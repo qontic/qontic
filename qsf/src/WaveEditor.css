@@ -1,0 +1,96 @@
+.derived-variables-container {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  border-top: 1px solid #444;
+  padding-top: 15px;
+}
+
+.derived-variables-container h4 {
+  margin: 0 0 10px 0;
+  color: #ccc;
+  font-weight: 500;
+}
+
+.derived-variables-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.derived-variables-table th,
+.derived-variables-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #444;
+  font-size: 0.95em;
+}
+
+.derived-variables-table th {
+  color: #aaa;
+  font-weight: 500;
+}
+
+.derived-variables-table input {
+  width: 100%;
+  background-color: #2a2a2a;
+  border: 1px solid #555;
+  color: #ddd;
+  padding: 4px;
+  border-radius: 3px;
+}
+
+.derived-variables-table input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.derived-variables-table .action-cell {
+  width: 40px;
+  text-align: center;
+}
+
+.delete-var-btn {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 0;
+}
+
+/* NEW: Styles for the expression cell with toggle */
+.expression-cell {
+  display: flex;
+  align-items: center;
+}
+
+.expression-cell input {
+  flex-grow: 1;
+}
+
+.expression-cell .expanded-expr {
+  background-color: #222;
+  color: #999;
+  font-style: italic;
+}
+
+.expand-btn {
+  background: none;
+  border: 1px solid #555;
+  color: #aaa;
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.validate-btn {
+  background: none;
+  border: 1px solid #555;
+  color: #28a745;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 1.1em;
+  font-weight: bold;
+}

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hydrogen — 3D</title>
+  <link rel="stylesheet" href="hydrogen-3d.css">
+</head>
+
+<body>
+  <header>
+    <h1>Hydrogen Atom</h1>
+    <span class="sub">volume rendering · slice planes · particle trails · complex ψ</span>
+    <button class="vtab" id="themeBtn" onclick="toggleTheme()" title="Switch between dark and light theme"
+      style="margin-left:auto;padding:5px 12px;flex-shrink:0">☀
+      Light</button>
+  </header>
+  <div class="main">
+    <div class="sidebar" id="sidebar">
+      <div>
+        <div class="slabel">Orbital |n, l, m⟩</div>
+        <div class="nrow" id="nrow"></div>
+        <div class="ogrid" id="ogrid"></div>
+      </div>
+      <div>
+        <div class="slabel">Superposition</div>
+        <select id="superSel">
+          <option value="none">None (pure state)</option>
+          <option value="px">p_x = (2p₊₁ − 2p₋₁)/√2 [real, lobes along x]</option>
+          <option value="ss">1s + 2s [radial oscillation, particles move]</option>
+          <option value="sp">1s + 2pz [z oscillation, particles move]</option>
+          <option value="pd">2pz + 3dz² [slower z beating]</option>
+          <option value="circ">2p₊₁ + 3d₊₁ [circulation + radial beat]</option>
+        </select>
+      </div>
+      <div>
+        <div class="vtabs">
+          <button class="vtab active" id="vtVol" onclick="toggleViz('volume')"
+            title="Ray-marched 3D volume rendering of |ψ|² (mutually exclusive with Lobes)">Volume</button>
+          <button class="vtab" id="vtSlice" onclick="toggleViz('slice')"
+            title="2D cross-section slices — can combine with Volume or Lobes">Slices</button>
+          <button class="vtab" id="vtLobes" onclick="toggleViz('lobes')"
+            title="GPU isosurface lobes coloured by ψ sign — amber = positive, blue = negative (mutually exclusive with Volume)">Lobes</button>
+          <button class="vtab" id="vtCloud" onclick="toggleViz('cloud')"
+            title="Particle cloud: thousands of Bohmian particles sampled from |ψ|², advected by the probability current field">Cloud</button>
+          <button class="vtab" id="vtPhase" onclick="toggleViz('phase')"
+            title="Phase overlay: show arg(ψ) as hue · |ψ|² as opacity. Combines with Volume, Slices or Lobes. Most useful for m≠0 and superpositions. Incompatible with Cloud.">&#936;
+            Phase</button>
+        </div>
+        <div id="sliceRow" class="crow" style="display:none">
+          <label>Slice
+            <select id="sliceSel" style="width:auto;padding:2px 5px;font-size:10px;">
+              <option value="xz">XZ (side)</option>
+              <option value="xy">XY (top)</option>
+              <option value="yz">YZ (front)</option>
+              <option value="all">All three</option>
+            </select>
+          </label>
+        </div>
+        <div id="cloudRow" class="crow" style="display:none">
+          <label
+            title="Sphere diameter in screen pixels — particle count is auto-derived so spheres don't overlap">Sphere
+            px</label>
+          <input type=range id="sSphPx" min="4" max="24" value="10" step="1">
+          <span class="crow-val" id="vSphPx">10px</span>
+          <button id="resetCloudBtn" class="btn"
+            style="padding:0;width:22px;height:22px;font-size:13px;flex:0 0 22px;line-height:1"
+            title="Resample cloud from |ψ|²">↺</button>
+        </div>
+        <div id="cloudAutoRow" class="crow" style="display:none">
+          <label title="Auto-computed sphere count for non-overlapping coverage">Auto pts</label>
+          <span class="crow-val" id="vAutoN" style="margin-left:4px;opacity:0.7">—</span>
+        </div>
+      </div>
+      <div>
+        <div class="slabel">Simulation</div>
+        <div class="crow"><label title="Number of particles sampled from |ψ|² distribution">Particles</label>
+          <input type=range id="sNP" min=1 max=10 value=2 step=1>
+          <span class="crow-val" id="vNP">2</span>
+        </div>
+        <div class="crow"><label title="Simulation speed multiplier (1× = 20× atomic units)">Speed</label>
+          <input type=range id="sSP" min=0.1 max=10 value=1.0 step=0.1>
+          <span class="crow-val" id="vSP">1.0×</span>
+        </div>
+        <div class="crow"><label title="Maximum number of trail points stored per particle">Trail</label>
+          <input type=range id="sTR" min=5 max=1250 value=800 step=5>
+          <span class="crow-val" id="vTR">800</span>
+        </div>
+        <div class="crow"><label title="RK4 integration time step (smaller = more accurate, slower)">dt</label>
+          <input type=range id="sDT" min=0.005 max=0.15 value=0.04 step=0.005>
+          <span class="crow-val" id="vDT">0.040</span>
+        </div>
+      </div>
+      <div>
+        <div class="slabel">Display</div>
+        <div class="crow"><label
+            title="Per-ray-step absorption (low = rays penetrate deeper and reveal inner shells; high = opaque outer cloud)">Opacity</label>
+          <input type=range id="sDO" min=0 max=100 value=60>
+          <span class="crow-val" id="vDO">60%</span>
+        </div>
+        <div class="crow"><label
+            title="Density threshold: clips low-density outer fog so inner nodal structure shows through (0 = show all, 100 = only densest core)">Fog
+            clip</label>
+          <input type=range id="sIO" min=0 max=100 value=0>
+          <span class="crow-val"><span id="vIO">0</span>%</span>
+        </div>
+        <div class="crow" id="lobeRow" style="display:none"><label
+            title="Isosurface threshold for lobe rendering (% of peak density)">Lobe level</label>
+          <input type=range id="sLB" min=1 max=40 value=12 step=1>
+          <span class="crow-val"><span id="vLB">12</span>%</span>
+        </div>
+        <div class="crow"><label title="Particle dot radius in pixels">Pt size</label>
+          <input type=range id="sPS" min=1 max=6 value=2.5 step=0.5>
+          <span class="crow-val" id="vPS">2.5</span>
+        </div>
+        <div style="display:flex;gap:5px;margin-top:4px">
+          <button class="vtab" id="axesBtn" onclick="toggleAxes()" title="Toggle XYZ coordinate axes"
+            style="flex:1;font-size:10px">Axes</button>
+          <button class="vtab" id="insetBtn" onclick="toggleInset()"
+            title="Toggle P(r) = r²|R_nl|² radial probability chart overlay" style="flex:1;font-size:10px">P(r)</button>
+          <button class="vtab" id="projBtn" onclick="toggleProjections()"
+            title="Toggle XZ / XY / YZ integrated density projection panels" style="flex:1;font-size:10px">Proj</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:row;gap:6px;">
+        <button class="btn active" id="runBtn" onclick="toggleRun()" title="Pause or resume particle simulation"
+          style="flex:2">⏸ Pause</button>
+        <button class="btn" id="resetBtn" title="Resample particles from |ψ|² and restart simulation time"
+          style="flex:1">↺ Reset</button>
+        <button class="btn danger" id="clearBtn" title="Erase all particle trail history" style="flex:1">✕
+          Clear</button>
+      </div>
+      <div>
+        <div class="slabel" style="display:flex;justify-content:space-between;align-items:center">State
+          <button class="vtab" id="expertBtn" onclick="toggleExpert()"
+            title="Show/hide numerical verification stats (⟨r⟩, normalization, match %)">Expert</button>
+        </div>
+        <div class="stat-grid" id="stGrid">
+          <div class="stat"><span class="stat-label">Energy</span><span class="stat-val" id="stE">—</span></div>
+          <div class="stat"><span class="stat-label">n, l, m</span><span class="stat-val" id="stNLM">—</span></div>
+          <div class="stat"><span class="stat-label">Particles</span><span class="stat-val" id="stN">—</span></div>
+          <div class="stat"><span class="stat-label">Sim time</span><span class="stat-val" id="stT">—</span></div>
+          <div id="expertRows" style="display:contents">
+            <div class="stat expert-stat"><span class="stat-label">⟨r⟩ computed</span><span class="stat-val"
+                id="stRc">—</span></div>
+            <div class="stat expert-stat"><span class="stat-label">⟨r⟩ exact</span><span class="stat-val"
+                id="stRe">—</span></div>
+            <div class="stat expert-stat"><span class="stat-label">Match</span><span class="stat-val"
+                id="stMatch">—</span></div>
+            <div class="stat expert-stat"><span class="stat-label">∫P(r)dr</span><span class="stat-val"
+                id="stNorm">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-resize" id="sidebarResize"></div>
+
+    <div class="canvas-wrap">
+      <canvas id="c"></canvas>
+
+      <div class="hint">🖱 Drag to rotate &nbsp;·&nbsp; Scroll to zoom</div>
+      <div class="legend" id="legend"></div>
+
+      <div class="info">
+        <span class="ket" id="infoKet">|2, 1, +1⟩</span>
+        <span id="infoDesc"></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="hydrogen-3d.js"></script>
+
+</body>
+
+</html>

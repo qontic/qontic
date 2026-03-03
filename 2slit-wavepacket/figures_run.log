@@ -1,0 +1,49 @@
+============================================================
+  2-slit quantum simulation  –  figure generator
+============================================================
+Grid: 256×256,  steps: 11500,  total: 575.0 fs
+Barrier at x=128..133  slits at j=108±10, j=148±10
+  step   718/11500  t=   35.9 fs  ‖ψ‖²=1.000046  [3.5s elapsed, ~53s left]
+  step  1436/11500  t=   71.8 fs  ‖ψ‖²=1.000048  [6.6s elapsed, ~46s left]
+  step  2154/11500  t=  107.7 fs  ‖ψ‖²=1.000049  [9.7s elapsed, ~42s left]
+  step  2872/11500  t=  143.6 fs  ‖ψ‖²=1.000049  [12.8s elapsed, ~39s left]
+  step  3590/11500  t=  179.5 fs  ‖ψ‖²=1.000049  [15.9s elapsed, ~35s left]
+  step  4308/11500  t=  215.4 fs  ‖ψ‖²=1.000049  [19.1s elapsed, ~32s left]
+  step  5026/11500  t=  251.3 fs  ‖ψ‖²=1.000049  [22.2s elapsed, ~29s left]
+  step  5744/11500  t=  287.2 fs  ‖ψ‖²=1.000050  [25.3s elapsed, ~25s left]
+  step  6462/11500  t=  323.1 fs  ‖ψ‖²=1.000050  [28.5s elapsed, ~22s left]
+  step  7180/11500  t=  359.0 fs  ‖ψ‖²=1.000050  [31.5s elapsed, ~19s left]
+  step  7898/11500  t=  394.9 fs  ‖ψ‖²=1.000050  [34.7s elapsed, ~16s left]
+  step  8616/11500  t=  430.8 fs  ‖ψ‖²=1.000049  [37.9s elapsed, ~13s left]
+  step  9334/11500  t=  466.7 fs  ‖ψ‖²=1.000049  [41.1s elapsed, ~10s left]
+  step 10052/11500  t=  502.6 fs  ‖ψ‖²=1.000046  [44.1s elapsed, ~6s left]
+  step 10770/11500  t=  538.5 fs  ‖ψ‖²=1.000014  [47.3s elapsed, ~3s left]
+  step 11488/11500  t=  574.4 fs  ‖ψ‖²=0.999906  [50.6s elapsed, ~0s left]
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_000.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_001.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_002.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_003.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_004.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_005.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_006.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_007.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_008.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_009.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_010.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_011.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_012.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_013.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_014.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_015.png
+  Saved /home/pyepes/qontic/2slit-wavepacket/figures/snapshot_016.png
+
+  Summary grid → /home/pyepes/qontic/2slit-wavepacket/figures/summary_grid.png
+  Interference profile → /home/pyepes/qontic/2slit-wavepacket/figures/interference_profile.png
+  Norm vs time       → /home/pyepes/qontic/2slit-wavepacket/figures/norm_vs_time.png
+  Early/late compare → /home/pyepes/qontic/2slit-wavepacket/figures/comparison_early_late.png
+
+============================================================
+  All figures saved to: /home/pyepes/qontic/2slit-wavepacket/figures/
+  Snapshots:   17
+  Final ‖ψ‖²: 0.999906
+============================================================

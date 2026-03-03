@@ -1,0 +1,262 @@
+/* ParametricEditorModal.css */
+/* This is the complete, new file for our custom modal */
+
+/* ParametricEditorModal.css */
+/* This is the complete, new file for our custom modal */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 90vw;
+  max-width: 1200px; /* Make it wider for 3 columns */
+  height: 90vh;    /* Make it tall */
+  background-color: #2a2d38; /* A dark, modern color */
+  color: #f0f0f0;
+  border-radius: 8px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+  
+  /* Use flex-column to create a header/body/footer layout */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent content from spilling out */
+}
+
+/* --- Header ("Parametric Editor" and Close Button) --- */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #404452;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.modal-close-btn:hover {
+  color: white;
+}
+
+/* --- Body (Text Areas) --- */
+.modal-body {
+  flex-grow: 1; /* This is the key: makes the body fill the space */
+  padding: 0; /* Remove padding to allow columns to fill space */
+  overflow: hidden; /* Let the columns handle their own scrolling */
+  
+  /* We use flex here to make the text areas grow */
+  display: flex;
+  flex-direction: row; /* Changed to row for columns */
+}
+
+.modal-body label {
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #c0c0c0;
+}
+
+.modal-input,
+.modal-textarea {
+  background-color: #181c20; /* Same as Leva's dark bg */
+  color: #f0f0f0;
+  border: 1px solid #404452;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: 'Roboto Mono', monospace; /* Good for code */
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-textarea {
+  /* This makes the text areas fill the available space */
+  flex-grow: 1;
+  width: 100%;
+  
+  background-color: #181c20; /* Same as Leva's dark bg */
+  color: #f0f0f0;
+  resize: none; /* We don't need resizing */
+}
+
+/* Add space between the two text areas */
+.modal-textarea:first-of-type {
+  margin-bottom: 16px;
+}
+
+/* --- View Switcher --- */
+.view-switcher {
+  padding: 10px 24px 0;
+  border-bottom: 1px solid #404452;
+}
+
+/* --- Error Message --- */
+.modal-error {
+  padding: 10px 24px;
+  background-color: #5d1a1a;
+  color: #ffc2c2;
+  font-weight: 500;
+}
+
+
+/* --- Footer (Buttons) --- */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #404452;
+}
+
+/* Common button styles */
+.modal-footer button {
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.modal-btn-cancel {
+  background-color: #404452;
+  color: #f0f0f0;
+}
+.modal-btn-cancel:hover {
+  background-color: #525766;
+}
+
+.modal-btn-apply {
+  background-color: #007bff; /* A nice "apply" blue */
+  color: white;
+}
+.modal-btn-apply:hover {
+  opacity: 0.85;
+}
+
+/* --- NEW: 3-Column GUI View Styles --- */
+.gui-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.gui-nav {
+  width: 180px;
+  flex-shrink: 0;
+  background-color: #20232a;
+  border-right: 1px solid #404452;
+  padding: 16px 0;
+}
+
+.gui-nav-button {
+  display: block;
+  width: 100%;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: #ccc;
+  text-align: left;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.gui-nav-button.active {
+  background-color: #007bff;
+  color: white;
+  font-weight: 600;
+}
+
+.gui-item-list-container {
+  width: 300px;
+  flex-shrink: 0;
+  border-right: 1px solid #404452;
+  display: flex;
+  flex-direction: column;
+}
+
+.gui-item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.gui-item-list-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #333640;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gui-item-list-item:hover {
+  background-color: #3a3d4a;
+}
+
+.gui-item-list-item.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.gui-item-list-actions {
+  padding: 12px;
+  border-top: 1px solid #404452;
+  display: flex;
+  gap: 8px;
+}
+
+.gui-editor-pane {
+  flex-grow: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gui-editor-pane h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #404452;
+  padding-bottom: 8px;
+}
+
+.correlation-list {
+  margin-top: 24px;
+  border-top: 1px solid #404452;
+  padding-top: 16px;
+}
+
+.correlation-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #aaa;
+}

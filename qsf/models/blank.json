@@ -1,0 +1,15 @@
+{
+  "projectName": "New QSF Project",
+  "projectVersion": "1.0",
+  "sceneObjects": [
+    { "id": "axes", "type": "axes", "name": "axes-001", "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [100, 100, 100] }
+  ],
+  "parameters": [],
+  "relations": [],
+  "physicsDomains": [],
+  "globalConstants": [],
+  "units": {
+    "distance": "mm",
+    "energy": "eV"
+  }
+}

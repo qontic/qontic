@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset="UTF-8">
+   <title>GPU vs CPU FFT - Direct Comparison</title>
+   <style>
+      body { font-family: monospace; margin: 20px; background: #f5f5f5; }
+      pre { background: #fff; padding: 15px; border-left: 4px solid #f00; overflow: auto; max-height: 800px; }
+      button { padding: 10px 20px; margin: 5px; background: #0066cc; color: white; border: none; cursor: pointer; }
+      button:hover { background: #0052a3; }
+      table { border-collapse: collapse; margin: 10px 0; background: #fff; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+   </style>
+</head>
+<body>
+   <h1>GPU vs CPU IFFT - Direct Comparison</h1>
+   <button onclick="compareFFT()">Compare FFT</button>
+   <button onclick="compareIFFT()">Compare IFFT</button>
+   <pre id="log"></pre>
+
+   <script src="js/gpu-fft.js"></script>
+   <script>
+      // CPU FFT reference
+      function fft1D(input, inverse = false) {
+         const N = input.length / 2;
+         if (N === 1) return input;
+         if ((N & (N - 1)) !== 0) throw new Error('N must be power of 2');
+         
+         const bits = Math.log2(N);
+         const reversed = new Float32Array(input.length);
+         for (let i = 0; i < N; i++) {
+            let j = 0;
+            for (let k = 0; k < bits; k++) {
+               if (i & (1 << k)) j |= 1 << (bits - 1 - k);
+            }
+            reversed[j*2] = input[i*2];
+            reversed[j*2+1] = input[i*2+1];
+         }
+         
+         let working = reversed.slice();
+         for (let stage = 0; stage < bits; stage++) {
+            const spanSize = 1 << (stage + 1);
+            const halfSpan = spanSize / 2;
+            let angleScale = -2 * Math.PI / spanSize;
+            if (inverse) angleScale = -angleScale;
+            
+            for (let block = 0; block < N; block += spanSize) {
+               for (let i = 0; i < halfSpan; i++) {
+                  const idx1 = block + i;
+                  const idx2 = block + i + halfSpan;
+                  
+                  const angle = angleScale * i;
+                  const wr = Math.cos(angle);
+                  const wi = Math.sin(angle);
+                  
+                  const re2 = working[idx2*2];
+                  const im2 = working[idx2*2+1];
+                  const tr = re2 * wr - im2 * wi;
+                  const ti = re2 * wi + im2 * wr;
+                  
+                  const re1 = working[idx1*2];
+                  const im1 = working[idx1*2+1];
+                  
+                  working[idx1*2] = re1 + tr;
+                  working[idx1*2+1] = im1 + ti;
+                  working[idx2*2] = re1 - tr;
+                  working[idx2*2+1] = im1 - ti;
+               }
+            }
+         }
+         
+         if (inverse) {
+            for (let i = 0; i < working.length; i++) working[i] /= N;
+         }
+         
+         return working;
+      }
+
+      const logEl = document.getElementById('log');
+      let lines = [];
+      
+      function log(msg) {
+         lines.push(msg);
+         logEl.textContent = lines.join('\n');
+         console.log(msg);
+      }
+
+      function compareFFT() {
+         lines = [];
+         log('='.repeat(70));
+         log('Comparing 1D FFT: CPU vs GPU');
+         log('='.repeat(70));
+         
+         if (!GPUFFT.init()) {
+            log('ERROR: GPU init failed');
+            return;
+         }
+         
+         const gl = GPUFFT.getContext();
+         const N = 8;
+         
+         // Constant input
+         const cpuInput = new Float32Array(N * 2);
+         for (let i = 0; i < N; i++) {
+            cpuInput[i*2] = 1.0;
+            cpuInput[i*2 + 1] = 0.0;
+         }
+         
+         log(`\nInput: ${N} constant values (1.0 + 0i)`);
+         
+         // CPU FFT
+         log('\n[CPU] FFT...');
+         const cpuFFT = fft1D(cpuInput, false);
+         log(`[CPU] First 5 FFT values:`);
+         for (let i = 0; i < 5; i++) {
+            const mag = Math.sqrt(cpuFFT[i*2]*cpuFFT[i*2] + cpuFFT[i*2+1]*cpuFFT[i*2+1]);
+            log(`  [${i}]: ${cpuFFT[i*2].toFixed(1)} + i*${cpuFFT[i*2+1].toFixed(1)} (mag: ${mag.toFixed(1)})`);
+         }
+         
+         // GPU FFT (convert 1D to 2D N/2 x 2 layout to fit our 2D code)
+         // Actually, let's test with the first row of an 8x8 matrix
+         log('\n[GPU] FFT...');
+         const gpuData = new Float32Array(8 * 8 * 4);
+         for (let i = 0; i < 8; i++) {
+            gpuData[i*4] = 1.0;  // First row constant
+            gpuData[i*4 + 1] = 0.0;
+         }
+         
+         const tex = GPUFFT.createFloatTexture(8, 8);
+         gl.bindTexture(gl.TEXTURE_2D, tex);
+         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 8, 8, 0, gl.RGBA, gl.FLOAT, gpuData);
+         
+         GPUFFT.fft2D(tex, 8, 8, false, false);
+         
+         const fbo = GPUFFT.createFramebuffer(tex);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+         const gpuFFT = new Float32Array(8 * 8 * 4);
+         gl.readPixels(0, 0, 8, 8, gl.RGBA, gl.FLOAT, gpuFFT);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+         
+         log(`[GPU] First row FFT values:`);
+         for (let i = 0; i < 8; i++) {
+            const idx = i * 4;
+            const mag = Math.sqrt(gpuFFT[idx]*gpuFFT[idx] + gpuFFT[idx+1]*gpuFFT[idx+1]);
+            log(`  [${i}]: ${gpuFFT[idx].toFixed(1)} + i*${gpuFFT[idx+1].toFixed(1)} (mag: ${mag.toFixed(1)})`);
+         }
+         
+         log(`\nDC component comparison:`);
+         log(`  CPU:  ${cpuFFT[0].toFixed(1)}`);
+         log(`  GPU:  ${gpuFFT[0].toFixed(1)}`);
+         
+         gl.deleteFramebuffer(fbo);
+         gl.deleteTexture(tex);
+      }
+
+      function compareIFFT() {
+         lines = [];
+         log('='.repeat(70));
+         log('Comparing 1D IFFT: CPU vs GPU');
+         log('='.repeat(70));
+         
+         if (!GPUFFT.init()) {
+            log('ERROR: GPU init failed');
+            return;
+         }
+         
+         const gl = GPUFFT.getContext();
+         const N = 8;
+         
+         // Constant input
+         const input = new Float32Array(N * 2);
+         for (let i = 0; i < N; i++) {
+            input[i*2] = 1.0;
+            input[i*2 + 1] = 0.0;
+         }
+         
+         log(`\nInput: ${N} constant values (1.0 + 0i)`);
+         
+         // CPU: FFT then IFFT
+         log('\n[CPU] FFT...');
+         const cpuFFT = fft1D(input, false);
+         log(`[CPU] FFT DC: ${cpuFFT[0].toFixed(1)}`);
+         
+         log('[CPU] IFFT...');
+         const cpuIFFT = fft1D(cpuFFT, true);
+         log(`[CPU] IFFT first 5 values:`);
+         for (let i = 0; i < 5; i++) {
+            log(`  [${i}]: ${cpuIFFT[i*2].toFixed(3)}`);
+         }
+         
+         // GPU: FFT then IFFT (8x8 grid)
+         log('\n[GPU] FFT...');
+         const gpuData = new Float32Array(8 * 8 * 4);
+         for (let i = 0; i < 8; i++) {
+            gpuData[i*4] = 1.0;  // First row constant
+         }
+         
+         const tex = GPUFFT.createFloatTexture(8, 8);
+         gl.bindTexture(gl.TEXTURE_2D, tex);
+         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 8, 8, 0, gl.RGBA, gl.FLOAT, gpuData);
+         
+         GPUFFT.fft2D(tex, 8, 8, false, false);
+         
+         const fbo1 = GPUFFT.createFramebuffer(tex);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo1);
+         const gpuFFT = new Float32Array(8 * 8 * 4);
+         gl.readPixels(0, 0, 8, 8, gl.RGBA, gl.FLOAT, gpuFFT);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+         
+         log(`[GPU] FFT DC: ${gpuFFT[0].toFixed(1)}`);
+         
+         log('[GPU] IFFT...');
+         GPUFFT.fft2D(tex, 8, 8, true, false);  // WITH bit-reversal
+         
+         const fbo2 = GPUFFT.createFramebuffer(tex);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo2);
+         const gpuIFFT = new Float32Array(8 * 8 * 4);
+         gl.readPixels(0, 0, 8, 8, gl.RGBA, gl.FLOAT, gpuIFFT);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+         
+         log(`[GPU] IFFT first row values:`);
+         for (let i = 0; i < 8; i++) {
+            const idx = i * 4;
+            log(`  [${i}]: ${gpuIFFT[idx].toFixed(3)}`);
+         }
+         
+         log(`\nComparison (expected all ~1.0):`);
+         log(`  CPU:  [${cpuIFFT[0].toFixed(3)}, ${cpuIFFT[2].toFixed(3)}, ${cpuIFFT[4].toFixed(3)}, ${cpuIFFT[6].toFixed(3)}, ...]`);
+         log(`  GPU:  [${gpuIFFT[0].toFixed(3)}, ${gpuIFFT[4].toFixed(3)}, ${gpuIFFT[8].toFixed(3)}, ${gpuIFFT[12].toFixed(3)}, ...]`);
+         
+         gl.deleteFramebuffer(fbo1);
+         gl.deleteFramebuffer(fbo2);
+         gl.deleteTexture(tex);
+      }
+   </script>
+</body>
+</html>

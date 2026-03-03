@@ -1,0 +1,39 @@
+.color-picker-container {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  flex-grow: 1;
+}
+
+.color-swatch {
+  width: 60px;
+  height: 24px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.color-picker-popover {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  z-index: 10;
+  background-color: #3a3a3a;
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Styles from react-colorful library */
+.react-colorful {
+  width: 200px;
+  height: 200px;
+}
+
+.react-colorful__saturation {
+  border-radius: 6px 6px 0 0;
+}
+.react-colorful__hue {
+  height: 20px;
+  border-radius: 0 0 6px 6px;
+}

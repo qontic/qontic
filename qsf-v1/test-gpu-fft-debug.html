@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset="UTF-8">
+   <title>GPU FFT Debug - Detailed Diagnostics</title>
+   <style>
+      body { font-family: monospace; margin: 20px; background: #f5f5f5; }
+      pre { background: #fff; padding: 15px; border-left: 4px solid #f00; overflow: auto; max-height: 700px; }
+      button { padding: 10px 20px; margin: 5px; background: #0066cc; color: white; border: none; cursor: pointer; }
+      button:hover { background: #0052a3; }
+   </style>
+</head>
+<body>
+   <h1>GPU FFT Debug - Detailed Analysis</h1>
+   <button onclick="testFFTOutput()">Test Forward FFT Output</button>
+   <button onclick="testIFFTNoScaling()">Test IFFT (No Scaling)</button>
+   <button onclick="testIFFTWithScaling()">Test IFFT (With Scaling)</button>
+   <button onclick="testBitReversalEffect()">Compare BR vs NoBR</button>
+   <button onclick="clearLog()">Clear</button>
+   <pre id="log"></pre>
+
+   <script src="js/gpu-fft.js"></script>
+   <script>
+      const logEl = document.getElementById('log');
+      let lines = [];
+      
+      function log(msg) {
+         lines.push(msg);
+         logEl.textContent = lines.join('\n');
+         console.log(msg);
+      }
+      
+      function clearLog() {
+         lines = [];
+         logEl.textContent = '';
+      }
+
+      function formatRow(data, startIdx, size) {
+         let s = '';
+         for (let i = 0; i < size; i++) {
+            const re = data[(startIdx + i) * 4];
+            const im = data[(startIdx + i) * 4 + 1];
+            const mag = Math.sqrt(re*re + im*im);
+            s += `[${i}]:${re.toFixed(2)},${im.toFixed(2)}(${mag.toFixed(2)}) `;
+         }
+         return s;
+      }
+
+      function testFFTOutput() {
+         clearLog();
+         log('='.repeat(70));
+         log('TEST 1: Analyze Forward FFT Output Structure');
+         log('='.repeat(70));
+         
+         if (!GPUFFT.init()) {
+            log('ERROR: GPU init failed');
+            return;
+         }
+         
+         const gl = GPUFFT.getContext();
+         const size = 8;
+         
+         // Create constant input
+         const input = new Float32Array(size * size * 4);
+         for (let i = 0; i < size * size; i++) {
+            input[i*4] = 1.0;
+            input[i*4 + 1] = 0.0;
+            input[i*4 + 2] = 0.0;
+            input[i*4 + 3] = 1.0;
+         }
+         
+         const tex = GPUFFT.createFloatTexture(size, size);
+         gl.bindTexture(gl.TEXTURE_2D, tex);
+         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, input);
+         
+         log('\nInput: all 1.0');
+         
+         // Forward FFT
+         GPUFFT.fft2D(tex, size, size, false, false);
+         
+         const fbo = GPUFFT.createFramebuffer(tex);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+         const fftResult = new Float32Array(size * size * 4);
+         gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, fftResult);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+         
+         log('\nFFT Output (should have DC at [0,0] = 64, rest ~0):');
+         for (let y = 0; y < Math.min(3, size); y++) {
+            const idx = y * size;
+            log(`  Row ${y}: ${formatRow(fftResult, idx, 8)}`);
+         }
+         
+         log('\nDC component analysis:');
+         for (let i = 0; i < 10; i++) {
+            const re = fftResult[i*4];
+            const mag = Math.sqrt(re*re + fftResult[i*4+1]*fftResult[i*4+1]);
+            if (mag > 0.01) {
+               log(`  [${i}]: mag=${mag.toFixed(3)}`);
+            }
+         }
+         
+         gl.deleteFramebuffer(fbo);
+         gl.deleteTexture(tex);
+      }
+
+      function testIFFTNoScaling() {
+         clearLog();
+         log('='.repeat(70));
+         log('TEST 2: Check if Forward FFT output is correct before IFFT');
+         log('='.repeat(70));
+         
+         if (!GPUFFT.init()) {
+            log('ERROR: GPU init failed');
+            return;
+         }
+         
+         const gl = GPUFFT.getContext();
+         const size = 8;
+         
+         // Create constant input
+         const input = new Float32Array(size * size * 4);
+         for (let i = 0; i < size * size; i++) {
+            input[i*4] = 1.0;
+            input[i*4 + 1] = 0.0;
+            input[i*4 + 2] = 0.0;
+            input[i*4 + 3] = 1.0;
+         }
+         
+         const tex = GPUFFT.createFloatTexture(size, size);
+         gl.bindTexture(gl.TEXTURE_2D, tex);
+         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, input);
+         
+         log('\nInput: constant 1.0');
+         
+         // Forward FFT
+         log('Doing forward FFT...');
+         GPUFFT.fft2D(tex, size, size, false, false);
+         
+         // Check FFT output
+         {
+            const fbo = GPUFFT.createFramebuffer(tex);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+            const fftResult = new Float32Array(size * size * 4);
+            gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, fftResult);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            
+            log('\nFFT output (first row):');
+            log(`  ${formatRow(fftResult, 0, 8)}`);
+            
+            // Check DC
+            log('\nDC components should all be at (0,0):');
+            log(`  [0,0]: Re=${fftResult[0].toFixed(2)}, Im=${fftResult[1].toFixed(2)}`);
+            log(`  [0,1]: Re=${fftResult[4].toFixed(2)}, Im=${fftResult[5].toFixed(2)}`);
+            log(`  [1,0]: Re=${fftResult[(size)*4].toFixed(2)}`);
+            
+            gl.deleteFramebuffer(fbo);
+         }
+         
+         // Now IFFT WITHOUT any modifications - just apply butterflies with negative angles
+         log('\n--- Now Testing IFFT (inverse butterflies on FFT output) ---');
+         
+         // IFFT should have BR applied (same as forward FFT)
+         log('\nApplying IFFT with bit-reversal...');
+         GPUFFT.fft2D(tex, size, size, true, false);  // IFFT WITH BR (skipBitReverse=false)
+         
+         // Read result
+         const fbo2 = GPUFFT.createFramebuffer(tex);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo2);
+         const ifftResult = new Float32Array(size * size * 4);
+         gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, ifftResult);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+         
+         log('\nIFFT output (first row):');
+         log(`  ${formatRow(ifftResult, 0, 8)}`);
+         log('\nExpected: all ~1.0 (before or after scaling)');
+         
+         gl.deleteFramebuffer(fbo2);
+         gl.deleteTexture(tex);
+      }
+
+      function testBitReversalEffect() {
+         clearLog();
+         log('='.repeat(70));
+         log('TEST 3: Verify FFT→IFFT Data Flow');
+         log('='.repeat(70));
+         
+         if (!GPUFFT.init()) {
+            log('ERROR: GPU init failed');
+            return;
+         }
+         
+         const gl = GPUFFT.getContext();
+         const size = 8;
+         const input = new Float32Array(size * size * 4);
+         for (let i = 0; i < size * size; i++) {
+            input[i*4] = 1.0;
+         }
+         
+         log('\nInput: all pixels = 1.0 (constant signal)');
+         
+         // Forward FFT
+         {
+            log('\n--- Step 1: Forward FFT ---');
+            const tex = GPUFFT.createFloatTexture(size, size);
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, input);
+            
+            GPUFFT.fft2D(tex, size, size, false, false);  // Forward with BR
+            
+            const fbo = GPUFFT.createFramebuffer(tex);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+            const fftResult = new Float32Array(size * size * 4);
+            gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, fftResult);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            
+            log('FFT output (first row):');
+            log(`  ${formatRow(fftResult, 0, 8)}`);
+            log('FFT output (DC and large values):');
+            let largeCount = 0;
+            for (let i = 0; i < size*size; i++) {
+               const re = fftResult[i*4];
+               const im = fftResult[i*4+1];
+               const mag = Math.sqrt(re*re + im*im);
+               if (mag > 1.0) {
+                  if (largeCount < 10) log(`  [${i}]: Re=${re.toFixed(2)}, Im=${im.toFixed(2)}, Mag=${mag.toFixed(2)}`);
+                  largeCount++;
+               }
+            }
+            
+            // Now do IFFT on the SAME output texture
+            log('\n--- Step 2: Inverse FFT (on FFT output texture) ---');
+            GPUFFT.fft2D(tex, size, size, true, true);    // Inverse WITHOUT BR
+            
+            const fbo2 = GPUFFT.createFramebuffer(tex);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fbo2);
+            const ifftResult = new Float32Array(size * size * 4);
+            gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, ifftResult);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            
+            log('IFFT output (first row):');
+            log(`  ${formatRow(ifftResult, 0, 8)}`);
+            
+            // Compute error
+            let maxErr = 0;
+            for (let i = 0; i < size*size; i++) {
+               const expected = 1.0;
+               const actual = ifftResult[i*4];
+               const err = Math.abs(actual - expected);
+               maxErr = Math.max(maxErr, err);
+            }
+            log(`Max roundtrip error: ${maxErr.toFixed(3)}`);
+            
+            gl.deleteFramebuffer(fbo);
+            gl.deleteFramebuffer(fbo2);
+            gl.deleteTexture(tex);
+         }
+      }
+   </script>
+</body>
+</html>

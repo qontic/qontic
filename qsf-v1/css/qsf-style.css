@@ -1,0 +1,1128 @@
+/* ========== CSS Variables for Theming ========== */
+:root {
+  /* Light theme (default) */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-panel: #ffffff;
+  --bg-histogram: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-light: #eff6ff;
+  --success-color: #10b981;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --canvas-bg: #ffffff;
+  --canvas-border: #1e293b;
+  --font-size-base: 15px;
+  --font-size-sm: 14px;
+  --font-size-xs: 13px;
+  --font-size-info: 15px;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-panel: #1e293b;
+  --bg-histogram: #ffffff;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --border-strong: #475569;
+  --accent-color: #60a5fa;
+  --accent-hover: #3b82f6;
+  --accent-light: #1e3a5f;
+  --success-color: #34d399;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -2px rgba(0,0,0,0.4);
+  --canvas-bg: #000000;
+  --canvas-border: #3b82f6;
+  --font-size-base: 14px;
+  --font-size-sm: 13px;
+  --font-size-xs: 12px;
+  --font-size-info: 14px;
+  --slit-open-color: #22c55e;
+  --slit-closed-color: #ef4444;
+  --tab-inactive-bg: #475569;
+}
+
+/* Dark mode specific overrides */
+[data-theme="dark"] #rationale,
+[data-theme="dark"] #rationale p,
+[data-theme="dark"] #rationale h1,
+[data-theme="dark"] #rationale article {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] #psiTabs .ui-tabs-nav li:not(.ui-state-active) {
+  background: #475569;
+}
+
+[data-theme="dark"] #superContainer > .ui-tabs-nav li:not(.ui-state-active) a {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .ui-slider {
+  background: #475569;
+  border-color: #475569;
+}
+
+[data-theme="dark"] .ui-slider-range {
+  background: var(--accent-color);
+}
+
+[data-theme="dark"] .ui-slider-handle {
+  background: #f1f5f9;
+  border-color: var(--accent-color);
+}
+
+[data-theme="dark"] #waveRangeLabel {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] #graphics-parameter-container label,
+[data-theme="dark"] #graphics-parameter-container td {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] #toggleSlits,
+[data-theme="dark"] #toggleWhichPath,
+[data-theme="dark"] #toggleView {
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+[data-theme="dark"] #math-container .katex,
+[data-theme="dark"] #math-container .katex .mord,
+[data-theme="dark"] #math-container .katex .mbin,
+[data-theme="dark"] #math-container .katex .mrel,
+[data-theme="dark"] #math-container .katex .mopen,
+[data-theme="dark"] #math-container .katex .mclose,
+[data-theme="dark"] #math-container .katex .mpunct,
+[data-theme="dark"] #math-container .katex .minner {
+  color: #f1f5f9;
+}
+
+/* ========== Base Styles ========== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  padding: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ========== View-Link Styles (Rationale tab) ========== */
+.view-link {
+  color: var(--accent-color);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+.view-link:hover {
+  color: var(--accent-hover);
+  text-decoration-style: solid;
+}
+[data-theme="dark"] .view-link {
+  color: #93c5fd;
+}
+[data-theme="dark"] .view-link:hover {
+  color: #ffffff;
+}
+
+/* ========== Main Layout ========== */
+.main-container {
+  position: relative;
+  display: flex;
+  gap: 16px;
+}
+
+#leftPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  width: 380px;
+  min-width: 250px;
+  max-width: none;
+}
+
+/* ========== Resizable Panel Handles ========== */
+.ui-resizable-e {
+  width: 8px;
+  right: -4px;
+  background: linear-gradient(90deg, transparent 2px, var(--border-strong) 2px, var(--border-strong) 4px, transparent 4px);
+  cursor: ew-resize;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.ui-resizable-e:hover { opacity: 1; }
+
+.ui-resizable-s {
+  height: 8px;
+  bottom: -4px;
+  background: linear-gradient(0deg, transparent 2px, var(--border-strong) 2px, var(--border-strong) 4px, transparent 4px);
+  cursor: ns-resize;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.ui-resizable-s:hover { opacity: 1; }
+
+#canvas-container.ui-resizable {
+  overflow: hidden;
+}
+
+#controls {
+  margin-top: 20px;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== Input Groups ========== */
+.input-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  max-width: 100%;
+  position: relative;
+}
+.input-group:has([data-tip]:hover) {
+  z-index: 1001;
+}
+.input-group label {
+  width: 95px;
+  margin-right: 4px;
+  flex-shrink: 0;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.input-group input[type=range] {
+  flex: 1 1 auto;
+  margin-right: 4px;
+  max-width: 100px;
+  accent-color: var(--accent-color);
+  height: 5px;
+}
+.input-group input[type=number] {
+  width: 5em;
+  margin-right: 2px;
+  flex-shrink: 0;
+  padding: 3px 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-group input[type=number]:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+.input-group select {
+  min-width: 45px;
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+}
+
+/* ========== Wave Controls Box ========== */
+.wave-range-box {
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 8px 10px 4px;
+  margin-bottom: 8px;
+}
+
+/* ========== Opacity Controls Box ========== */
+.opacity-box {
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 6px 10px 4px;
+  margin-bottom: 8px;
+}
+.opacity-box-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.opacity-box .input-group label {
+  width: 65px;
+}
+.opacity-box .input-group select {
+  display: none;
+}
+
+#waveFunctionOption,
+#sourceOption {
+  min-width: 110px;
+}
+
+#particle-parameter-container .amplitude-label {
+  width: auto;
+  margin-left: 8px;
+  margin-right: 4px;
+}
+
+/* Make the Sim. Speed "x" look like plain text, not a dropdown */
+#animationStep-units {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  pointer-events: none;
+  color: var(--text-secondary);
+}
+
+/* ========== Info Panel ========== */
+#Info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--font-size-info);
+}
+
+/* ========== Tooltips (data-tip, not title, to avoid native double-tooltip) ========== */
+label[data-tip], div[data-tip], tr[data-tip] td.label, td[data-tip]:first-child {
+  border-bottom: 1px dotted var(--text-muted);
+  cursor: help;
+}
+tr[data-tip] td.label {
+  border-bottom: 1px dotted var(--text-muted);
+}
+
+[data-tip] {
+  position: relative;
+}
+[data-tip]:hover {
+  z-index: 1001;
+}
+label[data-tip]:hover::after,
+div[data-tip]:hover::after,
+tr[data-tip]:hover::after,
+td[data-tip]:hover::after,
+canvas[data-tip]:hover::after,
+button[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 6px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  white-space: normal;
+  max-width: 300px;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  border: 1px solid var(--border-strong);
+  line-height: 1.5;
+  opacity: 0;
+  animation: tooltipFadeIn 0s 1s forwards;
+}
+@keyframes tooltipFadeIn {
+  to { opacity: 1; }
+}
+#Info tr[data-tip]:hover::after {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 10px;
+  margin-top: 0;
+  white-space: nowrap;
+  max-width: none;
+}
+
+/* ========== Math tab compactness ========== */
+#math-container .katex-display {
+  margin: 0.2em 0;
+}
+#math-container .katex {
+  font-size: 1.1em;
+}
+
+/* ========== Button status lines ========== */
+.btn-status-line {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  min-height: 1.4em;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  line-height: 1.4;
+  transition: opacity 0.15s;
+}
+
+/* ========== Info Panel Layout ========== */
+.info-layout {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.info-metrics table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.info-metrics td.label {
+  padding-right: 18px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.info-metrics td.value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.info-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.info-metrics {
+  flex: 2;
+}
+
+.info-controls {
+  flex: 1;
+}
+
+#histo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 200px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+}
+
+.histogram {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 200px;
+  height: 70px;
+  border: 1px solid var(--border-color);
+  margin: 16px auto;
+  background: var(--bg-histogram);
+}
+.bar {
+  width: 30px;
+  background-color: var(--accent-color);
+  text-align: center;
+  margin: 1px;
+  position: relative;
+}
+.bar-label {
+  font-size: 12px;
+  color: #fff;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}
+
+/* ========== Tab Navigation ========== */
+#psiTabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+#psiTabs .ui-tabs-nav {
+  display: flex;
+  flex-direction: row;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+#psiTabs .ui-tabs-nav li {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-right: 1px solid var(--border-color);
+  transition: background-color 0.2s;
+}
+
+#psiTabs .ui-tabs-nav li:hover {
+  background: var(--bg-secondary);
+}
+
+#psiTabs .ui-tabs-nav li:last-child {
+  border-right: none;
+}
+
+#psiTabs .ui-tabs-nav li a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--text-secondary);
+  padding: 2px 0;
+  width: 100%;
+  height: 100%;
+  gap: 1px;
+}
+
+#psiTabs .tab-label {
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+#psiTabs .tab-icon.material-icons {
+  font-size: 20px;
+  line-height: 1;
+}
+
+#psiTabs .tab-icon-svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  color: var(--accent-color);
+}
+
+/* Per-tab icon colors */
+#psiTabs .tab-physics a { color: var(--accent-color); }
+#psiTabs .tab-physics  .tab-icon { color: var(--accent-color); }
+#psiTabs .tab-setup    .tab-icon { color: #8b5cf6; }
+#psiTabs .tab-setup    a { color: #8b5cf6; }
+#psiTabs .tab-math     .tab-icon { color: #f59e0b; }
+#psiTabs .tab-math     a { color: #f59e0b; }
+#psiTabs .tab-graphics .tab-icon { color: #10b981; }
+#psiTabs .tab-graphics a { color: #10b981; }
+#psiTabs .tab-views    .tab-icon { color: #ef4444; }
+#psiTabs .tab-views    a { color: #ef4444; }
+
+#psiTabs .ui-tabs-nav li.ui-state-active {
+  background: var(--bg-panel);
+  border-bottom: 2px solid var(--accent-color);
+  margin-bottom: -1px;
+}
+
+#psiTabs .ui-tabs-panel {
+  flex: 1 1 auto;
+  padding: 12px;
+  overflow: auto;
+  background: var(--bg-panel);
+}
+
+/* ========== Color Picker Modal ========== */
+#colorPickerModal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-panel);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 20px 24px;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  z-index: 1001;
+  min-width: 320px;
+}
+
+#colorPickerModal h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+  gap: 8px;
+}
+
+.colorOption {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.colorOption:hover {
+  transform: scale(1.1);
+  border-color: var(--accent-color);
+  box-shadow: var(--shadow-md);
+}
+
+#overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+
+.pick-color {
+  width: 32px;
+  height: 22px;
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: border-color 0.2s;
+}
+.pick-color:hover {
+  border-color: var(--accent-color);
+}
+
+#canvas {
+  margin-top: 20px;
+}
+
+/* ========== Canvas Container ========== */
+#canvas-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+#canvas-container {
+  position: relative;
+  width: 800px;
+  height: 600px;
+  border: 2px solid var(--canvas-border);
+  border-radius: var(--radius-md);
+  margin: 20px 0;
+  min-width: 400px;
+  min-height: 300px;
+  max-width: 1200px;
+  max-height: 900px;
+  background: var(--canvas-bg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+canvas {
+  position: absolute;
+}
+#waveCanvas  { z-index: 0; }
+#setupCanvas { z-index: 1; }
+#partCanvas  { z-index: 2; }
+
+#view-label {
+  text-align: center;
+  font-size: 16.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  letter-spacing: 0.03em;
+  opacity: 0.7;
+}
+
+#shortcut-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
+}
+
+/* ========== Buttons ========== */
+button {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-color);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+#startButton, #resetButton {
+  min-width: 90px;
+  padding: 10px 16px;
+  font-weight: 600;
+}
+
+#startButton {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+#startButton:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+#resetButton {
+  background: #b91c1c;
+  color: white;
+  border-color: #b91c1c;
+}
+
+#resetButton:hover {
+  background: #991b1b;
+  border-color: #991b1b;
+}
+
+#toggleSlits, #toggleWhichPath, #toggleView {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+  min-width: 80px;
+  padding: 6px 10px;
+  font-weight: 500;
+}
+
+#toggleSlits:hover, #toggleWhichPath:hover, #toggleView:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+/* Fixed experiment control bar above tabs */
+#experiment-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+#experiment-bar button {
+  flex: 1;
+}
+
+#experiment-bar .btn-status-line {
+  display: none;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.particle-second-line {
+  display: block;
+  margin-top: 2px;
+}
+
+.branch-button {
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 18px;
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.branch-button:hover {
+  transform: scale(1.03);
+  box-shadow: var(--shadow-lg);
+}
+
+#worldFactor {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+/* ========== Checkboxes ========== */
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+/* ========== Super Container Tabs ========== */
+#superContainer.ui-tabs {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+#superContainer > .ui-tabs-nav {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+#superContainer > .ui-tabs-nav li {
+  margin: 0;
+  border: none;
+  background: transparent;
+}
+
+#superContainer > .ui-tabs-nav li a {
+  padding: 12px 20px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+#superContainer > .ui-tabs-nav li.ui-state-active {
+  background: var(--bg-panel);
+  border-bottom: 2px solid var(--accent-color);
+}
+
+#superContainer > .ui-tabs-nav li.ui-state-active a {
+  color: var(--text-primary);
+}
+
+#superContainer > .ui-tabs-panel {
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--bg-primary);
+  padding: 20px;
+}
+
+/* ========== Timing Fieldset ========== */
+fieldset {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+}
+
+fieldset legend {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 0 6px;
+}
+
+fieldset table {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ========== Responsive Layout ========== */
+
+/* Tablet / narrow window: stack sidebar above canvas */
+@media (max-width: 900px) {
+  body {
+    padding: 8px;
+  }
+
+  .main-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #leftPanel {
+    width: 100% !important;
+    height: auto !important;
+    min-width: 0;
+    max-width: none;
+  }
+
+  #canvas-container {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 4 / 3;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none;
+    margin: 8px 0;
+  }
+
+  /* Hide drag-resize handles on narrow screens */
+  .ui-resizable-e,
+  .ui-resizable-s,
+  .ui-resizable-se {
+    display: none !important;
+  }
+}
+
+/* Small phones */
+@media (max-width: 520px) {
+  body {
+    padding: 4px;
+  }
+
+  #psiTabs .ui-tabs-nav li {
+    padding: 4px 6px;
+  }
+
+  #psiTabs .tab-label {
+    font-size: 7px;
+  }
+
+  #psiTabs .tab-icon-svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  #psiTabs .tab-icon.material-icons {
+    font-size: 16px;
+  }
+
+  .info-layout {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .info-controls {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .input-group label {
+    font-size: 12px;
+  }
+
+  #toggleSlits, #toggleWhichPath, #toggleView,
+  #mathToggleSlits, #mathToggleWhichPath, #mathToggleView {
+    min-width: 60px;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  #rationale {
+    padding: 12px;
+  }
+
+  #rationale h1 {
+    font-size: 1.3em;
+  }
+}
+
+/* ========== Basics Tab ========== */
+#basics-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.basics-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.basics-section-label {
+  font-size: 0.8em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.basics-btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.basics-btn-row button {
+  flex: 1;
+}
+
+.basics-advanced-toggle {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.basics-advanced-toggle .theme-toggle-btn {
+  flex: 1;
+}
+
+/* Hide advanced tabs by default */
+#psiTabs .ui-tabs-nav li.advanced-tab {
+  display: none;
+}
+
+/* Show advanced tabs when toggled */
+#psiTabs.show-advanced .ui-tabs-nav li.advanced-tab {
+  display: flex;
+}
+
+/* Basics tab icon color */
+#psiTabs .tab-basics .tab-icon { color: #06b6d4; }
+#psiTabs .tab-basics a { color: #06b6d4; }
+
+/* ========== Theme Toggle Button ========== */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: fit-content;
+}
+
+.theme-toggle-btn:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-light);
+}
+
+/* ========== View-Locked Mode ========== */
+/* Hide the view toggle when ?mode= is set */
+.view-locked #toggleView {
+  display: none !important;
+}
+
+/* Info panel: Many-Worlds-only rows (hidden by default, shown by JS) */
+.manyworlds-only {
+  display: none;
+}
+
+/* Info panel: advanced-only rows (hidden until advanced toggle is on) */
+.advanced-info {
+  display: none;
+}
+body.show-advanced .advanced-info {
+  display: table-row;
+}
+body.show-advanced fieldset.advanced-info {
+  display: block;
+}
+
+/* Prominent highlight for Particles / Branches rows in the info panel */
+.info-highlight td {
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 700;
+  color: #000000;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.info-highlight td.label {
+  color: #000000;
+}
+
+.info-highlight td.value,
+.info-highlight td.value span {
+  color: #000000;
+}
+
+/* Advanced toggle button (matching theme toggle) */
+#advancedToggle.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+/* Mirror slider styling — match originals */
+.mirror-slider {
+  opacity: 0.92;
+}
+
+/* Vertical palette range slider next to canvas palette */
+#paletteRangeSlider {
+  width: 10px;
+}
+
+#paletteRangeSlider .ui-slider-range {
+  background: rgba(255,255,255,0.25);
+}
+
+#paletteRangeSlider .ui-slider-handle {
+  width: 16px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 2px;
+  background: #fff;
+  border: 1px solid #999;
+  cursor: ns-resize;
+}

@@ -1,0 +1,235 @@
+/* src/ControlTabs.css */
+.control-tabs-container {
+  display: flex;
+  height: 100%;
+  background-color: #181818; /* Match the main app background */
+  width: 100%;
+}
+
+.control-tab-buttons {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0; /* Add more vertical padding */
+  border-right: 1px solid #333;
+  background-color: #202020; /* A slightly lighter grey for the tab bar */
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.control-tab-button {
+  background-color: rgb(50, 49, 49);
+  border: none;
+  /* --- THE FIX: Add a left border for the active indicator --- */
+  border-left: 3px solid transparent;
+  color: #999; /* Softer grey for inactive text */
+  padding: 20px 0; /* Adjust padding for vertical text */
+  text-align: center;
+  cursor: pointer;
+  font-size: 16px; /* Use a fixed pixel size for consistency */
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  /* --- THE FIX: Make text vertical --- */
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+
+.control-tab-button:hover {
+  background-color: #282828;
+  color: #eee; /* Brighten text on hover */
+}
+
+.control-tab-button.active {
+  color: #ffffff; /* White text for active tab */
+  background-color: #181818; /* Match the panel background to blend in */
+  border-left-color: #5a99e1; /* Sharp blue accent for the active tab */
+}
+
+.control-panel-wrapper {
+  flex-grow: 1;
+  position: relative; /* For overlay positioning */
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.control-tab-title {
+  padding: 6px 10px;
+  font-size: 14px; /* Use a fixed size so it doesn't scale with the panel font */
+  font-weight: 600;
+  color: #ffffff; /* White font */
+  background-color: #005A9C; /* Marine blue background */
+  text-align: center; /* Center the title horizontally */
+  border-bottom: 1px solid #3a3a3a;
+  flex-shrink: 0; /* Prevent title from shrinking */
+  margin-bottom: 10px; /* Add space below the title */
+}
+
+.control-controls-area {
+  flex-grow: 2; /* Takes up 2/3 of the space */
+  position: relative;
+  overflow-y: auto; /* Allow scrolling */
+  /* Use block layout so tab contents naturally stretch to the
+     full available width of the panel instead of staying at a
+     fixed intrinsic width and leaving an empty strip on the
+     right when the panel is widened. */
+  display: block;
+}
+
+.info-panel-area {
+  flex-grow: 1; /* Takes up 1/3 of the space */
+  background-color: #202020;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.info-panel-tabs {
+  display: flex;
+  border-bottom: 1px solid #333;
+}
+
+.info-panel-tab-button {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #999;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 1em; /* Use relative unit to inherit from parent */
+  font-weight: 500;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.info-panel-tab-button:hover {
+  color: #fff;
+}
+
+.info-panel-tab-button.active {
+  color: #fff;
+  border-bottom-color: #5a99e1;
+}
+
+.info-panel-content {
+  padding: 12px;
+  font-family: monospace;
+  font-size: 1em; /* Use relative unit to inherit from parent */
+  flex-grow: 1;
+}
+
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Tighter spacing to fit more lines in the Physics info panel */
+}
+
+.info-header {
+  color: #aaa;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.info-item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0 6px;
+  line-height: 1.1; /* Slightly tighter line height to reduce vertical space */
+}
+
+.info-label {
+  flex-shrink: 0;
+  color: #ccc;
+}
+
+.info-value, .info-value-placeholder {
+  flex: 1;
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #fff;
+}
+
+.app-container {
+  display: grid;
+  grid-template-columns: auto 1fr; /* Auto for tabs, 1fr for content */
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* --- NEW: Container for the entire left panel --- */
+.left-panel-container {
+  position: relative; /* This is crucial for positioning the resize handle */
+  height: 100vh;
+}
+
+/* Adjustments for the overlay */
+.control-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10; /* Ensure it's above Leva content */
+  flex-direction: column;
+  gap: 15px;
+}
+
+.preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.preview-timer {
+  font-size: 3em;
+  color: white;
+  font-weight: bold;
+}
+
+.stop-preview-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1em;
+}
+.stop-preview-btn:hover {
+  background-color: #c82333;
+}
+
+.validation-error-box {
+  /* Ensure it's positioned correctly relative to the new layout */
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+}
+
+.resize-handle {
+  position: absolute;
+  right: -3px; /* Position it just outside the container's right edge */
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 100;
+}
+
+.resize-handle:hover {
+  background-color: rgba(90, 153, 225, 0.5);
+}
+
+.resize-handle.active {
+  background-color: rgba(90, 153, 225, 0.8);
+}

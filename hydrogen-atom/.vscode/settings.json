@@ -1,0 +1,16 @@
+{
+  "liveServer.settings.root": "/",
+  "liveServer.settings.CustomBrowser": "chromium",
+  "liveServer.settings.donotShowInfoMsg": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "vscode.html-language-features",
+  "editor.tabSize": 2,
+  "editor.wordWrap": "on",
+  "files.associations": {
+    "*.html": "html"
+  },
+  "emmet.includeLanguages": {
+    "html": "html"
+  },
+  "editor.linkedEditing": true
+}

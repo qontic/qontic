@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset="UTF-8">
+   <title>GPU FFT Constant Signal Test</title>
+   <style>
+      body { font-family: monospace; margin: 20px; background: #f5f5f5; }
+      pre { background: #fff; padding: 15px; border-left: 4px solid #0066cc; overflow: auto; max-height: 600px; }
+      button { padding: 10px 20px; margin: 5px; background: #0066cc; color: white; border: none; cursor: pointer; }
+      button:hover { background: #0052a3; }
+      .success { color: green; font-weight: bold; }
+      .error { color: red; font-weight: bold; }
+   </style>
+</head>
+<body>
+   <h1>GPU FFT: Constant Signal Roundtrip Test</h1>
+   <p>Tests that FFT of constant signal = size² at DC, and IFFT recovers constant signal</p>
+   <button onclick="runTest()">Run Full Test</button>
+   <button onclick="clearLog()">Clear</button>
+   <pre id="log"></pre>
+
+   <script src="js/gpu-fft.js"></script>
+   <script>
+      const logEl = document.getElementById('log');
+      let lines = [];
+      
+      function log(msg) {
+         lines.push(msg);
+         logEl.textContent = lines.join('\n');
+         console.log(msg);
+      }
+      
+      function clearLog() {
+         lines = [];
+         logEl.textContent = '';
+      }
+      
+      async function runTest() {
+         clearLog();
+         log('='.repeat(60));
+         log('GPU FFT Constant Signal Roundtrip Test');
+         log('='.repeat(60));
+         
+         // Initialize GPU FFT
+         log('Initializing GPU FFT...');
+         if (!GPUFFT.init()) {
+            log('ERROR: Failed to initialize GPU FFT');
+            return;
+         }
+         
+         const gl = GPUFFT.getContext();
+         if (!gl) {
+            log('ERROR: GPU not initialized');
+            return;
+         }
+         log('✓ GPU initialized');
+         
+         const size = 8;  // 8x8 texture
+         
+         // Create constant input: all pixels = 1.0
+         const inputData = new Float32Array(size * size * 4);
+         for (let i = 0; i < size * size; i++) {
+            inputData[i*4 + 0] = 1.0;  // Re
+            inputData[i*4 + 1] = 0.0;  // Im
+            inputData[i*4 + 2] = 0.0;
+            inputData[i*4 + 3] = 1.0;
+         }
+         
+         log(`\nInput: ${size}×${size} texture, all pixels = 1.0 + 0i`);
+         
+         // Create texture
+         const tex = GPUFFT.createFloatTexture(size, size);
+         gl.bindTexture(gl.TEXTURE_2D, tex);
+         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, inputData);
+         
+         // ===== Forward FFT =====
+         log(`\n[1/3] Forward FFT...`);
+         const tStart = performance.now();
+         GPUFFT.fft2D(tex, size, size, false, false);  // forward, WITH bit-reversal
+         const tForward = performance.now() - tStart;
+         log(`  Time: ${tForward.toFixed(2)}ms`);
+         
+         // Read FFT result
+         const fbo1 = GPUFFT.createFramebuffer(tex);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo1);
+         const fftData = new Float32Array(size * size * 4);
+         gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, fftData);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+         
+         // Check  DC component
+         const dcRe = fftData[0];
+         const dcIm = fftData[1];
+         const expectedDC = size * size;
+         log(`  DC component: ${dcRe.toExponential(3)} (expected: ${expectedDC})`);
+         const dcError = Math.abs(dcRe - expectedDC);
+         log(`    Error: ${dcError.toExponential(3)} ${dcError < 0.1 ? '✓' : '✗'}`);
+         
+         // Check other components (should be ~0)
+         let nonDCSum = 0;
+         for (let i = 1; i < size * size; i++) {
+            const re = fftData[i*4];
+            const im = fftData[i*4 + 1];
+            nonDCSum += Math.sqrt(re*re + im*im);
+         }
+         const nonDCAvg = nonDCSum / (size*size - 1);
+         log(`  Non-DC average magnitude: ${nonDCAvg.toExponential(3)} (expected: ~0)`);
+         
+         // ===== Inverse FFT =====
+         log(`\n[2/3] Inverse FFT...`);
+         const tInvStart = performance.now();
+         // Try IFFT with ONLY horizontal BR, skip vertical BR
+         // This tests if we need both BR stages
+         GPUFFT.fft2D(tex, size, size, true, true);  // inverse, SKIP bit-reversal (test: maybe we don't need it for IFFT?)
+         const tInv = performance.now() - tInvStart;
+         log(`  Time: ${tInv.toFixed(2)}ms`);
+         
+         // Read IFFT result
+         const fbo2 = GPUFFT.createFramebuffer(tex);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo2);
+         const ifftData = new Float32Array(size * size * 4);
+         gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, ifftData);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+         
+         // ===== Check Roundtrip Error =====
+         log(`\n[3/3] Roundtrip Error Analysis...`);
+         let maxErr = 0, minErr = Infinity, sumErr = 0, errHistogram = {};
+         
+         for (let i = 0; i < size * size; i++) {
+            const re = ifftData[i*4];
+            const im = ifftData[i*4 + 1];
+            const expected = 1.0;
+            const err = Math.abs(re - expected);
+            maxErr = Math.max(maxErr, err);
+            minErr = Math.min(minErr, err);
+            sumErr += err;
+            
+            // Histogram for error ranges
+            const bucket = Math.floor(Math.log10(Math.max(err, 1e-10)) * 10) / 10;
+            errHistogram[bucket.toFixed(1)] = (errHistogram[bucket.toFixed(1)] || 0) + 1;
+         }
+         
+         const avgErr = sumErr / (size * size);
+         const rms = Math.sqrt(sumErr / (size * size) * sumErr / (size * size));
+         
+         log(`  Max error: ${maxErr.toExponential(3)}`);
+         log(`  Min error: ${minErr.toExponential(3)}`);
+         log(`  Avg error: ${avgErr.toExponential(3)}`);
+         log(`  RMS error: ${rms.toExponential(3)}`);
+         
+         log(`\nSample values:`);
+         for (let i = 0; i < Math.min(5, size*size); i++) {
+            const idx = i * 4;
+            log(`    [${i}]: ${ifftData[idx].toExponential(3)} (err: ${Math.abs(ifftData[idx] - 1.0).toExponential(3)})`);
+         }
+         
+         // Success criteria
+         log(`\n${'='.repeat(60)}`);
+         const dcOK = dcError < 0.1;
+         const rtOK = maxErr < 1e-4;
+         
+         if (dcOK) {
+            log('✓ FFT DC component correct');
+         } else {
+            log(`✗ FFT DC component ERROR: ${dcError.toExponential(3)}`);
+         }
+         
+         if (rtOK) {
+            log('✓ IFFT roundtrip SUCCESSFUL (error < 1e-4)');
+         } else {
+            log(`✗ IFFT roundtrip FAILED (max error: ${maxErr.toExponential(3)})`);
+         }
+         
+         log('='.repeat(60));
+         
+         // Cleanup
+         gl.deleteFramebuffer(fbo1);
+         gl.deleteFramebuffer(fbo2);
+         gl.deleteTexture(tex);
+      }
+   </script>
+</body>
+</html>

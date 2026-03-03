@@ -1,0 +1,38 @@
+/* This file styles the Toolbar component */
+
+.toolbar-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  transform: none;
+  z-index: 100; /* Ensures it floats above the canvas */
+
+  display: flex;
+  gap: 8px;
+  background-color: rgba(40, 40, 40, 0.8);
+  padding: 8px;
+  border-radius: 8px;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.toolbar-container button {
+  background-color: rgba(80, 80, 80, 0.8);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.toolbar-container button:hover {
+  background-color: rgba(100, 100, 100, 0.9);
+}
+
+.toolbar-container button.active {
+  background-color: #61dafbaa; /* React blue, or any highlight color */
+  color: #1a1a1a;
+}

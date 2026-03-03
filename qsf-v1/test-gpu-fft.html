@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset="UTF-8">
+   <title>GPU FFT Test</title>
+   <style>
+      body {
+         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+         margin: 20px;
+         background: #f5f5f5;
+      }
+      .container {
+         background: white;
+         padding: 20px;
+         border-radius: 8px;
+         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+         max-width: 1200px;
+         margin: 0 auto;
+      }
+      h1 {
+         color: #333;
+         margin-top: 0;
+      }
+      canvas {
+         border: 1px solid #ccc;
+         margin: 10px;
+         image-rendering: pixelated;
+      }
+      .canvas-row {
+         display: flex;
+         align-items: center;
+         margin: 15px 0;
+      }
+      .canvas-label {
+         font-weight: bold;
+         min-width: 150px;
+         color: #555;
+      }
+      button {
+         background: #0066cc;
+         color: white;
+         border: none;
+         padding: 10px 20px;
+         margin: 5px;
+         border-radius: 4px;
+         cursor: pointer;
+         font-size: 14px;
+      }
+      button:hover {
+         background: #0052a3;
+      }
+      button:active {
+         background: #003d7a;
+      }
+      .info {
+         background: #e7f3ff;
+         padding: 15px;
+         border-radius: 4px;
+         margin: 15px 0;
+         font-size: 14px;
+         line-height: 1.6;
+      }
+      .controls {
+         margin: 20px 0;
+      }
+      #status {
+         margin: 10px 0;
+         padding: 10px;
+         background: #f9f9f9;
+         border-radius: 4px;
+         font-family: 'Courier New', monospace;
+         font-size: 12px;
+      }
+   </style>
+</head>
+<body>
+   <div class="container">
+      <h1>GPU FFT Test</h1>
+      
+      <div class="info">
+         <strong>Test:</strong> Creating a Gaussian pulse in real space, performing FFT to k-space, 
+         then inverse FFT back to real space. The output should match the input (roundtrip test).
+      </div>
+      
+      <div class="controls">
+         <button onclick="runTest()">Run FFT Test</button>
+         <button onclick="runGaussianTest()">Test Gaussian Pulse</button>
+         <button onclick="runSineTest()">Test Sine Wave</button>
+      </div>
+      
+      <div id="status">Ready. Click a button to run test.</div>
+      
+      <div class="canvas-row">
+         <span class="canvas-label">Input (Real):</span>
+         <canvas id="canvasInputRe" width="256" height="256"></canvas>
+         <span class="canvas-label">Input (Imag):</span>
+         <canvas id="canvasInputIm" width="256" height="256"></canvas>
+      </div>
+      
+      <div class="canvas-row">
+         <span class="canvas-label">After FFT (Real):</span>
+         <canvas id="canvasFftRe" width="256" height="256"></canvas>
+         <span class="canvas-label">After FFT (Imag):</span>
+         <canvas id="canvasFftIm" width="256" height="256"></canvas>
+      </div>
+      
+      <div class="canvas-row">
+         <span class="canvas-label">After IFFT (Real):</span>
+         <canvas id="canvasIfftRe" width="256" height="256"></canvas>
+         <span class="canvas-label">After IFFT (Imag):</span>
+         <canvas id="canvasIfftIm" width="256" height="256"></canvas>
+      </div>
+   </div>
+   
+   <script src="js/gpu-fft.js"></script>
+   <script>
+      const N = 256;
+      let gl;
+      let complexTex;
+      let complexFBO;
+      
+      function log(msg) {
+         const status = document.getElementById('status');
+         status.textContent = msg;
+         console.log(msg);
+      }
+      
+      function init() {
+         if (!GPUFFT.init()) {
+            log('ERROR: Failed to initialize GPU FFT');
+            return false;
+         }
+         
+         gl = GPUFFT.getContext();
+         
+         // Create texture and FBO for complex data
+         complexTex = GPUFFT.createFloatTexture(N, N);
+         complexFBO = GPUFFT.createFramebuffer(complexTex);
+         
+         log('Initialized. WebGL context ready, N=' + N);
+         return true;
+      }
+      
+      function createGaussianPulse(centerX, centerY, sigma) {
+         const data = new Float32Array(N * N * 4);  // RGBA
+         
+         for (let y = 0; y < N; y++) {
+            for (let x = 0; x < N; x++) {
+               const dx = x - centerX;
+               const dy = y - centerY;
+               const r2 = dx*dx + dy*dy;
+               const val = Math.exp(-r2 / (2*sigma*sigma));
+               
+               const idx = (y*N + x) * 4;
+               data[idx + 0] = val;  // Real
+               data[idx + 1] = 0;    // Imag
+               data[idx + 2] = 0;
+               data[idx + 3] = 1;
+            }
+         }
+         
+         return data;
+      }
+      
+      function createSineWave(kx, ky) {
+         const data = new Float32Array(N * N * 4);
+         
+         for (let y = 0; y < N; y++) {
+            for (let x = 0; x < N; x++) {
+               const phase = 2 * Math.PI * (kx * x / N + ky * y / N);
+               const real = Math.cos(phase);
+               const imag = Math.sin(phase);
+               
+               const idx = (y*N + x) * 4;
+               data[idx + 0] = real;
+               data[idx + 1] = imag;
+               data[idx + 2] = 0;
+               data[idx + 3] = 1;
+            }
+         }
+         
+         return data;
+      }
+      
+      function uploadTexture(data) {
+         gl.bindTexture(gl.TEXTURE_2D, complexTex);
+         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, N, N, 0, gl.RGBA, gl.FLOAT, data);
+      }
+      
+      function downloadTexture(tex) {
+         const fbo = GPUFFT.createFramebuffer(tex);
+         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+         
+         const data = new Float32Array(N * N * 4);
+         gl.readPixels(0, 0, N, N, gl.RGBA, gl.FLOAT, data);
+         
+         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+         gl.deleteFramebuffer(fbo);
+         
+         return data;
+      }
+      
+      function renderToCanvas(data, canvasIdRe, canvasIdIm) {
+         const canvasRe = document.getElementById(canvasIdRe);
+         const canvasIm = document.getElementById(canvasIdIm);
+         const ctxRe = canvasRe.getContext('2d');
+         const ctxIm = canvasIm.getContext('2d');
+         
+         const imgDataRe = ctxRe.createImageData(N, N);
+         const imgDataIm = ctxIm.createImageData(N, N);
+         
+         // Find max for scaling
+         let maxRe = 0, maxIm = 0;
+         for (let i = 0; i < N*N; i++) {
+            maxRe = Math.max(maxRe, Math.abs(data[i*4 + 0]));
+            maxIm = Math.max(maxIm, Math.abs(data[i*4 + 1]));
+         }
+         
+         log(`Max values - Re: ${maxRe.toExponential(3)}, Im: ${maxIm.toExponential(3)}`);
+         
+         for (let i = 0; i < N*N; i++) {
+            const re = data[i*4 + 0];
+            const im = data[i*4 + 1];
+            
+            // Map values to 0-255
+            const valRe = maxRe > 0 ? Math.floor((re / maxRe) * 127 + 128) : 128;
+            const valIm = maxIm > 0 ? Math.floor((im / maxIm) * 127 + 128) : 128;
+            
+            imgDataRe.data[i*4 + 0] = valRe;
+            imgDataRe.data[i*4 + 1] = valRe;
+            imgDataRe.data[i*4 + 2] = valRe;
+            imgDataRe.data[i*4 + 3] = 255;
+            
+            imgDataIm.data[i*4 + 0] = valIm;
+            imgDataIm.data[i*4 + 1] = valIm;
+            imgDataIm.data[i*4 + 2] = valIm;
+            imgDataIm.data[i*4 + 3] = 255;
+         }
+         
+         ctxRe.putImageData(imgDataRe, 0, 0);
+         ctxIm.putImageData(imgDataIm, 0, 0);
+      }
+      
+      function runGaussianTest() {
+         log('Creating Gaussian pulse...');
+         const inputData = createGaussianPulse(N/2, N/2, 20);
+         uploadTexture(inputData);
+         renderToCanvas(inputData, 'canvasInputRe', 'canvasInputIm');
+         
+         log('Performing forward FFT...');
+         const start1 = performance.now();
+         GPUFFT.fft2D(complexTex, N, N, false);
+         const time1 = performance.now() - start1;
+         const fftData = downloadTexture(complexTex);
+         renderToCanvas(fftData, 'canvasFftRe', 'canvasFftIm');
+         
+         log('Performing inverse FFT...');
+         const start2 = performance.now();
+         GPUFFT.fft2D(complexTex, N, N, true);
+         const time2 = performance.now() - start2;
+         const ifftData = downloadTexture(complexTex);
+         renderToCanvas(ifftData, 'canvasIfftRe', 'canvasIfftIm');
+         
+         // Compute error
+         let maxError = 0;
+         let rmseError = 0;
+         let count = 0;
+         for (let i = 0; i < N*N; i++) {
+            const errorRe = Math.abs(inputData[i*4 + 0] - ifftData[i*4 + 0]);
+            const errorIm = Math.abs(inputData[i*4 + 1] - ifftData[i*4 + 1]);
+            maxError = Math.max(maxError, errorRe, errorIm);
+            rmseError += errorRe * errorRe + errorIm * errorIm;
+            count += 2;
+         }
+         rmseError = Math.sqrt(rmseError / count);
+         
+         log(`FFT: ${time1.toFixed(1)}ms, IFFT: ${time2.toFixed(1)}ms. Max error: ${maxError.toExponential(3)}, RMS: ${rmseError.toExponential(3)}`);
+      }
+      
+      function runSineTest() {
+         log('Creating sine wave (kx=4, ky=0)...');
+         const inputData = createSineWave(4, 0);
+         uploadTexture(inputData);
+         renderToCanvas(inputData, 'canvasInputRe', 'canvasInputIm');
+         
+         log('Performing forward FFT...');
+         GPUFFT.fft2D(complexTex, N, N, false);
+         const fftData = downloadTexture(complexTex);
+         renderToCanvas(fftData, 'canvasFftRe', 'canvasFftIm');
+         
+         log('Performing inverse FFT...');
+         GPUFFT.fft2D(complexTex, N, N, true);
+         const ifftData = downloadTexture(complexTex);
+         renderToCanvas(ifftData, 'canvasIfftRe', 'canvasIfftIm');
+         
+         log('DONE. Check for sharp peaks in FFT at k=(4,0) and k=(-4,0)');
+      }
+      
+      function runTest() {
+         runGaussianTest();
+      }
+      
+      // Initialize on load
+      window.onload = function() {
+         if (!init()) {
+            alert('Failed to initialize GPU FFT. Check console for errors.');
+         }
+      };
+   </script>
+</body>
+</html>

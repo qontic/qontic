@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Double-Slit Quantum Simulation</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Three.js r160 via importmap -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three":                        "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/":                "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- HUD (rendered over the canvas) -->
+  <div id="hud">
+    <div class="hud-item" id="hud-time">t = 0.0 fs</div>
+    <div class="hud-item" id="hud-norm">‖ψ‖² = 1.000000</div>
+    <div class="hud-item" id="hud-backend">⚡ GPU</div>
+  </div>
+
+  <div id="app">
+    <canvas id="canvas"></canvas>
+
+    <!-- ── Side panel ──────────────────────────── -->
+    <aside id="panel">
+      <div class="panel-title">⚛ 2-Slit Quantum Sim</div>
+
+      <!-- Slit geometry -->
+      <div class="panel-section">
+        <div class="section-label">Slit Geometry</div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Slit 1 centre (y)</span>
+            <span class="slider-val" id="slit1-val">0.30</span>
+          </div>
+          <input type="range" id="slit1" min="0.10" max="0.45" step="0.01" value="0.42" />
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Slit 2 centre (y)</span>
+            <span class="slider-val" id="slit2-val">0.70</span>
+          </div>
+          <input type="range" id="slit2" min="0.55" max="0.90" step="0.01" value="0.58" />
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Slit half-width</span>
+            <span class="slider-val" id="slitWidth-val">0.04</span>
+          </div>
+          <input type="range" id="slitWidth" min="0.01" max="0.12" step="0.005" value="0.039" />
+        </div>
+      </div>
+
+      <!-- Wave packet -->
+      <div class="panel-section">
+        <div class="section-label">Wave Packet</div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Momentum vₓ</span>
+            <span class="slider-val" id="momentum-val">1.00 × 10⁵ m/s</span>
+          </div>
+          <input type="range" id="momentum" min="0.3" max="3.0" step="0.1" value="1.0" />
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Width σₓ</span>
+            <span class="slider-val" id="sigmax-val">6.0 nm</span>
+          </div>
+          <input type="range" id="sigmax" min="2" max="18" step="0.5" value="6" />
+        </div>
+      </div>
+
+      <!-- Simulation -->
+      <div class="panel-section">
+        <div class="section-label">Simulation</div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Bohmian particles</span>
+            <span class="slider-val" id="np-val">300</span>
+          </div>
+          <input type="range" id="np" min="50" max="500" step="50" value="300" />
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Steps / frame</span>
+            <span class="slider-val" id="speed-val">16×</span>
+          </div>
+          <input type="range" id="speed" min="1" max="64" step="1" value="16" />
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Resolution</span>
+          </div>
+          <select id="resolution">
+            <option value="64">64 × 64 &mdash; fastest</option>
+            <option value="128" selected>128 × 128 &mdash; fast</option>
+            <option value="256">256 × 256 &mdash; high quality</option>
+          </select>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Absorb layer</span>
+            <span class="slider-val" id="absthick-val">10%</span>
+          </div>
+          <input type="range" id="absthick" min="0.02" max="0.20" step="0.01" value="0.05" />
+        </div>
+      </div>
+
+      <!-- Appearance -->
+      <div class="panel-section">
+        <div class="section-label">Appearance</div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Wave palette</span>
+          </div>
+          <select id="palette-select">
+            <option value="plasma"   selected>Plasma  — purple → yellow</option>
+            <option value="viridis"         >Viridis — purple → green → yellow</option>
+            <option value="inferno"         >Inferno — black → red → white</option>
+            <option value="magma"           >Magma   — black → purple → peach</option>
+            <option value="ocean"           >Ocean   — navy → cyan → white</option>
+            <option value="fire"            >Fire    — black → red → white</option>
+            <option value="neon"            >Neon    — black → green → white</option>
+            <option value="coolwarm"        >Cool–Warm — teal → white → red</option>
+          </select>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-name">Particle color</span>
+          </div>
+          <select id="particle-select">
+            <option value="0"  selected>🟡 Yellow</option>
+            <option value="1"          >🩵 Cyan</option>
+            <option value="2"          >⚪ White</option>
+            <option value="3"          >🟢 Green</option>
+            <option value="4"          >🟣 Magenta</option>
+            <option value="5"          >🟠 Orange</option>
+            <option value="6"          >🔴 Red</option>
+            <option value="7"          >🔵 Blue</option>
+            <option value="8"          >🌸 Pink</option>
+            <option value="9"          >💜 Lavender</option>
+            <option value="10"         >✨ Gold</option>
+            <option value="11"         >🍀 Lime</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="panel-section">
+        <div class="section-label">Controls</div>
+        <div class="btn-row">
+          <button id="btn-reset">↺ Reset Simulation</button>
+          <button id="btn-pause" class="btn-running">⏸ Stop</button>
+          <button id="btn-bohmian">Hide Particles</button>
+          <button id="btn-view">🗺 2D Density</button>
+          <button id="btn-wire">Wireframe</button>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="panel-section">
+        <div class="section-label">Physics</div>
+        <p style="color:var(--muted);line-height:1.6;font-size:11px;">
+          Solves the 2D time-dependent Schrödinger equation
+          via the <em>split-operator method</em> on a background Web Worker thread.<br><br>
+          Trajectories follow the <em>Bohmian pilot-wave</em> velocity field
+          <strong>v = ℏ/m · Im(∇ψ / ψ)</strong>.<br><br>
+          Drag to orbit · scroll to zoom.
+        </p>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ─── Python Reference Comparison Panel ─────────────────────── -->
+  <div id="compare-panel" style="
+      max-width:1200px; margin:18px auto 0; padding:0 16px 24px;
+      font-family:var(--font); color:var(--fg); display:none">
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:10px;">
+      <h3 style="margin:0; font-size:14px; color:var(--acc);">🔬 Python Reference (split-operator, 256×256, same parameters)</h3>
+      <span style="font-size:11px; color:var(--muted);">
+        17 snapshots · t = 0 → 575 fs · ‖ψ‖² conserved to &lt;0.01%
+      </span>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">
+          All time-steps grid (Python / NumPy)
+        </div>
+        <img src="/figures/summary_grid.png" alt="Python simulation grid"
+             style="width:100%;border-radius:6px;border:1px solid #1e2d3d;cursor:pointer;"
+             onclick="window.open(this.src,'_blank')" title="Click to open full size" />
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">
+            Initial → Final comparison (Python)
+          </div>
+          <img src="/figures/comparison_early_late.png" alt="Early vs late"
+               style="width:100%;border-radius:6px;border:1px solid #1e2d3d;cursor:pointer;"
+               onclick="window.open(this.src,'_blank')" />
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">
+            Interference y-profile after barrier (Python)
+          </div>
+          <img src="/figures/interference_profile.png" alt="Interference profile"
+               style="width:100%;border-radius:6px;border:1px solid #1e2d3d;cursor:pointer;"
+               onclick="window.open(this.src,'_blank')" />
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">
+            ‖ψ‖² vs time — norm conservation (Python)
+          </div>
+          <img src="/figures/norm_vs_time.png" alt="Norm vs time"
+               style="width:100%;border-radius:6px;border:1px solid #1e2d3d;cursor:pointer;"
+               onclick="window.open(this.src,'_blank')" />
+        </div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-top:8px;">
+      💡 Use <strong>🗺 2D Flat View</strong> in the simulation above to get the same top-down heatmap
+      view as shown here.  The plasma colormap and gamma=0.35 are identical to the Python figures.
+    </p>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
