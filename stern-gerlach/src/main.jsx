@@ -1,5 +1,2 @@
-import React from "react";
-import { createRoot } from "react-dom/client";
-import App from "../sg_3d.jsx";
-
-createRoot(document.getElementById("root")).render(<App />);
+// sg_3d.jsx is self-mounting — it calls createRoot itself.
+import "../sg_3d.jsx";

@@ -10,6 +10,14 @@
       "presentation": { "reveal": "always", "panel": "shared", "clear": true }
     },
     {
+      "label": "Deploy: stern-gerlach → bonner-gpu",
+      "type": "shell",
+      "command": "cd stern-gerlach && npm run build && cd .. && rsync -az --info=progress2 stern-gerlach/dist/ bonner-gpu.rice.edu:/var/www/html/bonner-gpu/bm/stern-gerlach/ && echo '✓ stern-gerlach deployed'",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
       "label": "Deploy: landing page → bonner-gpu",
       "type": "shell",
       "command": "rsync -az --info=progress2 /tmp/bm_index.html bonner-gpu.rice.edu:/var/www/html/bonner-gpu/bm/index.html && rsync -az /tmp/bm_style.css bonner-gpu.rice.edu:/var/www/html/bonner-gpu/bm/css/main-style.css && echo '✓ landing page deployed'",
@@ -31,6 +39,16 @@
       "dependsOn": [
         "Git: commit & push",
         "Deploy: hydrogen-atom → bonner-gpu"
+      ],
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "Deploy all: commit, push & deploy stern-gerlach",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Git: commit & push",
+        "Deploy: stern-gerlach → bonner-gpu"
       ],
       "group": { "kind": "build", "isDefault": true },
       "presentation": { "reveal": "always", "panel": "shared", "clear": true }
