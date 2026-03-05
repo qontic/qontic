@@ -254,9 +254,9 @@ function Histogram({ up, down, pP, pM }) {
   const sigStr = n > 0 ? ' ±' + (sigma < 0.5 ? sigma.toFixed(1) : Math.round(sigma)) + '%' : '';
   return (
     <div style={{ fontFamily:"'Courier New',monospace", fontSize:11, color:'#b8d4ff', minWidth:158 }}>
-      <div style={{ fontSize:10, color:'#4a6a9a', textTransform:'uppercase',
+      <div style={{ fontSize:10, color:'#7a9ece', textTransform:'uppercase',
         letterSpacing:'0.12em', marginBottom:8 }}>
-        Detector <span style={{color:'#506080'}}>n={n}</span>
+        Detector <span style={{color:'#8aaedd'}}>n={n}</span>
       </div>
       {[{label:'▲ +n̂', color:'#44ee66', grad:'#22aa44,#44ee66', pct:upPct,   expPct:expUpPct,   count:up},
         {label:'▼ −n̂', color:'#ff5533', grad:'#aa2211,#ff5533', pct:downPct, expPct:expDownPct, count:down}
@@ -286,8 +286,8 @@ function Histogram({ up, down, pP, pM }) {
           </div>
         </div>
       ))}
-      <div style={{ borderTop:'1px solid rgba(60,100,200,0.20)', paddingTop:4,
-        fontSize:9, color:'#334e7a' }}>│ Born rule  ±σ bracket</div>
+      <div style={{ borderTop:'1px solid rgba(60,100,200,0.30)', paddingTop:4,
+        fontSize:9, color:'#7a9ece' }}>│ Born rule  ±σ bracket</div>
     </div>
   );
 }
@@ -386,11 +386,11 @@ const SimPanel = React.memo(({
       </SL>
 
       {interp === 'manyworlds' && (
-        <div style={{background:'rgba(100,60,220,0.12)', border:'1px solid rgba(140,100,255,0.4)',
+        <div style={{background:'rgba(100,60,220,0.15)', border:'1px solid rgba(160,120,255,0.5)',
           borderRadius:7, padding:'8px 10px'}}>
-          <div style={{fontSize:12, color:'#d0b8ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4}}>Parallel worlds</div>
-          <div style={{fontSize:22, fontWeight:700, color:'#e0c8ff'}}>{fmtWorlds(worlds)}</div>
-          <div style={{fontSize:11, color:'#c0a8ee', marginTop:3}}>{Math.round(worlds / Math.max(nPart, 1))} cycles × {nPart} particles</div>
+          <div style={{fontSize:12, color:'#c8b8ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4}}>Parallel worlds</div>
+          <div style={{fontSize:22, fontWeight:700, color:'#ffffff'}}>{fmtWorlds(worlds)}</div>
+          <div style={{fontSize:11, color:'#d0c4f8', marginTop:3}}>{Math.round(worlds / Math.max(nPart, 1))} cycles × {nPart} particles</div>
         </div>
       )}
 
