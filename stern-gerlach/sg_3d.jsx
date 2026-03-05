@@ -663,7 +663,14 @@ export default function App() {
     S.current.interp = v; setInterpUI(v);
     // Reset worlds when switching interpretation
     S.current.worlds = 1; setWorldsUI(1);
-    if (T.current) T.current.clearHits();
+    if (T.current) {
+      T.current.clearHits();
+      // Immediately hide Bohmian particle dots/glows/lines so they don't
+      // flash for one frame when switching away from pilot-wave mode.
+      T.current.fDots.forEach(m  => { m.visible = false; });
+      T.current.fGlows.forEach(m => { m.visible = false; });
+      T.current.fLines.forEach(fl => { fl.line.visible = false; });
+    }
   };
   const setRunning = v => { S.current.running = v; setRunUI(v); };
   const setSpeed   = v => { S.current.speed = v; setSpeedUI(v); if (speedRef.current) speedRef.current.value = v; };
@@ -1094,13 +1101,14 @@ export default function App() {
         fl.geo.attributes.position.needsUpdate = true;
         fl.geo.attributes.color.needsUpdate    = true;
         fl.geo.setDrawRange(0, pts.length);
-        fl.line.visible = true;
+        // Only show trajectory lines when in pilot-wave mode
+        fl.line.visible = (s.interp === 'pilot');
         hitRegistered[i] = false;
       });
       for (let i = s.nPart; i < MAX_P; i++) {
         fLines[i].line.visible = false;
-        fDots[i].material.opacity = 0;
-        fGlows[i].material.opacity = 0;
+        fDots[i].visible  = false;
+        fGlows[i].visible = false;
       }
     }
     rebuild();
@@ -1367,13 +1375,15 @@ export default function App() {
 
         // Hide visual elements when not in pilot view or out of range
         if (i >= s.nPart || !showP) {
-          Tr.fDots[i].material.opacity = 0;
-          Tr.fGlows[i].material.opacity = 0;
+          Tr.fDots[i].visible  = false;
+          Tr.fGlows[i].visible = false;
           if (i < s.nPart) Tr.fLines[i].line.visible = false;
         } else {
           // Pilot wave: show dots, glows, trajectory lines
           Tr.fLines[i].line.visible = true;
           const pt = pts[tIdx];
+          Tr.fDots[i].visible  = true;
+          Tr.fGlows[i].visible = true;
           Tr.fDots[i].position.copy(pt);
           Tr.fGlows[i].position.copy(pt);
           Tr.fDots[i].material.opacity  = 0.95;
