@@ -201,15 +201,17 @@ const VIEW_DESC = {
   manyworlds:'Everett: all outcomes occur in branching parallel worlds. Wave only.',
 };
 
-function fmtWorlds(n) {
-  if (n < 10000) return n.toLocaleString();
-  const exp = Math.floor(Math.log10(n));
-  const mantissa = (n / Math.pow(10, exp)).toFixed(2);
-  // Convert exponent digits to Unicode superscripts
-  const supDigits = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴',
-    '5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
-  const expStr = String(exp).split('').map(d => supDigits[d] || d).join('');
-  return mantissa + ' × 10' + expStr;
+function fmtWorlds(exp) {
+  // worlds = 2^exp — display as 10^y where y = exp * log10(2)
+  if (exp === 0) return '1';
+  const log10 = exp * Math.log10(2);          // exact base-10 exponent
+  const floorExp = Math.floor(log10);
+  const mantissa = Math.pow(10, log10 - floorExp); // 1.0 – 9.999…
+  const supMap = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴',
+    '5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
+  const expStr = String(floorExp).split('').map(d => supMap[d] || d).join('');
+  if (floorExp < 2) return Math.round(Math.pow(10, log10)).toLocaleString();
+  return mantissa.toFixed(2) + ' × 10' + expStr;
 }
 
 
@@ -388,7 +390,7 @@ const SimPanel = React.memo(({
           borderRadius:7, padding:'8px 10px'}}>
           <div style={{fontSize:12, color:'#d0b8ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4}}>Parallel worlds</div>
           <div style={{fontSize:22, fontWeight:700, color:'#e0c8ff'}}>{fmtWorlds(worlds)}</div>
-          <div style={{fontSize:11, color:'#c0a8ee', marginTop:3}}>{Math.round(Math.log2(Math.max(worlds,1))/Math.max(nPart,1))} cycles × {nPart} particles</div>
+          <div style={{fontSize:11, color:'#c0a8ee', marginTop:3}}>{Math.round(worlds / Math.max(nPart, 1))} cycles × {nPart} particles</div>
         </div>
       )}
 
@@ -624,7 +626,7 @@ export default function App() {
     drag: null,
     hits: [],
     hitStats: { up: 0, down: 0 },
-    worlds: 1,
+    worlds: 0,
   });
 
   const [theta,       setThetaUI]   = useState(90);
@@ -635,7 +637,7 @@ export default function App() {
   const [interp,      setInterpUI]  = useState('pilot');
   const [running,     setRunUI]     = useState(true);
   const [probs,       setProbs]     = useState({ pP: 0.5, pM: 0.5 });
-  const [worlds,      setWorldsUI]  = useState(1);
+  const [worlds,      setWorldsUI]  = useState(0);
   const [wSig,        setWSigUI]    = useState(0.55);
   const [wMode,       setWModeUI]   = useState('old');
   const [fieldModel,  setFieldModelUI] = useState('delta');
@@ -662,7 +664,7 @@ export default function App() {
   const setInterp       = v => {
     S.current.interp = v; setInterpUI(v);
     // Reset worlds when switching interpretation
-    S.current.worlds = 1; setWorldsUI(1);
+    S.current.worlds = 0; setWorldsUI(0);
     if (T.current) {
       T.current.clearHits();
       // Immediately hide Bohmian particle dots/glows/lines so they don't
@@ -677,7 +679,7 @@ export default function App() {
   const resetHits  = () => {
     S.current.hits = [];
     S.current.hitStats = { up: 0, down: 0 };
-    S.current.worlds = 1; setWorldsUI(1);
+    S.current.worlds = 0; setWorldsUI(0);
     setHitCountsUI({ up: 0, down: 0 });
     if (T.current) T.current.clearHits();
   };
@@ -1403,9 +1405,9 @@ export default function App() {
           Tr.addHit(endPt.x, endPt.y, armC);
           if (oc > 0) s.hitStats.up++; else s.hitStats.down++;
           Tr.setHitCounts(s.hitStats);
-          // Many-worlds: each particle hit doubles the branch count
+          // Many-worlds: each particle measurement adds 1 to the branching exponent (worlds = 2^exp)
           if (s.interp === 'manyworlds') {
-            s.worlds = s.worlds * 2;
+            s.worlds += 1;
             setWorldsUI(s.worlds);
           }
         }
