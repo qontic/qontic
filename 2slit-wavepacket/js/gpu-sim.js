@@ -432,7 +432,7 @@ export class GPUSim {
     this.simTime = 0;
     // Auto-stop time: packet travels full domain past the barrier
     // ~1200 fs at default velox=1e5 m/s
-    this.stopTime = (Lx * (1 - xfrac) * 1.5) / velox;
+    this.stopTime = (Lx * (1 - xfrac) * 0.75) / velox;
 
     // CPU-side buffers
     this._pixBuf = new Float32Array(Nx * Ny * 4); // RGBA readback

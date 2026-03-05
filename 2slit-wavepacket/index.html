@@ -107,9 +107,8 @@
             <span class="slider-name">Resolution</span>
           </div>
           <select id="resolution">
-            <option value="64">64 × 64 &mdash; fastest</option>
-            <option value="128" selected>128 × 128 &mdash; fast</option>
-            <option value="256">256 × 256 &mdash; high quality</option>
+            <option value="128" selected>256 × 128 &mdash; standard</option>
+            <option value="256">512 × 256 &mdash; high quality</option>
           </select>
         </div>
 
@@ -141,7 +140,11 @@
           <div class="slider-header">
             <span class="slider-name">Particle color</span>
           </div>
-          <div id="particle-picker" class="particle-picker"></div>
+          <div id="particle-btn" class="palette-btn">
+            <div id="particle-dot-cur" class="particle-dot-cur"></div>
+            <span id="particle-label-cur" class="palette-label-cur">Yellow</span>
+            <span class="palette-arrow">▾</span>
+          </div>
         </div>
       </div>
 
@@ -225,6 +228,8 @@
 
   <!-- Palette popup (fixed-positioned, populated by JS) -->
   <div id="palette-popup" class="palette-popup"></div>
+  <!-- Particle colour popup -->
+  <div id="particle-popup" class="particle-popup"></div>
 
   <script type="module" src="js/main.js"></script>
 </body>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stern-Gerlach 3D — Qontic Lab</title>
+    <meta name="description" content="Interactive 3D simulation of the Stern-Gerlach experiment. A spin-½ particle travels through an inhomogeneous magnetic field and is deflected according to its spin projection along the field axis. Explore three quantum interpretations: Copenhagen (wavefunction collapse on measurement), Pilot-Wave / de Broglie-Bohm (particles follow deterministic trajectories guided by the wavefunction), and Many-Worlds / Everett (all outcomes occur simultaneously in branching parallel worlds). Live Born-rule histogram with ±σ statistical errors." />
+    <meta property="og:title" content="Stern-Gerlach 3D — Quantum Interpretations" />
+    <meta property="og:description" content="Visualise the Stern-Gerlach experiment through three interpretations: Copenhagen collapse, Bohmian pilot-wave trajectories, and Everett many-worlds branching. Adjustable spin angle θ and magnet orientation φ, live Born-rule histogram." />
+    <meta property="og:url" content="http://qonticlab.rice.edu/bm/" />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛</text></svg>" />
+    <link rel="stylesheet" href="./theme.css">
+    <style>
+      html, body, #root {
+        width: 100%; height: 100%;
+        overflow: hidden;
+        display: flex; flex-direction: column;
+        margin: 0; padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/sg_3d.jsx"></script>
+  </body>
+</html>

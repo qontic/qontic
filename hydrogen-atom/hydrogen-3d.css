@@ -453,3 +453,74 @@ body.light .btn.active  { background: rgba(0,102,204,.12); border-color: #0066cc
 body.light .btn.danger  { background: #fce8e8; color: #cc2200; border-color: #e8b0a8; }
 body.light .slabel      { color: #0066cc; border-color: #c8d0e8; }
 body.light input[type=range] { accent-color: #0066cc; }
+
+/* ════════════════════════════════════════════════════════════════
+   Spin (Pauli–Bohm) Section
+   ════════════════════════════════════════════════════════════════ */
+#spinSection {
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+
+.spin-slabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.spin-slabel span {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+#spinSubSection {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#spinModeRow {
+  gap: 8px;
+  align-items: center;
+  font-size: 10px;
+}
+#spinModeRow label {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+/* Keep the φ/θ sliders hidden until product mode is active —
+   visibility is controlled from JS via _syncSpinUI() */
+
+/* Spin legend rows */
+.spin-lrow {
+  position: relative;         /* needed for the hidden colour-input sibling */
+}
+.spin-lrow .lrow-btn {
+  width: 100%;
+}
+
+/* Light-mode override for spin label */
+body.light .spin-slabel span { color: #0066cc; }
+
+/* Spin diagnostics in expert panel */
+.spin-diag {
+  grid-column: 1 / -1;          /* full-width row (like expert-stat) */
+}
+.spin-diag .stat-label {
+  font-size: 9px;
+  color: var(--accent);
+  opacity: 0.85;
+}
+.spin-diag .stat-val {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.spin-diag .stat-val.ok   { color: #00e5a0; }
+.spin-diag .stat-val.warn { color: #ff9040; }

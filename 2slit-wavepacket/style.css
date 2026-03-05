@@ -286,23 +286,40 @@ select option {
   white-space: nowrap;
 }
 
-/* ── Particle colour dots ──────────────────── */
-.particle-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  padding: 4px 0;
+.particle-dot-cur {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.25);
 }
-.particle-dot {
-  width: 26px;
-  height: 26px;
+
+/* Particle colour popup — floating dot grid */
+.particle-popup {
+  position: fixed;
+  z-index: 9999;
+  background: rgba(8, 10, 28, 0.97);
+  border: 1px solid rgba(0,204,255,0.30);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 12px 44px rgba(0,0,0,0.80);
+  display: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 200px;
+  backdrop-filter: blur(16px);
+}
+.particle-popup .p-dot {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid rgba(255,255,255,0.12);
-  transition: border-color .15s, transform .15s, box-shadow .15s;
+  transition: transform .15s, border-color .15s, box-shadow .15s;
 }
-.particle-dot:hover   { transform: scale(1.2); border-color: rgba(255,255,255,0.4); }
-.particle-dot.active  { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.55); }
+.particle-popup .p-dot:hover  { transform: scale(1.2); border-color: rgba(255,255,255,0.45); }
+.particle-popup .p-dot.active { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.55); }
+
 /* ── HUD overlay ─────────────────────────────── */
 #hud {
   position: absolute;

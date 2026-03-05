@@ -19,13 +19,13 @@ const WAVE_PALETTES = {
     [0.762, 0.876, 0.137], [0.993, 0.906, 0.144],
   ],
   inferno: [
-    [0.001, 0.000, 0.014], [0.120, 0.027, 0.270], [0.298, 0.024, 0.373],
+    [0.10, 0.02, 0.18], [0.180, 0.040, 0.320], [0.298, 0.024, 0.373],
     [0.460, 0.066, 0.310], [0.621, 0.120, 0.200], [0.768, 0.224, 0.089],
     [0.886, 0.368, 0.027], [0.968, 0.532, 0.020], [0.993, 0.715, 0.139],
     [0.987, 0.891, 0.429], [0.988, 1.000, 0.643],
   ],
   magma: [
-    [0.001, 0.000, 0.014], [0.086, 0.006, 0.189], [0.246, 0.022, 0.349],
+    [0.09, 0.03, 0.22], [0.130, 0.020, 0.280], [0.246, 0.022, 0.349],
     [0.417, 0.046, 0.377], [0.576, 0.125, 0.338], [0.718, 0.215, 0.321],
     [0.844, 0.336, 0.329], [0.942, 0.484, 0.381], [0.980, 0.643, 0.497],
     [0.994, 0.804, 0.652], [0.998, 0.965, 0.845],
@@ -37,13 +37,13 @@ const WAVE_PALETTES = {
     [0.800, 0.962, 0.982], [1.000, 1.000, 1.000],
   ],
   fire: [
-    [0.000, 0.000, 0.000], [0.280, 0.000, 0.000], [0.570, 0.010, 0.000],
+    [0.14, 0.02, 0.04], [0.320, 0.008, 0.008], [0.570, 0.010, 0.000],
     [0.820, 0.080, 0.000], [0.970, 0.220, 0.000], [1.000, 0.400, 0.000],
     [1.000, 0.590, 0.000], [1.000, 0.770, 0.050], [1.000, 0.910, 0.300],
     [1.000, 0.970, 0.650], [1.000, 1.000, 1.000],
   ],
   neon: [
-    [0.000, 0.000, 0.000], [0.000, 0.100, 0.100], [0.000, 0.300, 0.200],
+    [0.02, 0.08, 0.10], [0.010, 0.140, 0.140], [0.010, 0.300, 0.200],
     [0.020, 0.550, 0.180], [0.060, 0.750, 0.150], [0.200, 0.900, 0.300],
     [0.400, 0.980, 0.500], [0.400, 1.000, 0.800], [0.600, 1.000, 0.950],
     [0.800, 1.000, 1.000], [1.000, 1.000, 1.000],
@@ -76,6 +76,11 @@ function buildLUT(stops) {
 function setWavePalette(key) {
   currentPaletteKey = key;
   buildLUT(WAVE_PALETTES[key]);
+  // Redraw immediately even when paused
+  if (lastRho) {
+    if (viewMode === 'spacetime') updateSpacetime(lastRho, NX, NY, lastTime);
+    else updateSurface(lastRho, NX, NY);
+  }
 }
 buildLUT(WAVE_PALETTES.plasma);
 
@@ -119,7 +124,7 @@ const scene = new THREE.Scene();
 // scene.fog set by setCameraView()
 
 const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.001, 100);
-camera.position.set(0, 0, 3.0);   // start top-down for 2D mode
+camera.position.set(0, 0, 5.5);   // start top-down for 2D mode
 camera.lookAt(0, 0, 0);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -137,7 +142,7 @@ function setCameraView(mode) {
     controls.target.set(0, 0, 0);
     controls.enableRotate = false;
     scene.fog = null;
-    if (bohmPoints) bohmPoints.material.size = 0.028;
+    if (bohmPoints) bohmPoints.material.size = 0.036;
   } else {
     // 3D perspective – pull back to show the 4×2 plane
     controls.enableRotate = true;
@@ -147,7 +152,7 @@ function setCameraView(mode) {
     controls.maxPolarAngle = Math.PI;
     controls.minPolarAngle = 0;
     scene.fog = new THREE.FogExp2(0x090918, 0.25);
-    if (bohmPoints) bohmPoints.material.size = 0.018;
+    if (bohmPoints) bohmPoints.material.size = 0.024;
   }
   camera.lookAt(controls.target);
   controls.update();
@@ -170,13 +175,15 @@ scene.add(dirLight);
 // ─────────────────────────────────────────────────────────────
 let NX = 256, NY = 256;
 const SURFACE_SCALE = 2.0;   // Y scene extent  (maps to Ly = 100 nm)
-const SS_X          = 4.0;   // X scene extent  (maps to Lx = 200 nm, 2× wider)
+const SS_X          = 4.0;   // X scene extent  (maps to Lx = 200 nm)
 const HEIGHT_PEAK   = 0.9;
 
 let viewMode    = 'density';  // default: flat 2D density (plasma)
 let showBohmian = true;
 let paused      = false;
 let stepsPerFrame = 16;
+let lastRho  = null;   // most recent rho snapshot for palette-change redraws
+let lastTime = 0;
 
 // Physics backend
 let gpuSim    = null;   // GPUSim instance
@@ -537,7 +544,8 @@ function stepBohmian(psi, Np, Nx, Ny, Lx, Ly, Dt, absThick) {
   const hbOverM = HB / ME;
   // Particles entering the absorbing boundary region are marked dead (NaN).
   // They vanish from the display rather than reflecting back.
-  const dead = (absThick || 0.05) + 0.015;
+  // dead zone matches the actual absorber — no extra margin
+  const dead = (absThick || 0.05);
   for (let p = 0; p < Np; p++) {
     const px = bohmPosX[p], py = bohmPosY[p];
     if (isNaN(px)) continue; // already dead
@@ -603,6 +611,8 @@ function spawnWorker() {
 //  Frame dispatch (GPU and CPU paths merge here)
 // ─────────────────────────────────────────────────────────────
 function dispatchFrame(rho, trajX, trajY, time, norm) {
+  lastRho  = rho;
+  lastTime = time;
   if (viewMode === 'spacetime') updateSpacetime(rho, NX, NY, time);
   else                          updateSurface(rho, NX, NY);
 
@@ -643,8 +653,10 @@ function gpuTick(n) {
 function getConfig() {
   const g = id => parseFloat(document.getElementById(id).value);
   const res = parseInt(document.getElementById('resolution').value);
+  // Nx is 2× Ny to match the 2:1 physical domain (Lx=200nm, Ly=100nm),
+  // keeping the same ~0.78 nm/cell resolution as a 128×128 grid on 100nm.
   return {
-    Nx: res, Ny: res,
+    Nx: 2 * res, Ny: res,
     slitCenterY1  : g('slit1'),
     slitCenterY2  : g('slit2'),
     slitHalfWidth : g('slitWidth'),
@@ -758,21 +770,50 @@ function buildPaletteUI() {
 }
 
 function buildParticleUI() {
-  const container = document.getElementById('particle-picker');
+  const btn      = document.getElementById('particle-btn');
+  const dotCur   = document.getElementById('particle-dot-cur');
+  const lblCur   = document.getElementById('particle-label-cur');
+  const popup    = document.getElementById('particle-popup');
+  let open = false;
+
+  function rgbCss(rgb) {
+    const [r, g, b] = rgb;
+    return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
+  }
+  function setActive(i) {
+    trailColorIdx = i;
+    dotCur.style.background = rgbCss(PARTICLE_PRESETS[i].rgb);
+    lblCur.textContent = PARTICLE_PRESETS[i].label.replace(/^\S+\s*/, '');
+    popup.querySelectorAll('.p-dot').forEach((d, j) =>
+      d.classList.toggle('active', j === i));
+  }
+
+  // Build popup grid
   PARTICLE_PRESETS.forEach((p, i) => {
-    const dot = document.createElement('div');
-    dot.className = 'particle-dot' + (i === trailColorIdx ? ' active' : '');
-    const [r, g, b] = p.rgb;
-    dot.style.background = `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
-    // Tooltip: strip leading emoji
-    dot.title = p.label.replace(/^\S+\s*/, '');
-    dot.addEventListener('click', () => {
-      trailColorIdx = i;
-      container.querySelectorAll('.particle-dot').forEach((d, j) =>
-        d.classList.toggle('active', j === i));
-    });
-    container.appendChild(dot);
+    const d = document.createElement('div');
+    d.className = 'p-dot' + (i === trailColorIdx ? ' active' : '');
+    d.style.background = rgbCss(p.rgb);
+    d.title = p.label.replace(/^\S+\s*/, '');
+    d.addEventListener('click', e => { e.stopPropagation(); setActive(i); closePopup(); });
+    popup.appendChild(d);
   });
+
+  // Init current display
+  setActive(trailColorIdx);
+
+  function openPopup() {
+    const r = btn.getBoundingClientRect();
+    const popH = 90;
+    const below = r.bottom + 6;
+    popup.style.left  = r.left + 'px';
+    popup.style.top   = (below + popH > window.innerHeight ? r.top - popH - 6 : below) + 'px';
+    popup.style.display = 'flex';
+    open = true;
+  }
+  function closePopup() { popup.style.display = 'none'; open = false; }
+
+  btn.addEventListener('click', e => { e.stopPropagation(); open ? closePopup() : openPopup(); });
+  document.addEventListener('click', () => { if (open) closePopup(); });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -795,7 +836,17 @@ function initUI() {
     el.addEventListener('input', update);
   });
 
-  document.getElementById('resolution').addEventListener('change', resetSim);
+  document.getElementById('resolution').addEventListener('change', e => {
+    // Automatically tone down steps/frame for the heavier grid
+    const speedEl = document.getElementById('speed');
+    const speedLbl = document.getElementById('speed-val');
+    if (parseInt(e.target.value) >= 256) {
+      speedEl.value = '8'; speedLbl.textContent = '8×';
+    } else {
+      speedEl.value = '16'; speedLbl.textContent = '16×';
+    }
+    resetSim();
+  });
   document.getElementById('btn-reset').addEventListener('click', resetSim);
 
   document.getElementById('btn-pause').addEventListener('click', () => {
