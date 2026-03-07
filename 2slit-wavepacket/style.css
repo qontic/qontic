@@ -27,6 +27,7 @@ html, body {
   display: flex;
   width: 100vw;
   height: 100vh;
+  position: relative;
 }
 
 #canvas {
@@ -37,6 +38,13 @@ html, body {
   cursor: grab;
 }
 #canvas:active { cursor: grabbing; }
+
+#axes-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 5;
+}
 
 /* ── Side panel ─────────────────────────────── */
 #panel {
@@ -63,11 +71,11 @@ html, body {
 }
 
 .panel-section {
-  padding: 14px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .section-label {
@@ -76,14 +84,61 @@ html, body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: -4px;
+  margin-bottom: -2px;
 }
-
+/* ── Dual-handle slit slider ────────────────────── */
+.dual-range {
+  position: relative;
+  height: 18px;
+  margin: 2px 0;
+}
+.dual-track {
+  position: absolute;
+  top: 7px;
+  left: 0; right: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0,204,255,0.15);
+  pointer-events: none;
+}
+.dual-range input[type="range"] {
+  position: absolute;
+  width: 100%;
+  height: 4px;
+  top: 7px;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+}
+.dual-range input[type="range"]::-webkit-slider-thumb {
+  pointer-events: all;
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform .1s;
+}
+.dual-range input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+.dual-range input[type="range"]::-moz-range-thumb {
+  pointer-events: all;
+  width: 14px; height: 14px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+#slit1::-webkit-slider-thumb { background: #00ccff; box-shadow: 0 0 8px #00ccff; }
+#slit1::-moz-range-thumb      { background: #00ccff; box-shadow: 0 0 8px #00ccff; }
+#slit2::-webkit-slider-thumb { background: #ff6b6b; box-shadow: 0 0 8px #ff6b6b; }
+#slit2::-moz-range-thumb      { background: #ff6b6b; box-shadow: 0 0 8px #ff6b6b; }
 /* ── Sliders ─────────────────────────────────── */
 .slider-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .slider-header {
@@ -101,7 +156,7 @@ html, body {
   font-size: 11px;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
-  min-width: 100px;
+  min-width: 62px;
   text-align: right;
 }
 
@@ -135,15 +190,87 @@ input[type="range"]::-moz-range-thumb {
   cursor: pointer;
 }
 
+/* ── Panel tabs ─────────────────────────────── */
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+button.tab-btn {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .15s;
+  box-shadow: none;
+}
+button.tab-btn:hover {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  color: var(--text);
+}
+button.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+/* Show/hide basic vs expert panel sections */
+.panel-section[data-tab="expert"] { display: none; }
+#panel.show-expert .panel-section[data-tab="expert"] { display: flex; }
+#panel.show-expert .panel-section[data-tab="basic"] { display: none; }
+
+/* ── Panel tabs ─────────────────────────────── */
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+button.tab-btn {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .15s;
+  box-shadow: none;
+}
+button.tab-btn:hover {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  color: var(--text);
+}
+button.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+/* Show/hide basic vs expert panel sections */
+.panel-section[data-tab="expert"] { display: none; }
+#panel.show-expert .panel-section[data-tab="expert"] { display: flex; }
+#panel.show-expert .panel-section[data-tab="basic"] { display: none; }
+
 /* ── Buttons ─────────────────────────────────── */
 .btn-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 button {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: rgba(0, 204, 255, 0.07);
@@ -161,6 +288,28 @@ button:hover {
   border-color: var(--accent);
   color: #fff;
 }
+/* Inline pair of buttons */
+.btn-row-inline {
+  display: flex;
+  gap: 6px;
+}
+.btn-row-inline button {
+  flex: 1;
+  font-size: 11px;
+  padding: 6px 6px;
+}
+.btn-toggle.btn-off {
+  opacity: 0.38;
+  border-color: var(--border);
+  background: transparent;
+  color: var(--muted);
+}
+.btn-toggle.btn-off:hover {
+  opacity: 0.7;
+  background: rgba(0, 204, 255, 0.08);
+  box-shadow: none;
+}
+
 button#btn-reset {
   border-color: rgba(168, 85, 247, 0.5);
   background: rgba(168, 85, 247, 0.10);
@@ -173,10 +322,10 @@ button#btn-reset:hover {
 
 /* Start / Stop button */
 button#btn-pause {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  padding: 10px 12px;
-  letter-spacing: 0.06em;
+  padding: 6px 10px;
+  letter-spacing: 0.04em;
 }
 button#btn-pause.btn-running {
   border-color: rgba(0, 255, 128, 0.55);
@@ -216,6 +365,22 @@ select option {
   color: var(--text);
 }
 /* ── Palette picker ─────────────────────────── */
+.appearance-row {
+  display: flex;
+  gap: 8px;
+}
+.appearance-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.appearance-label {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .palette-btn {
   display: flex;
   align-items: center;
@@ -227,6 +392,11 @@ select option {
   background: rgba(0,204,255,0.05);
   transition: border-color .2s, box-shadow .2s;
   user-select: none;
+}
+/* Compact variant — strip fills all available space, no text label */
+.palette-btn-compact {
+  padding: 5px 7px;
+  gap: 5px;
 }
 .palette-btn:hover {
   border-color: var(--accent);

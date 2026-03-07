@@ -80,34 +80,19 @@ void main() {
   oC = vec4(isSecond ? (a - wb) : (a + wb), 0.0, 1.0);
 }`;
 
-// ─── Divide by Nx*Ny, apply cosine absorbing mask ────────────
-//  Mask: cos^8(π/2 * normalised_distance_from_edge) within the
-//  absorption layer of thickness `uAbsThick` (fraction 0..1).
+// ─── Scale by 1/(Nx*Ny) — absorption handled by CAP in vprop ─
+// The sin² mask is NOT applied here; it caused the initial packet's
+// absorber-zone tails to be over-killed when combined with the CAP.
+// The capdecay texture is used separately by the FD leapfrog path.
 const FS_ABS = `#version 300 es
 precision highp float;
 uniform sampler2D uTex;
-uniform float uScale;    // 1 / (Nx * Ny)
-uniform float uAbsThick; // absorption layer thickness (e.g. 0.10)
+uniform float uScale; // 1 / (Nx * Ny)
 out vec4 oC;
-const float PI2 = 1.5707963267948966;
 void main() {
   ivec2 c  = ivec2(gl_FragCoord.xy);
   vec2  psi = texelFetch(uTex, c, 0).rg * uScale;
-
-  vec2  uv = (vec2(c) + 0.5) / vec2(textureSize(uTex, 0));
-  float x  = uv.x, y = uv.y, t = uAbsThick;
-
-  float mx = 1.0, my = 1.0;
-  if      (x < t)     mx = sin(x            / t * PI2);
-  else if (x > 1.-t)  mx = sin((1.0 - x)    / t * PI2);
-  if      (y < t)     my = sin(y            / t * PI2);
-  else if (y > 1.-t)  my = sin((1.0 - y)    / t * PI2);
-
-  // cos^8 envelope: (sin value)^8 gives very gradual onset + sharp cutoff
-  float m = mx * my;
-  m = m * m * m * m;  // ^4  (input is already sin, so this is sin^4 = cos^4 up to pi/2)
-
-  oC = vec4(psi * m, 0.0, 1.0);
+  oC = vec4(psi, 0.0, 1.0);
 }`;
 
 // ─── Compute |ψ|² → R channel ────────────────────────────────
@@ -133,6 +118,62 @@ void main() {
   oC = vec4(psi * m, 0.0, 1.0);
 }`;
 
+// ─── FD leapfrog pass 1: update R using current I ────────────
+// Schrödinger: ∂R/∂t = +(ℏ/2m)∇²I
+// R_half = R + uAX*(I_xp+I_xm-2I) + uAY*(I_yp+I_ym-2I)
+const FS_FD_R = `#version 300 es
+precision highp float;
+uniform sampler2D uPsi;   // (R, I)
+uniform sampler2D uMask;  // 1=free, 0=barrier/boundary
+uniform float uAX;
+uniform float uAY;
+out vec4 oC;
+void main() {
+  ivec2 c  = ivec2(gl_FragCoord.xy);
+  ivec2 sz = textureSize(uPsi, 0);
+  if (c.x<=0||c.x>=sz.x-1||c.y<=0||c.y>=sz.y-1||texelFetch(uMask,c,0).r<0.5){
+    oC=vec4(0.0,0.0,0.0,1.0); return;
+  }
+  vec2  C   = texelFetch(uPsi, c, 0).rg;
+  float I   = C.g;
+  float Ixp = texelFetch(uPsi, c+ivec2(1,0), 0).g;
+  float Ixm = texelFetch(uPsi, c-ivec2(1,0), 0).g;
+  float Iyp = texelFetch(uPsi, c+ivec2(0,1), 0).g;
+  float Iym = texelFetch(uPsi, c-ivec2(0,1), 0).g;
+  float laplI = uAX*(Ixp+Ixm-2.0*I) + uAY*(Iyp+Iym-2.0*I);
+  oC = vec4(C.r - laplI, I, 0.0, 1.0);  // R_half = R - (hbar/2m)*lapl(I)
+}`;
+
+// ─── FD leapfrog pass 2: update I using R_half, apply CAP ────────────
+// Schrödinger:  ∂I/∂t = -(ℏ/2m)∇²R
+//   I_new = I - uAX*(R_xp+R_xm-2R) - uAY*(R_yp+R_ym-2R)
+// Then multiply both (R_half, I_new) by per-pixel CAP decay
+const FS_FD_I = `#version 300 es
+precision highp float;
+uniform sampler2D uHalf;     // (R_half, I_orig) from pass 1
+uniform sampler2D uCapDecay; // per-pixel exp(-Γ·dt)
+uniform sampler2D uMask;     // 1=free, 0=barrier/boundary
+uniform float uAX;
+uniform float uAY;
+out vec4 oC;
+void main() {
+  ivec2 c  = ivec2(gl_FragCoord.xy);
+  ivec2 sz = textureSize(uHalf, 0);
+  if (c.x<=0||c.x>=sz.x-1||c.y<=0||c.y>=sz.y-1||texelFetch(uMask,c,0).r<0.5){
+    oC=vec4(0.0,0.0,0.0,1.0); return;
+  }
+  vec2  H   = texelFetch(uHalf, c, 0).rg;
+  float R   = H.r;
+  float Rxp = texelFetch(uHalf, c+ivec2(1,0), 0).r;
+  float Rxm = texelFetch(uHalf, c-ivec2(1,0), 0).r;
+  float Ryp = texelFetch(uHalf, c+ivec2(0,1), 0).r;
+  float Rym = texelFetch(uHalf, c-ivec2(0,1), 0).r;
+  float laplR = uAX*(Rxp+Rxm-2.0*R) + uAY*(Ryp+Rym-2.0*R);
+  float I_new = H.g + laplR;  // I_new = I + (hbar/2m)*lapl(R_half)
+  float decay = texelFetch(uCapDecay, c, 0).r;
+  oC = vec4(R*decay, I_new*decay, 0.0, 1.0);
+}`;
+
 // ─── Export class ─────────────────────────────────────────────
 export class GPUSim {
   constructor() {
@@ -155,6 +196,8 @@ export class GPUSim {
       abs  : this._prog(VS, FS_ABS),
       rho  : this._prog(VS, FS_RHO),
       mask : this._prog(VS, FS_MASK),
+      fdR  : this._prog(VS, FS_FD_R),
+      fdI  : this._prog(VS, FS_FD_I),
     };
 
     this.simTime = 0;
@@ -306,9 +349,11 @@ export class GPUSim {
       velox = 1e5, veloy = 0,
       sigmax = 6e-9, sigmay = 10e-9, xfrac = 0.20,
       slitX = 0.5, slitCenterY1 = 0.422, slitCenterY2 = 0.578,
-      slitHalfWidth = 0.039, barrierThick = 6,
-      absThick = 0.05,
+      slitHalfWidth = 0.039,
+      absThick = 0.15, absStrength = 35,
+      fdMode = false,
     } = cfg;
+    this._fdMode = fdMode;
 
     // Clean up old GL resources
     if (this._tex) {
@@ -320,7 +365,8 @@ export class GPUSim {
     this.Lx = Lx; this.Ly = Ly; this.Dt = Dt;
     this._Nx_log2 = Math.round(Math.log2(Nx));
     this._Ny_log2 = Math.round(Math.log2(Ny));
-    this._absThick = absThick;
+    this._absThick    = absThick;
+    this._absStrength = absStrength;
     this._canvas.width = Nx; this._canvas.height = Ny;
 
     const Dx = Lx / (Nx - 1), Dy = Ly / (Ny - 1);
@@ -363,10 +409,9 @@ export class GPUSim {
 
     // ── V propagator (half-step: exp(-i V Δt / 2ℏ)) ────────
     const vpropData = new Float32Array(Nx * Ny * 4);
-    // Hard-wall barrier using real potential V=10eV (matches MATLAB)
-    // Reflections are fine — simulation auto-stops before they return, like MATLAB's Nt limit
     const QE_local = 1.602176634e-19;
     const barrierV = 10 * QE_local;
+    const barrierThick = 6;
     const biX0 = Math.floor(slitX * (Nx - 1));
     const j1c  = Math.floor(slitCenterY1 * (Ny - 1));
     const j2c  = Math.floor(slitCenterY2 * (Ny - 1));
@@ -384,6 +429,30 @@ export class GPUSim {
         vpropData[i4    ] =  Math.cos(ang);
         vpropData[i4 + 1] = -Math.sin(ang);
         vpropData[i4 + 3] = 1.0;
+      }
+    }
+
+    // ── Bake Complex Absorbing Potential (CAP) into vprop ──
+    // Applied once per V-half-step → fires BEFORE and AFTER the kinetic
+    // propagation, so waves can never sneak through in one T-step.
+    // Decay per half-step = exp(-absStrength/2 * d²), where d = 1-sin(depth·π/2).
+    // Total per full step = exp(-absStrength * d²) — same magnitude as before,
+    // but correctly bracketing the FFT.
+    const HPI = Math.PI / 2;
+    for (let ix = 0; ix < Nx; ix++) {
+      for (let iy = 0; iy < Ny; iy++) {
+        const fx = ix / Math.max(Nx - 1, 1);
+        const fy = iy / Math.max(Ny - 1, 1);
+        let sx = 1.0, sy = 1.0;
+        if (fx < absThick)       sx = Math.sin(fx              / absThick * HPI);
+        else if (fx > 1-absThick) sx = Math.sin((1 - fx)        / absThick * HPI);
+        if (fy < absThick)       sy = Math.sin(fy              / absThick * HPI);
+        else if (fy > 1-absThick) sy = Math.sin((1 - fy)        / absThick * HPI);
+        const dx = 1 - sx, dy = 1 - sy;
+        const decay = Math.exp(-absStrength * 0.5 * (dx * dx + dy * dy));
+        const i4 = (iy * Nx + ix) * 4;
+        vpropData[i4    ] *= decay;
+        vpropData[i4 + 1] *= decay;
       }
     }
 
@@ -408,15 +477,62 @@ export class GPUSim {
       }
     }
 
+    // ── FD: barrier mask (0 at barrier pixels, 1 elsewhere) ─
+    // Also used in FD leapfrog to enforce ψ=0 inside walls.
+    const fdmaskData = new Float32Array(Nx * Ny * 4);
+    for (let ix = 0; ix < Nx; ix++) {
+      for (let iy = 0; iy < Ny; iy++) {
+        const i4 = (iy * Nx + ix) * 4;
+        let isWall = 0;
+        if (ix >= biX0 && ix < biX0 + barrierThick) {
+          const inSlit1 = Math.abs(iy - j1c) <= hw;
+          const inSlit2 = Math.abs(iy - j2c) <= hw;
+          if (!inSlit1 && !inSlit2) isWall = 1;
+        }
+        fdmaskData[i4    ] = isWall ? 0.0 : 1.0;
+        fdmaskData[i4 + 3] = 1.0;
+      }
+    }
+
+    // ── FD: per-pixel CAP decay = exp(-absStrength * d²) ──────
+    // d = 1 - sin(depth*π/2), ranges 0 (interior edge) → 1 (boundary)
+    // Applied once per full step, provides smooth attenuation before
+    // the hard Dirichlet zero at the boundary pixel.
+    const capdecayData = new Float32Array(Nx * Ny * 4);
+    const HPI2 = Math.PI / 2;
+    for (let ix = 0; ix < Nx; ix++) {
+      for (let iy = 0; iy < Ny; iy++) {
+        const fx = ix / Math.max(Nx - 1, 1);
+        const fy = iy / Math.max(Ny - 1, 1);
+        let sx = 1.0, sy = 1.0;
+        if (fx < absThick)        sx = Math.sin(fx        / absThick * HPI2);
+        else if (fx > 1-absThick) sx = Math.sin((1-fx)    / absThick * HPI2);
+        if (fy < absThick)        sy = Math.sin(fy        / absThick * HPI2);
+        else if (fy > 1-absThick) sy = Math.sin((1-fy)    / absThick * HPI2);
+        const ddx = 1 - sx, ddy = 1 - sy;
+        const decay = Math.exp(-absStrength * (ddx * ddx + ddy * ddy));
+        const i4 = (iy * Nx + ix) * 4;
+        capdecayData[i4    ] = decay;
+        capdecayData[i4 + 3] = 1.0;
+      }
+    }
+
+    // ── FD coefficients (stored for use in _stepFDOnce) ───────
+    // Dx and Dy already declared above
+    this._AX = HB * Dt / (2 * ME * Dx * Dx);  // ℏ·dt / (2m·dx²)
+    this._AY = HB * Dt / (2 * ME * Dy * Dy);
+
     // ── Allocate textures ───────────────────────────────────
     const T = {
-      psi0  : this._mkTex(Nx, Ny, psi0Data),
-      psi1  : this._mkTex(Nx, Ny, null),
-      ping  : this._mkTex(Nx, Ny, null),
-      pong  : this._mkTex(Nx, Ny, null),
-      vprop : this._mkTex(Nx, Ny, vpropData),
-      tprop : this._mkTex(Nx, Ny, tpropData),
-      bmask : this._mkTex(Nx, Ny, bmaskData),
+      psi0     : this._mkTex(Nx, Ny, psi0Data),
+      psi1     : this._mkTex(Nx, Ny, null),
+      ping     : this._mkTex(Nx, Ny, null),
+      pong     : this._mkTex(Nx, Ny, null),
+      vprop    : this._mkTex(Nx, Ny, vpropData),
+      tprop    : this._mkTex(Nx, Ny, tpropData),
+      bmask    : this._mkTex(Nx, Ny, bmaskData),
+      fdmask   : this._mkTex(Nx, Ny, fdmaskData),
+      capdecay : this._mkTex(Nx, Ny, capdecayData),
     };
     this._tex = T;
 
@@ -439,8 +555,19 @@ export class GPUSim {
     this.rho = new Float32Array(Nx * Ny);          // column-major output
     this._psi = null;                              // set after first readback
 
-    // Read back initial state so rho is valid from frame 0
-    this._readback();
+    // ── Async PBO readback (double-buffered) ──────────────
+    const byteSize = Nx * Ny * 4 * 4; // RGBA × float32
+    this._pbo = [gl.createBuffer(), gl.createBuffer()];
+    this._pboIdx = 0;
+    this._pboReady = false;
+    for (const b of this._pbo) {
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, b);
+      gl.bufferData(gl.PIXEL_PACK_BUFFER, byteSize, gl.STREAM_READ);
+    }
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+    // Synchronous read for frame-0 (so rho/psi are immediately valid)
+    this._readbackSync();
   }
 
   // ── Single split-operator step ───────────────────────────
@@ -473,11 +600,10 @@ export class GPUSim {
     // Step 4: Inverse 2D FFT
     const kTex2 = this._fft2d(this._nxtTex(), -1.0);
 
-    // Step 5: Normalise IFFT result + domain-edge absorbing mask
+    // Step 5: Normalise IFFT result (CAP baked into vprop handles absorption)
     this._pass(p.abs, this._curFBO(), Nx, Ny, {
-      uTex     : kTex2,
-      uScale   : 1.0 / (Nx * Ny),
-      uAbsThick: this._absThick,
+      uTex  : kTex2,
+      uScale: 1.0 / (Nx * Ny),
     });
 
     // Step 6: V half-step
@@ -488,42 +614,95 @@ export class GPUSim {
     this.simTime += Dt;
   }
 
+  // ── FD leapfrog single step (2 passes, true Dirichlet BC) ──
+  // Schrödinger: ∂R/∂t = -(ℏ/2m)∇²I,  ∂I/∂t = +(ℏ/2m)∇²R
+  // No FFT → no periodic wrap-around → wave is fully absorbed at walls.
+  _stepFDOnce() {
+    const { Nx, Ny, Dt } = this;
+    const p = this._progs, T = this._tex, F = this._fbo;
+    // Pass 1: R_half = R + AX·∇²I
+    this._pass(p.fdR, F.ping, Nx, Ny, {
+      uPsi : this._curTex(), uMask: T.fdmask,
+      uAX  : this._AX, uAY: this._AY,
+    });
+    // Pass 2: I_new = I + AX·∇²R_half; apply CAP decay to both channels
+    this._pass(p.fdI, this._nxtFBO(), Nx, Ny, {
+      uHalf    : T.ping, uCapDecay: T.capdecay,
+      uMask    : T.fdmask,
+      uAX      : this._AX, uAY: this._AY,
+    });
+    this._cur ^= 1;
+    this.simTime += Dt;
+  }
+
   // ── Public: advance n steps then read back ───────────────
   step(n) {
-    for (let i = 0; i < n; i++) this._stepOnce();
+    const stepFn = this._fdMode ? () => this._stepFDOnce()
+                                : () => this._stepOnce();
+    for (let i = 0; i < n; i++) stepFn();
     this._readback();
   }
 
-  // ── Read psi from GPU → CPU  (RGBA32F readPixels) ────────
+  // ── Sync readback (init only) ────────────────────────────
+  _readbackSync() {
+    const gl = this.gl;
+    const { Nx, Ny } = this;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._curFBO());
+    gl.readPixels(0, 0, Nx, Ny, gl.RGBA, gl.FLOAT, this._pixBuf);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this._processBuf();
+  }
+
+  // ── Async double-buffered PBO readback (every step) ──────
+  // Kick off a non-blocking DMA copy into curPBO, then retrieve
+  // the *previous* frame's data from prevPBO — GPU never stalls.
   _readback() {
     const gl = this.gl;
     const { Nx, Ny } = this;
 
-    // readPixels from the current psi framebuffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this._curFBO());
-    gl.readPixels(0, 0, Nx, Ny, gl.RGBA, gl.FLOAT, this._pixBuf);
+    const curPBO  = this._pbo[ this._pboIdx];
+    const prevPBO = this._pbo[ this._pboIdx ^ 1];
 
-    // _pixBuf layout: pixel (ix, iy) → pixBuf[(iy*Nx+ix)*4]  (row-major, GL)
-    // rho output:     rho[ix*Ny+iy]  (column-major, matches worker convention)
+    // Retrieve previous frame's pixels (already in VRAM→RAM by now)
+    if (this._pboReady) {
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, prevPBO);
+      gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, this._pixBuf);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      this._processBuf();
+    }
+
+    // Enqueue non-blocking copy of current frame into curPBO
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._curFBO());
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, curPBO);
+    gl.readPixels(0, 0, Nx, Ny, gl.RGBA, gl.FLOAT, 0); // 0 = offset into PBO
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    this._pboIdx  ^= 1;
+    this._pboReady = true;
+  }
+
+  // ── Unpack pixBuf → rho + psi ─────────────────────────────
+  _processBuf() {
+    const { Nx, Ny } = this;
     const buf = this._pixBuf;
     const rho = this.rho;
+    // _pixBuf layout: pixel (ix, iy) → buf[(iy*Nx+ix)*4]  (row-major, GL)
+    // rho output:     rho[ix*Ny+iy]  (column-major, matches worker convention)
     for (let ix = 0; ix < Nx; ix++) {
       for (let iy = 0; iy < Ny; iy++) {
         const glIdx  = (iy * Nx + ix) * 4;
-        const simIdx = ix * Ny + iy;
         const re = buf[glIdx], im = buf[glIdx + 1];
-        rho[simIdx] = re * re + im * im;
+        rho[ix * Ny + iy] = re * re + im * im;
       }
     }
-
-    // Also store psi in row-major layout for Bohmian gradient (re,im interleaved)
-    // psi[ix][iy] accessible as: psi[(iy*Nx+ix)*2] = re, *2+1 = im
+    // psi in row-major layout for Bohmian gradient (re,im interleaved)
     if (!this._psi || this._psi.length !== Nx * Ny * 2) {
       this._psi = new Float32Array(Nx * Ny * 2);
     }
     for (let i = 0; i < Nx * Ny; i++) {
-      this._psi[i * 2    ] = buf[i * 4    ]; // Re
-      this._psi[i * 2 + 1] = buf[i * 4 + 1]; // Im
+      this._psi[i * 2    ] = buf[i * 4    ];
+      this._psi[i * 2 + 1] = buf[i * 4 + 1];
     }
     this.psi = this._psi;
   }

@@ -56,7 +56,7 @@ const WAVE_PALETTES = {
   ],
 };
 
-let currentPaletteKey = 'plasma';
+let currentPaletteKey = 'ocean';
 const LUT_SIZE = 512;
 const colorLUT = new Float32Array(LUT_SIZE * 3);
 
@@ -82,7 +82,7 @@ function setWavePalette(key) {
     else updateSurface(lastRho, NX, NY);
   }
 }
-buildLUT(WAVE_PALETTES.plasma);
+buildLUT(WAVE_PALETTES.ocean);
 
 function sampleLUT(t) {
   const idx = Math.max(0, Math.min(LUT_SIZE - 1, Math.round(t * (LUT_SIZE - 1))));
@@ -114,8 +114,8 @@ function hsvToRgb(h, s, v) {
 //  Scene / renderer / camera
 // ─────────────────────────────────────────────────────────────
 const canvas = document.getElementById('canvas');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
 renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 renderer.setClearColor(0x090918);
 
@@ -133,25 +133,45 @@ controls.dampingFactor = 0.08;
 controls.target.set(0, 0, 0);
 
 // ─── Camera view helpers ─────────────────────────────────────
+// "Cover" fit: plane fills the entire canvas, no black borders.
+// Equivalent to CSS background-size:cover applied to the 4×2 scene plane.
+function fitCamera2D() {
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  const aspect = W / H;
+  camera.aspect = aspect;
+  camera.updateProjectionMatrix();
+  // halfH of scene coords the camera must show to cover the canvas:
+  //   if aspect >= 2 (wider than plane) → fit by height (halfH = 1)
+  //   if aspect <  2 (narrower)         → fit by width  (halfH = 2 / aspect)
+  const halfH = Math.max(SURFACE_SCALE / 2, (SS_X / 2) / aspect);
+  const fovRad = camera.fov * Math.PI / 180;
+  const d = halfH / Math.tan(fovRad / 2);
+  camera.position.set(0, 0, d);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(0, 0, 0);
+  controls.target.set(0, 0, 0);
+  controls.update();
+}
+
 function setCameraView(mode) {
   if (mode === '2d') {
-    // Top-down: camera far enough to see the 4×2 scene plane
-    camera.position.set(0, 0, 5.5);
-    camera.up.set(0, 1, 0);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
     controls.enableRotate = false;
+    controls.enableZoom   = true;
     scene.fog = null;
+    grid.visible = false;
+    fitCamera2D();
     if (bohmPoints) bohmPoints.material.size = 0.036;
   } else {
     // 3D perspective – pull back to show the 4×2 plane
     controls.enableRotate = true;
+    controls.enableZoom   = true;
     camera.position.set(0, -4.0, 3.0);
     camera.up.set(0, 0, 1);
     controls.target.set(0, 0, 0);
     controls.maxPolarAngle = Math.PI;
     controls.minPolarAngle = 0;
     scene.fog = new THREE.FogExp2(0x090918, 0.25);
+    grid.visible = true;
     if (bohmPoints) bohmPoints.material.size = 0.024;
   }
   camera.lookAt(controls.target);
@@ -171,15 +191,116 @@ dirLight.position.set(1, 1, 3);
 scene.add(dirLight);
 
 // ─────────────────────────────────────────────────────────────
+//  Coordinate axes overlay
+// ─────────────────────────────────────────────────────────────
+const axesCanvas = document.getElementById('axes-canvas');
+const axCtx = axesCanvas.getContext('2d');
+
+function drawAxes() {
+  const W = canvas.clientWidth;
+  const H = canvas.clientHeight;
+  axesCanvas.width  = W;
+  axesCanvas.height = H;
+  axCtx.clearRect(0, 0, W, H);
+  if (viewMode !== 'density' && viewMode !== 'phase') return;
+
+  // Fixed bottom-left inset: axes drawn in canvas-pixel space
+  const PAD   = 36;   // left/bottom margin for labels
+  const LEN_X = 120;  // pixel length of x-axis
+  const LEN_Y = 80;   // pixel length of y-axis
+  const ox = PAD;           // origin x (pixels from left)
+  const oy = H - PAD;       // origin y (pixels from top)
+
+  // Physical scale from pixel length
+  const _v = new THREE.Vector3();
+  function physToCanvas(x_nm, y_nm) {
+    const sx = -2.0 + (x_nm / 200.0) * 4.0;
+    const sy =  1.0 - (y_nm / 100.0) * 2.0;
+    _v.set(sx, sy, 0).project(camera);
+    return [(_v.x * 0.5 + 0.5) * W, (-_v.y * 0.5 + 0.5) * H];
+  }
+  // domain pixel extents (for scaling)
+  const [canvX0] = physToCanvas(0,   50);
+  const [canvX1] = physToCanvas(200, 50);
+  const [, canvY0] = physToCanvas(100, 0);
+  const [, canvY1] = physToCanvas(100, 100);
+  const pxPerNmX = (canvX1 - canvX0) / 200;
+  const pxPerNmY = (canvY1 - canvY0) / 100;
+
+  // Fixed axis spans
+  const nmX = 25;  // always 25 nm
+  const nmY = Math.round(LEN_Y / Math.abs(pxPerNmY) / 25) * 25 || 25;
+  const axLenX = nmX * pxPerNmX;
+  const axLenY = nmY * Math.abs(pxPerNmY);
+
+  axCtx.lineWidth   = 1.5;
+  axCtx.strokeStyle = 'rgba(0,204,255,0.70)';
+  axCtx.fillStyle   = 'rgba(0,204,255,0.90)';
+  axCtx.font        = '10px Inter, system-ui, sans-serif';
+
+  // X axis
+  axCtx.beginPath(); axCtx.moveTo(ox, oy); axCtx.lineTo(ox + axLenX, oy); axCtx.stroke();
+  // ticks at 0 and nmX
+  [0, nmX].forEach(v => {
+    const px = ox + v * pxPerNmX;
+    axCtx.beginPath(); axCtx.moveTo(px, oy - 4); axCtx.lineTo(px, oy + 4); axCtx.stroke();
+    axCtx.textAlign = 'center'; axCtx.textBaseline = 'top';
+    axCtx.fillText(`${v}`, px, oy + 6);
+  });
+  // x axis label at tip
+  axCtx.textAlign = 'left'; axCtx.textBaseline = 'middle';
+  axCtx.fillStyle = 'rgba(0,204,255,0.95)';
+  axCtx.fillText('x (nm)', ox + axLenX + 5, oy);
+
+  // Y axis (upward)
+  axCtx.beginPath(); axCtx.moveTo(ox, oy); axCtx.lineTo(ox, oy - axLenY); axCtx.stroke();
+  [0, nmY].forEach(v => {
+    const py = oy - v * Math.abs(pxPerNmY);
+    axCtx.beginPath(); axCtx.moveTo(ox - 4, py); axCtx.lineTo(ox + 4, py); axCtx.stroke();
+    axCtx.textAlign = 'right'; axCtx.textBaseline = 'middle';
+    axCtx.fillText(`${v}`, ox - 7, py);
+  });
+  // y axis label (rotated) at mid-axis, to the left
+  axCtx.save();
+  axCtx.translate(ox - 24, oy - axLenY * 0.5);
+  axCtx.rotate(-Math.PI / 2);
+  axCtx.textAlign = 'center'; axCtx.textBaseline = 'middle';
+  axCtx.fillStyle = 'rgba(0,204,255,0.95)';
+  axCtx.fillText('y (nm)', 0, 0);
+  axCtx.restore();
+
+  // Simulation time — top-left corner of canvas
+  if (typeof gpuSim !== 'undefined' && gpuSim && gpuSim.simTime != null) {
+    const t_fs = (gpuSim.simTime * 1e15).toFixed(1);
+    axCtx.font = '11px Inter, system-ui, sans-serif';
+    axCtx.textAlign = 'left'; axCtx.textBaseline = 'top';
+    axCtx.fillStyle = 'rgba(0,204,255,0.85)';
+    axCtx.fillText(`t = ${t_fs} fs`, 10, 10);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 //  Shared simulation state
 // ─────────────────────────────────────────────────────────────
-let NX = 256, NY = 256;
+let NX = 256, NY = 128;
 const SURFACE_SCALE = 2.0;   // Y scene extent  (maps to Ly = 100 nm)
 const SS_X          = 4.0;   // X scene extent  (maps to Lx = 200 nm)
 const HEIGHT_PEAK   = 0.9;
 
 let viewMode    = 'density';  // default: flat 2D density (plasma)
-let showBohmian = true;
+let showParticles = true;
+let showTrails    = true;
+let trailDisplayLen = 20;    // max visible trail length in nm
+let autoStop = true;         // auto-pause when wave exits domain
+let fdMode   = false;        // false=FFT split-operator, true=FD leapfrog
+
+// Performance tracking
+let _perfFrameCount = 0;
+let _perfLastTime   = 0;
+let _perfLastSimT   = 0;
+let _perfFPS        = 0;
+let _perfSimSpeed   = 0;  // simulated fs per real second
+let _perfStepsPerS  = 0;
 let paused      = false;
 let stepsPerFrame = 16;
 let lastRho  = null;   // most recent rho snapshot for palette-change redraws
@@ -198,7 +319,7 @@ let bohmPosX = null, bohmPosY = null;
 let bohmNp   = 300;
 
 // Trajectory trail ring-buffer
-const TRAIL_LEN = 100;             // steps stored per particle
+const TRAIL_LEN = 2000;            // steps stored per particle (covers full simulation run)
 let trajBufX  = null;             // Float32Array[MAX_PARTICLES * TRAIL_LEN]
 let trajBufY  = null;
 let trajHead  = null;             // Int32Array[MAX_PARTICLES]
@@ -219,7 +340,20 @@ const PARTICLE_PRESETS = [
   { label: '✨ Gold',     rgb: [1.00, 0.84, 0.00] },
   { label: '🍀 Lime',     rgb: [0.55, 1.00, 0.10] },
 ];
-let trailColorIdx = 0;
+let trailColorIdx = 6;  // default: Red
+
+// Wall / barrier colour presets
+const WALL_PRESETS = [
+  { label: 'Brick',      hex: 0x8B3A2B },
+  { label: 'Terracotta', hex: 0xBF5A33 },
+  { label: 'Brown',      hex: 0x5E3A1A },
+  { label: 'Slate',      hex: 0x5A5060 },
+  { label: 'Steel',      hex: 0x4466AA },
+  { label: 'Concrete',   hex: 0x7A7570 },
+];
+let wallColorIdx = 0;  // default: Brick
+function wallHex() { return WALL_PRESETS[wallColorIdx].hex; }
+
 let trailGeo, trailMesh;
 
 // ─────────────────────────────────────────────────────────────
@@ -267,12 +401,13 @@ function updateSurface(rho, Nx, Ny) {
 
       let r, g, b;
       if (psi) {
-        // Phase view: hue = arg(ψ)/(2π),  brightness = |ψ|^0.45
-        const re  = psi[vIdx * 2];
-        const im  = psi[vIdx * 2 + 1];
-        const hue = Math.atan2(im, re) / (2 * Math.PI); // −0.5 … +0.5
-        const val = Math.pow(t, 0.45);
-        [r, g, b] = hsvToRgb(hue, 0.92, val);
+        // Phase view: visualise Re(ψ) through the wave-colour LUT.
+        // Re(ψ) varies smoothly (no wrapping discontinuities).
+        // Map [-ampMax, +ampMax] → [0, 1] so the full palette is used.
+        const re     = psi[vIdx * 2];
+        const ampMax = Math.sqrt(rhoMax) || 1;
+        const reNorm = 0.5 + 0.5 * (re / ampMax); // [0,1]
+        [r, g, b] = sampleLUT(reNorm);
       } else if (viewMode === 'density') {
         // Density view: plasma colormap on |ψ|², gamma=0.45 for fringe visibility
         [r, g, b] = sampleLUT(Math.pow(t, 0.45));
@@ -363,14 +498,15 @@ function buildBarrier(slitX, slitCenterY1, slitCenterY2, slitHalfWidth) {
     barrierMesh.traverse(c => { if (c.geometry) c.geometry.dispose(); });
   }
 
-  const wallThick = 0.04;   // scene-unit thickness along x
+  // SS_X=4.0 maps to Lx=200nm, so scene-units per nm = 4/200 = 0.02; 6px = 4.7nm ≈ 0.06 scene-units
+  const wallThick = 0.06;
   const slit1Lo = slitCenterY1 - slitHalfWidth;
   const slit1Hi = slitCenterY1 + slitHalfWidth;
   const slit2Lo = slitCenterY2 - slitHalfWidth;
   const slit2Hi = slitCenterY2 + slitHalfWidth;
 
   const bGroup = new THREE.Group();
-  const mat = new THREE.MeshBasicMaterial({ color: 0x00ccff, transparent: true, opacity: 0.55 });
+  const mat = new THREE.MeshBasicMaterial({ color: wallHex(), transparent: true, opacity: 0.80 });
 
   // Wall segments in fractional coords: [lo, hi]
   const segments = [
@@ -416,20 +552,22 @@ function buildBohmianMesh() {
   });
   bohmPoints = new THREE.Points(bohmGeo, ptMat);
   bohmPoints.renderOrder = 11;
-  bohmPoints.visible = showBohmian;
+  bohmPoints.visible = showParticles;
   scene.add(bohmPoints);
 
-  // Trail mesh
+  // Trail mesh — LineSegments so the trail is always a solid line
+  // regardless of steps/frame. Each consecutive pair of ring-buffer positions
+  // becomes one segment (2 vertices). Max segments = MAX_PARTICLES * TRAIL_LEN.
   if (trailMesh) { scene.remove(trailMesh); trailGeo.dispose(); }
-  const maxTrailPts = MAX_PARTICLES * TRAIL_LEN;
+  const maxSegVerts = MAX_PARTICLES * TRAIL_LEN * 2; // 2 verts per segment
   trailGeo = new THREE.BufferGeometry();
-  trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxTrailPts * 3), 3));
-  trailGeo.setAttribute('color',    new THREE.BufferAttribute(new Float32Array(maxTrailPts * 3), 3));
+  trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxSegVerts * 3), 3));
+  trailGeo.setAttribute('color',    new THREE.BufferAttribute(new Float32Array(maxSegVerts * 3), 3));
   trailGeo.setDrawRange(0, 0);
-  trailMesh = new THREE.Points(trailGeo,
-    new THREE.PointsMaterial({ vertexColors: true, size: 0.007, sizeAttenuation: true, depthTest: false }));
+  trailMesh = new THREE.LineSegments(trailGeo,
+    new THREE.LineBasicMaterial({ vertexColors: true, depthTest: false }));
   trailMesh.renderOrder = 10;
-  trailMesh.visible = showBohmian;
+  trailMesh.visible = showTrails;
   scene.add(trailMesh);
 }
 
@@ -480,25 +618,43 @@ function updateTrailMesh(Np) {
   const pts  = trailGeo.attributes.position.array;
   const cols = trailGeo.attributes.color.array;
   const [cr, cg, cb] = PARTICLE_PRESETS[trailColorIdx].rgb;
+  const LX_NM = 200, LY_NM = 100; // physical domain size in nm
   let n = 0;
   for (let p = 0; p < Math.min(Np, MAX_PARTICLES); p++) {
     const filled = trajFilled[p];
-    if (!filled) continue;
+    if (filled < 2) continue;
     const head = trajHead[p];
-    for (let k = 0; k < filled; k++) {
-      // k=0 is oldest entry, k=filled-1 is most recent
-      const ringIdx = (head - filled + k + TRAIL_LEN) % TRAIL_LEN;
-      const bx = trajBufX[p * TRAIL_LEN + ringIdx];
-      const by = trajBufY[p * TRAIL_LEN + ringIdx];
-      if (isNaN(bx)) continue;
-      pts[n * 3    ] = -SS_X / 2 + bx * SS_X;
-      pts[n * 3 + 1] =  1.0 - by * SURFACE_SCALE;
-      pts[n * 3 + 2] = 0.022;
-      const age = k / Math.max(1, filled - 1);   // 0=oldest … 1=newest
-      const bright = age * age;                   // quadratic fade
-      cols[n * 3    ] = cr * bright;
-      cols[n * 3 + 1] = cg * bright;
-      cols[n * 3 + 2] = cb * bright;
+
+    // Walk backwards from newest to find how many steps fit within trailDisplayLen nm
+    let kStart = filled - 2;
+    let totalDist = 0;
+    for (let k = filled - 2; k >= 0; k--) {
+      const idxA = (head - filled + k     + TRAIL_LEN) % TRAIL_LEN;
+      const idxB = (head - filled + k + 1 + TRAIL_LEN) % TRAIL_LEN;
+      const ax = trajBufX[p * TRAIL_LEN + idxA], ay = trajBufY[p * TRAIL_LEN + idxA];
+      const bx = trajBufX[p * TRAIL_LEN + idxB], by = trajBufY[p * TRAIL_LEN + idxB];
+      if (isNaN(ax) || isNaN(bx)) break;
+      const ddx = (bx - ax) * LX_NM, ddy = (by - ay) * LY_NM;
+      totalDist += Math.sqrt(ddx * ddx + ddy * ddy);
+      if (totalDist > trailDisplayLen) break;
+      kStart = k;
+    }
+
+    // Emit segments from kStart → newest
+    const segCount = Math.max(1, filled - 2 - kStart);
+    for (let k = kStart; k < filled - 1; k++) {
+      const idxA = (head - filled + k     + TRAIL_LEN) % TRAIL_LEN;
+      const idxB = (head - filled + k + 1 + TRAIL_LEN) % TRAIL_LEN;
+      const ax = trajBufX[p * TRAIL_LEN + idxA], ay = trajBufY[p * TRAIL_LEN + idxA];
+      const bx = trajBufX[p * TRAIL_LEN + idxB], by = trajBufY[p * TRAIL_LEN + idxB];
+      if (isNaN(ax) || isNaN(bx)) continue;
+      const t  = (k - kStart) / segCount;   // 0 = oldest, 1 = newest
+      const br = 0.25 + 0.75 * t;
+      pts[n*3  ] = -SS_X/2 + ax*SS_X;  pts[n*3+1] = 1.0 - ay*SURFACE_SCALE;  pts[n*3+2] = 0.022;
+      cols[n*3  ] = cr*br; cols[n*3+1] = cg*br; cols[n*3+2] = cb*br;
+      n++;
+      pts[n*3  ] = -SS_X/2 + bx*SS_X;  pts[n*3+1] = 1.0 - by*SURFACE_SCALE;  pts[n*3+2] = 0.022;
+      cols[n*3  ] = cr*br; cols[n*3+1] = cg*br; cols[n*3+2] = cb*br;
       n++;
     }
   }
@@ -535,6 +691,55 @@ function initBohmianPositions(rho, Np, Nx, Ny) {
     const ix = Math.floor(lo / Ny), iy = lo % Ny;
     bohmPosX[p] = Math.max(0.01, Math.min(0.99, (ix + (Math.random() - 0.5)) / (Nx - 1)));
     bohmPosY[p] = Math.max(0.01, Math.min(0.99, (iy + (Math.random() - 0.5)) / (Ny - 1)));
+  }
+}
+
+// Respawn any dead (NaN) Bohmian particles by sampling from the current density.
+// rho is column-major (ix*Ny+iy), same layout as initBohmianPositions.
+function respawnDeadParticles(rho, Np, Nx, Ny, absThick) {
+  const dead = absThick || 0.05;
+  // Collect indices of dead particles
+  const deadList = [];
+  for (let p = 0; p < Np; p++) {
+    if (isNaN(bohmPosX[p])) deadList.push(p);
+  }
+  if (deadList.length === 0) return;
+
+  // Build CDF from density, excluding absorber zone
+  const cdf = new Float32Array(Nx * Ny);
+  let tot = 0;
+  const x0d = Math.ceil(dead * (Nx - 1));
+  const x1d = Math.floor((1 - dead) * (Nx - 1));
+  const y0d = Math.ceil(dead * (Ny - 1));
+  const y1d = Math.floor((1 - dead) * (Ny - 1));
+  for (let ix = x0d; ix <= x1d; ix++) {
+    for (let iy = y0d; iy <= y1d; iy++) {
+      tot += rho[ix * Ny + iy];
+    }
+  }
+  if (tot < 1e-60) return; // no density — skip
+  let cum = 0;
+  for (let i = 0; i < Nx * Ny; i++) {
+    const ix = Math.floor(i / Ny), iy = i % Ny;
+    const inZone = ix >= x0d && ix <= x1d && iy >= y0d && iy <= y1d;
+    cum += inZone ? rho[i] / tot : 0;
+    cdf[i] = cum;
+  }
+
+  // Sample a new position for each dead particle
+  for (const p of deadList) {
+    const u = Math.random();
+    let lo = 0, hi = Nx * Ny - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (cdf[mid] < u) lo = mid + 1; else hi = mid; }
+    const ix = Math.floor(lo / Ny), iy = lo % Ny;
+    bohmPosX[p] = Math.max(dead + 0.01, Math.min(1 - dead - 0.01, (ix + (Math.random() - 0.5)) / (Nx - 1)));
+    bohmPosY[p] = Math.max(dead + 0.01, Math.min(1 - dead - 0.01, (iy + (Math.random() - 0.5)) / (Ny - 1)));
+    // Clear the old (dead) trail so the fresh particle starts a new one
+    if (trajBufX) {
+      trajBufX.fill(NaN, p * TRAIL_LEN, p * TRAIL_LEN + TRAIL_LEN);
+      trajBufY.fill(NaN, p * TRAIL_LEN, p * TRAIL_LEN + TRAIL_LEN);
+      trajFilled[p] = 0;
+    }
   }
 }
 
@@ -622,7 +827,7 @@ function dispatchFrame(rho, trajX, trajY, time, norm) {
   updateTrailMesh(Np);
 
   // Auto-stop when sim time reaches the natural end point (like MATLAB Nt limit)
-  if (!paused && useGPU && gpuSim.simTime >= gpuSim.stopTime) {
+  if (!paused && useGPU && autoStop && gpuSim.simTime >= gpuSim.stopTime) {
     paused = true;
     const btn = document.getElementById('btn-pause');
     btn.textContent = '\u25b6 Start';
@@ -631,6 +836,7 @@ function dispatchFrame(rho, trajX, trajY, time, norm) {
 
   document.getElementById('hud-time').textContent = `t = ${(time * 1e15).toFixed(1)} fs`;
   document.getElementById('hud-norm').textContent = `‖ψ‖² = ${norm.toFixed(6)}`;
+  drawAxes();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -640,9 +846,12 @@ function gpuTick(n) {
   const { Nx, Ny, Lx, Ly, Dt } = gpuSim;
   if (n > 0) {
     gpuSim.step(n);
-    if (showBohmian && bohmPosX && gpuSim.psi)
+    if ((showParticles || showTrails) && bohmPosX && gpuSim.psi) {
       for (let s = 0; s < n; s++)
         stepBohmian(gpuSim.psi, bohmNp, Nx, Ny, Lx, Ly, Dt, gpuSim._absThick);
+      // Respawn any particles that died this frame so the count stays at bohmNp
+      respawnDeadParticles(gpuSim.rho, bohmNp, Nx, Ny, gpuSim._absThick);
+    }
   }
   dispatchFrame(gpuSim.rho, bohmPosX, bohmPosY, gpuSim.simTime, gpuSim.norm);
 }
@@ -653,25 +862,58 @@ function gpuTick(n) {
 function getConfig() {
   const g = id => parseFloat(document.getElementById(id).value);
   const res = parseInt(document.getElementById('resolution').value);
-  // Nx is 2× Ny to match the 2:1 physical domain (Lx=200nm, Ly=100nm),
-  // keeping the same ~0.78 nm/cell resolution as a 128×128 grid on 100nm.
+  const Ly = 100e-9;  // physical domain height [m]
+  // Slit positions are given as nm offsets from the centre of the domain
+  const slitCenterY1 = 0.5 + parseInt(document.getElementById('slit1').value) * 1e-9 / Ly;
+  const slitCenterY2 = 0.5 + parseInt(document.getElementById('slit2').value) * 1e-9 / Ly;
+  const slitHalfWidth = g('slitWidth') * 1e-9 / Ly;
+  const Dt = parseInt(document.getElementById('dt').value) * 0.05e-15;
+  const xfrac = parseFloat(document.getElementById('x0').value) / 200; // nm → fraction of Lx=200nm
   return {
     Nx: 2 * res, Ny: res,
-    slitCenterY1  : g('slit1'),
-    slitCenterY2  : g('slit2'),
-    slitHalfWidth : g('slitWidth'),
+    slitCenterY1,
+    slitCenterY2,
+    slitHalfWidth,
+    Dt,
+    xfrac,
     velox         : g('momentum') * 1e5,
     sigmax        : g('sigmax') * 1e-9,
+    sigmay        : g('sigmay') * 1e-9,
     Np            : parseInt(document.getElementById('np').value),
     stepsPerFrame : parseInt(document.getElementById('speed').value),
     absThick      : g('absthick'),
+    absStrength   : parseFloat(document.getElementById('absstrength').value),
+    fdMode,
   };
 }
 
 // ─────────────────────────────────────────────────────────────
 //  Reset simulation
 // ─────────────────────────────────────────────────────────────
-function resetSim() {
+function resetDefaults() {
+  // Reset every <input type="range"> and <select> to its HTML defaultValue
+  document.querySelectorAll('#panel input[type="range"]').forEach(el => {
+    el.value = el.defaultValue;
+    el.dispatchEvent(new Event('input'));
+  });
+  // Reset dual-slit to defaults and re-fire update
+  const s1 = document.getElementById('slit1');
+  const s2 = document.getElementById('slit2');
+  s1.value = s1.defaultValue;
+  s2.value = s2.defaultValue;
+  s1.dispatchEvent(new Event('input'));
+  s2.dispatchEvent(new Event('input'));
+  resetSim();
+}
+
+function resetSim(keepPaused = false) {
+  paused = keepPaused ? paused : false;
+  const pauseBtn = document.getElementById('btn-pause');
+  if (pauseBtn) {
+    pauseBtn.textContent = paused ? '\u25b6 Start' : '\u23f8 Stop';
+    pauseBtn.classList.toggle('btn-running', !paused);
+  }
+
   const cfg = getConfig();
   stepsPerFrame = cfg.stepsPerFrame;
   bohmNp = cfg.Np;
@@ -684,7 +926,7 @@ function resetSim() {
     buildBohmianMesh();
   }
 
-  buildBarrier(0.5, cfg.slitCenterY1, cfg.slitCenterY2, cfg.slitHalfWidth);
+buildBarrier(0.5, cfg.slitCenterY1, cfg.slitCenterY2, cfg.slitHalfWidth);
 
   if (useGPU) {
     gpuSim.init(cfg);
@@ -722,7 +964,7 @@ function paletteCssGrad(key) {
 function buildPaletteUI() {
   const btn   = document.getElementById('palette-btn');
   const strip = document.getElementById('palette-strip-cur');
-  const lbl   = document.getElementById('palette-label-cur');
+  const lbl   = document.getElementById('palette-label-cur'); // may be null in compact layout
   const popup = document.getElementById('palette-popup');
   let open = false;
 
@@ -744,7 +986,7 @@ function buildPaletteUI() {
       e.stopPropagation();
       setWavePalette(key);
       strip.style.background = paletteCssGrad(key);
-      lbl.textContent = PALETTE_META[key];
+      if (lbl) lbl.textContent = PALETTE_META[key];
       popup.querySelectorAll('.palette-option').forEach(o =>
         o.classList.toggle('active', o.dataset.key === key));
       closePopup();
@@ -772,7 +1014,7 @@ function buildPaletteUI() {
 function buildParticleUI() {
   const btn      = document.getElementById('particle-btn');
   const dotCur   = document.getElementById('particle-dot-cur');
-  const lblCur   = document.getElementById('particle-label-cur');
+  const lblCur   = document.getElementById('particle-label-cur'); // may be null in compact layout
   const popup    = document.getElementById('particle-popup');
   let open = false;
 
@@ -783,7 +1025,7 @@ function buildParticleUI() {
   function setActive(i) {
     trailColorIdx = i;
     dotCur.style.background = rgbCss(PARTICLE_PRESETS[i].rgb);
-    lblCur.textContent = PARTICLE_PRESETS[i].label.replace(/^\S+\s*/, '');
+    if (lblCur) lblCur.textContent = PARTICLE_PRESETS[i].label.replace(/^\S+\s*/, '');
     popup.querySelectorAll('.p-dot').forEach((d, j) =>
       d.classList.toggle('active', j === i));
   }
@@ -803,9 +1045,61 @@ function buildParticleUI() {
 
   function openPopup() {
     const r = btn.getBoundingClientRect();
-    const popH = 90;
+    const popW = 200, popH = 90;
     const below = r.bottom + 6;
-    popup.style.left  = r.left + 'px';
+    const left = Math.max(4, Math.min(r.right - popW, window.innerWidth - popW - 4));
+    popup.style.left  = left + 'px';
+    popup.style.top   = (below + popH > window.innerHeight ? r.top - popH - 6 : below) + 'px';
+    popup.style.display = 'flex';
+    open = true;
+  }
+  function closePopup() { popup.style.display = 'none'; open = false; }
+
+  btn.addEventListener('click', e => { e.stopPropagation(); open ? closePopup() : openPopup(); });
+  document.addEventListener('click', () => { if (open) closePopup(); });
+}
+
+function buildWallUI() {
+  const btn    = document.getElementById('wall-btn');
+  const dotCur = document.getElementById('wall-dot-cur');
+  const popup  = document.getElementById('wall-popup');
+  if (!btn || !popup) return;
+  let open = false;
+
+  function hexCss(hex) {
+    return `#${hex.toString(16).padStart(6,'0')}`;
+  }
+  function setActive(i) {
+    wallColorIdx = i;
+    dotCur.style.background = hexCss(WALL_PRESETS[i].hex);
+    popup.querySelectorAll('.p-dot').forEach((d, j) =>
+      d.classList.toggle('active', j === i));
+    // Live-update existing barrier colour without full rebuild
+    if (barrierMesh) {
+      barrierMesh.traverse(c => {
+        if (c.isMesh) c.material.color.setHex(WALL_PRESETS[i].hex);
+      });
+    }
+  }
+
+  WALL_PRESETS.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'p-dot' + (i === wallColorIdx ? ' active' : '');
+    d.style.background = hexCss(p.hex);
+    d.title = p.label;
+    d.addEventListener('click', e => { e.stopPropagation(); setActive(i); closePopup(); });
+    popup.appendChild(d);
+  });
+
+  setActive(wallColorIdx);
+
+  function openPopup() {
+    const r = btn.getBoundingClientRect();
+    const popW = 200, popH = 90;
+    const below = r.bottom + 6;
+    // Right-align to button's right edge, clamped inside viewport
+    const left = Math.max(4, Math.min(r.right - popW, window.innerWidth - popW - 4));
+    popup.style.left  = left + 'px';
     popup.style.top   = (below + popH > window.innerHeight ? r.top - popH - 6 : below) + 'px';
     popup.style.display = 'flex';
     open = true;
@@ -820,74 +1114,187 @@ function buildParticleUI() {
 //  UI wiring
 // ─────────────────────────────────────────────────────────────
 function initUI() {
-  const sliders = ['slit1','slit2','slitWidth','momentum','sigmax','np','speed','absthick'];
+  const sliders = ['slitWidth','momentum','sigmax','sigmay','trailen','np','speed','dt','absthick','absstrength','x0'];
   sliders.forEach(id => {
     const el  = document.getElementById(id);
     const lbl = document.getElementById(`${id}-val`);
     const update = () => {
-      if      (id === 'momentum') lbl.textContent = `${parseFloat(el.value).toFixed(2)} × 10⁵ m/s`;
+      if      (id === 'slitWidth') lbl.textContent = `${parseFloat(el.value).toFixed(1)} nm`;
+      else if (id === 'momentum') lbl.textContent = `${parseFloat(el.value).toFixed(2)} × 10⁵ m/s`;
       else if (id === 'sigmax')   lbl.textContent = `${parseFloat(el.value).toFixed(1)} nm`;
+      else if (id === 'sigmay')   lbl.textContent = `${parseFloat(el.value).toFixed(1)} nm`;
+      else if (id === 'trailen')  lbl.textContent = `${el.value} nm`;
       else if (id === 'np')       lbl.textContent = el.value;
       else if (id === 'speed')    lbl.textContent = `${el.value}×`;
-      else if (id === 'absthick') lbl.textContent = `${(parseFloat(el.value)*100).toFixed(0)}%`;
+      else if (id === 'dt')       lbl.textContent = `${(parseInt(el.value) * 0.05).toFixed(2)} fs`;
+      else if (id === 'absthick')    lbl.textContent = `${(parseFloat(el.value)*100).toFixed(0)}%`;
+      else if (id === 'absstrength') lbl.textContent = parseFloat(el.value).toFixed(0);
+      else if (id === 'x0')          lbl.textContent = `${parseInt(el.value)} nm`;
       else                        lbl.textContent = parseFloat(el.value).toFixed(2);
     };
     update();
     el.addEventListener('input', update);
   });
 
+  // Trail length slider also triggers a mesh refresh (works while paused)
+  document.getElementById('trailen').addEventListener('input', (e) => {
+    trailDisplayLen = parseInt(e.target.value);
+    updateTrailMesh(bohmNp);
+  });
+
+  const s1 = document.getElementById('slit1');
+  const s2 = document.getElementById('slit2');
+  const slitsVal = document.getElementById('slits-val');
+  const dualTrack = document.getElementById('dual-track');
+  const slitWidthEl = document.getElementById('slitWidth');
+
+  function previewBarrier() {
+    const Ly = 100e-9;
+    const v1 = parseInt(s1.value), v2 = parseInt(s2.value);
+    const hw = parseFloat(slitWidthEl.value) * 1e-9 / Ly;
+    buildBarrier(0.5, 0.5 + v1 * 1e-9 / Ly, 0.5 + v2 * 1e-9 / Ly, hw);
+  }
+
+  function updateDualSlit() {
+    let v1 = parseInt(s1.value), v2 = parseInt(s2.value);
+    // enforce minimum separation of 3 nm
+    if (v1 > -2) { v1 = -2; s1.value = v1; }
+    if (v2 <  2) { v2 =  2; s2.value = v2; }
+    if (v1 >= v2 - 3) { v1 = v2 - 3; s1.value = v1; }
+    const pct1 = (v1 + 45) / 90 * 100;
+    const pct2 = (v2 + 45) / 90 * 100;
+    dualTrack.style.background =
+      `linear-gradient(to right,` +
+      ` rgba(0,204,255,0.15) 0%, rgba(0,204,255,0.15) ${pct1}%,` +
+      ` rgba(255,107,107,0.45) ${pct1}%, rgba(255,107,107,0.45) ${pct2}%,` +
+      ` rgba(0,204,255,0.15) ${pct2}%, rgba(0,204,255,0.15) 100%)`;
+    const sign2 = v2 >= 0 ? '+' : '';
+    slitsVal.textContent = `${v1} / ${sign2}${v2} nm`;
+    previewBarrier();
+  }
+  updateDualSlit();
+  s1.addEventListener('input', updateDualSlit);
+  s2.addEventListener('input', updateDualSlit);
+  slitWidthEl.addEventListener('input', previewBarrier);
+
+  // lift the active handle above the other
+  s1.addEventListener('pointerdown', () => { s1.style.zIndex = 3; s2.style.zIndex = 2; });
+  s2.addEventListener('pointerdown', () => { s2.style.zIndex = 3; s1.style.zIndex = 2; });
+
+  // While dragging slit/width: pause physics; on release: full reset + resume
+  ['slit1', 'slit2', 'slitWidth'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('pointerdown', () => { paused = true; });
+    el.addEventListener('change', () => {
+      paused = false;
+      const btn = document.getElementById('btn-pause');
+      btn.textContent = '⏸ Stop';
+      btn.classList.add('btn-running');
+      resetSim();
+    });
+  });
+
+  // All remaining physics sliders: pause while dragging, live-preview on input, resume on release
+  const liveReset = ['momentum','sigmax','sigmay','np','absthick','absstrength','dt','x0'];
+  liveReset.forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('pointerdown', () => { paused = true; });
+    el.addEventListener('input', resetSim);
+    el.addEventListener('change', () => {
+      paused = false;
+      const btn = document.getElementById('btn-pause');
+      btn.textContent = '⏸ Stop';
+      btn.classList.add('btn-running');
+    });
+  });
+
   document.getElementById('resolution').addEventListener('change', e => {
     // Automatically tone down steps/frame for the heavier grid
     const speedEl = document.getElementById('speed');
     const speedLbl = document.getElementById('speed-val');
-    if (parseInt(e.target.value) >= 256) {
+    const res = parseInt(e.target.value);
+    if (res >= 256) {
       speedEl.value = '8'; speedLbl.textContent = '8×';
     } else {
       speedEl.value = '16'; speedLbl.textContent = '16×';
     }
     resetSim();
   });
-  document.getElementById('btn-reset').addEventListener('click', resetSim);
+  document.getElementById('btn-reset').addEventListener('click', () => resetSim(paused));
+  document.getElementById('btn-defaults').addEventListener('click', resetDefaults);
 
   document.getElementById('btn-pause').addEventListener('click', () => {
     paused = !paused;
     const btn = document.getElementById('btn-pause');
-    btn.textContent = paused ? '▶ Start' : '⏸ Stop';
+    btn.textContent = paused ? '\u25b6 Start' : '\u23f8 Stop';
     btn.classList.toggle('btn-running', !paused);
   });
 
-  document.getElementById('btn-bohmian').addEventListener('click', () => {
-    showBohmian = !showBohmian;
+  document.getElementById('btn-particles').addEventListener('click', () => {
+    showParticles = !showParticles;
     const showing = viewMode !== 'spacetime';
-    bohmPoints.visible = showBohmian && showing;
-    trailMesh.visible  = showBohmian && showing;
-    document.getElementById('btn-bohmian').textContent =
-      showBohmian ? 'Hide Particles' : 'Show Particles';
+    bohmPoints.visible = showParticles && showing;
+    document.getElementById('btn-particles').classList.toggle('btn-off', !showParticles);
+  });
+
+  document.getElementById('btn-trails').addEventListener('click', () => {
+    showTrails = !showTrails;
+    const showing = viewMode !== 'spacetime';
+    trailMesh.visible = showTrails && showing;
+    document.getElementById('btn-trails').classList.toggle('btn-off', !showTrails);
+  });
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const panel = document.getElementById('panel');
+      if (btn.dataset.tab === 'expert') panel.classList.add('show-expert');
+      else panel.classList.remove('show-expert');
+    });
+  });
+
+  // Auto-stop toggle
+  document.getElementById('btn-autostop').addEventListener('click', () => {
+    autoStop = !autoStop;
+    document.getElementById('btn-autostop').textContent = autoStop ? 'Auto-stop: ON' : 'Auto-stop: OFF';
+    document.getElementById('btn-autostop').classList.toggle('btn-off', !autoStop);
+  });
+
+  document.getElementById('btn-fdmode').addEventListener('click', () => {
+    fdMode = !fdMode;
+    const btn = document.getElementById('btn-fdmode');
+    btn.textContent = fdMode ? 'Solver: FD leapfrog' : 'Solver: FFT split-op';
+    btn.classList.toggle('btn-off', false); // always styled as active, just changes label
+    resetSim();
   });
 
   buildPaletteUI();
   buildParticleUI();
+  buildWallUI();
 
   document.getElementById('btn-view').addEventListener('click', () => {
-    // Cycle: density → phase → 3D surface → spacetime → density
-    const cycle = ['density','phase','surface','spacetime'];
+    const cycle = ['density','phase','surface'];
     viewMode = cycle[(cycle.indexOf(viewMode) + 1) % cycle.length];
 
     const isFlat = (viewMode === 'density' || viewMode === 'phase');
-    const isSurf = isFlat || viewMode === 'surface';
-    surfaceMesh.visible    = isSurf;
-    spacetimeGroup.visible = (viewMode === 'spacetime');
-    bohmPoints.visible     = isSurf && showBohmian;
-    trailMesh.visible      = isSurf && showBohmian;
+    surfaceMesh.visible    = true;
+    spacetimeGroup.visible = false;
+    bohmPoints.visible     = showParticles;
+    trailMesh.visible      = showTrails;
 
     if (isFlat) setCameraView('2d');
     else        setCameraView('3d');
 
+    if (lastRho) updateSurface(lastRho, NX, NY);
+
+    drawAxes();
+
     const labels = {
-      density:    '� 2D Density',
-      phase:      '🌈 2D Phase',
-      surface:    '🌊 3D Surface',
-      spacetime:  '🕐 Spacetime',
+      density: '2D Density',
+      phase:   'Re(\u03c8)',
+      surface: '3D Surface',
     };
     document.getElementById('btn-view').textContent = labels[viewMode];
   });
@@ -904,6 +1311,8 @@ window.addEventListener('resize', () => {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  if (viewMode === 'density' || viewMode === 'phase') fitCamera2D();
+  drawAxes();
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -912,6 +1321,24 @@ window.addEventListener('resize', () => {
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
+
+  const now = performance.now();
+  _perfFrameCount++;
+  const elapsed = now - _perfLastTime;
+  if (elapsed >= 1000) {
+    _perfFPS = (_perfFrameCount / elapsed * 1000).toFixed(1);
+    const simElapsed = useGPU && gpuSim ? (gpuSim.simTime - _perfLastSimT) * 1e15 : 0;
+    _perfSimSpeed   = (simElapsed / elapsed * 1000).toFixed(0);  // fs/s
+    _perfStepsPerS  = ((stepsPerFrame * _perfFrameCount) / elapsed * 1000).toFixed(0);
+    _perfLastTime   = now;
+    _perfLastSimT   = useGPU && gpuSim ? gpuSim.simTime : 0;
+    _perfFrameCount = 0;
+    const hud = document.getElementById('perf-hud');
+    if (hud) hud.innerHTML =
+      `FPS: ${_perfFPS}<br>` +
+      `Steps/s: ${_perfStepsPerS}<br>` +
+      `Sim speed: ${_perfSimSpeed} fs/s`;
+  }
 
   if (!paused) {
     stepsPerFrame = parseInt(document.getElementById('speed').value);
@@ -933,17 +1360,19 @@ function boot() {
   buildSurface();
   buildSpacetime();
   buildBohmianMesh();
-  buildBarrier(0.5, 0.422, 0.578, 0.039);
+  buildBarrier(0.5, 0.5 + (-8e-9 / 100e-9), 0.5 + (8e-9 / 100e-9), 4e-9 / 100e-9);
   initUI();
 
   useGPU = initGPU();
   if (!useGPU) spawnWorker();
 
+  _perfLastTime = performance.now();
+
   // Start in 2D density view
   spacetimeGroup.visible = false;
   surfaceMesh.visible    = true;
   setCameraView('2d');
-  document.getElementById('btn-view').textContent = '🗺 2D Density';
+  document.getElementById('btn-view').textContent = '2D Density';
 
   try {
     resetSim();
@@ -951,6 +1380,7 @@ function boot() {
     console.error('resetSim failed:', err);
   }
 
+  drawAxes();
   animate();
 }
 

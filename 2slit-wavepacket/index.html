@@ -27,79 +27,112 @@
 
   <div id="app">
     <canvas id="canvas"></canvas>
+    <canvas id="axes-canvas"></canvas>
 
     <!-- ── Side panel ──────────────────────────── -->
     <aside id="panel">
       <div class="panel-title">⚛ 2-Slit Quantum Sim</div>
+      <div class="panel-tabs">
+        <button class="tab-btn active" data-tab="basic">Basic</button>
+        <button class="tab-btn" data-tab="expert">Expert</button>
+      </div>
 
       <!-- Slit geometry -->
-      <div class="panel-section">
+      <div class="panel-section" data-tab="basic">
         <div class="section-label">Slit Geometry</div>
 
-        <div class="slider-row">
+        <div class="slider-row" title="y-offsets of both slit centres from domain centre (Ly=100 nm). Cyan handle = slit 1 (below centre), red handle = slit 2 (above centre).">
           <div class="slider-header">
-            <span class="slider-name">Slit 1 centre (y)</span>
-            <span class="slider-val" id="slit1-val">0.30</span>
+            <span class="slider-name">Slit positions</span>
+            <span class="slider-val" id="slits-val">−8 / +8 nm</span>
           </div>
-          <input type="range" id="slit1" min="0.10" max="0.45" step="0.01" value="0.42" />
+          <div class="dual-range" id="dual-slit">
+            <div class="dual-track" id="dual-track"></div>
+            <input type="range" id="slit1" min="-45" max="45" step="1" value="-8" />
+            <input type="range" id="slit2" min="-45" max="45" step="1" value="8" />
+          </div>
         </div>
 
-        <div class="slider-row">
+        <div class="slider-row" title="Slit ½-width of each slit opening in nm. Full slit opening = 2 × this value.">
           <div class="slider-header">
-            <span class="slider-name">Slit 2 centre (y)</span>
-            <span class="slider-val" id="slit2-val">0.70</span>
+            <span class="slider-name">Slit ½-width</span>
+            <span class="slider-val" id="slitWidth-val">4.0 nm</span>
           </div>
-          <input type="range" id="slit2" min="0.55" max="0.90" step="0.01" value="0.58" />
+          <input type="range" id="slitWidth" min="1" max="12" step="0.5" value="4" />
         </div>
 
-        <div class="slider-row">
-          <div class="slider-header">
-            <span class="slider-name">Slit half-width</span>
-            <span class="slider-val" id="slitWidth-val">0.04</span>
-          </div>
-          <input type="range" id="slitWidth" min="0.01" max="0.12" step="0.005" value="0.039" />
-        </div>
+
+
       </div>
 
       <!-- Wave packet -->
-      <div class="panel-section">
+      <div class="panel-section" data-tab="basic">
         <div class="section-label">Wave Packet</div>
 
-        <div class="slider-row">
+        <div class="slider-row" title="Initial group velocity of the wave packet in x. Higher = faster packet, shorter de Broglie wavelength, less diffraction.">
           <div class="slider-header">
-            <span class="slider-name">Momentum vₓ</span>
+            <span class="slider-name">vₓ</span>
             <span class="slider-val" id="momentum-val">1.00 × 10⁵ m/s</span>
           </div>
           <input type="range" id="momentum" min="0.3" max="3.0" step="0.1" value="1.0" />
         </div>
 
-        <div class="slider-row">
+        <div class="slider-row" title="Gaussian envelope width along x (propagation direction). Smaller σₓ = broader momentum spread = wider diffraction cone.">
           <div class="slider-header">
-            <span class="slider-name">Width σₓ</span>
+            <span class="slider-name">σₓ</span>
             <span class="slider-val" id="sigmax-val">6.0 nm</span>
           </div>
           <input type="range" id="sigmax" min="2" max="18" step="0.5" value="6" />
         </div>
+
+        <div class="slider-row" title="Gaussian envelope width along y (transverse to propagation). Larger σᵧ = packet wider than slit spacing, both slits illuminated equally.">
+          <div class="slider-header">
+            <span class="slider-name">σᵧ</span>
+            <span class="slider-val" id="sigmay-val">10.0 nm</span>
+          </div>
+          <input type="range" id="sigmay" min="2" max="30" step="0.5" value="10" />
+        </div>
       </div>
 
-      <!-- Simulation -->
-      <div class="panel-section">
+      <!-- Simulation [basic] -->
+      <div class="panel-section" data-tab="basic">
         <div class="section-label">Simulation</div>
 
-        <div class="slider-row">
+        <div class="slider-row" title="Number of Bohmian pilot-wave tracer particles, sampled from |ψ|² at t=0. More particles = richer trajectories but slower CPU step.">
           <div class="slider-header">
-            <span class="slider-name">Bohmian particles</span>
+            <span class="slider-name">Particles</span>
             <span class="slider-val" id="np-val">300</span>
           </div>
           <input type="range" id="np" min="50" max="500" step="50" value="300" />
         </div>
 
-        <div class="slider-row">
+        <div class="slider-row" title="Physical length of each trajectory trail in nanometres. Constant regardless of simulation speed or time step.">
           <div class="slider-header">
-            <span class="slider-name">Steps / frame</span>
-            <span class="slider-val" id="speed-val">16×</span>
+            <span class="slider-name">Trail length</span>
+            <span class="slider-val" id="trailen-val">20 nm</span>
           </div>
-          <input type="range" id="speed" min="1" max="64" step="1" value="16" />
+          <input type="range" id="trailen" min="2" max="200" step="2" value="20" />
+        </div>
+
+        <div class="slider-row" title="Number of physics time-steps computed per rendered frame. Higher = faster playback; does not change final accuracy.">
+          <div class="slider-header">
+            <span class="slider-name">Steps/frame</span>
+            <span class="slider-val" id="speed-val">32×</span>
+          </div>
+          <input type="range" id="speed" min="1" max="128" step="1" value="32" />
+        </div>
+      </div>
+
+      <!-- Expert: Numerics -->
+      <div class="panel-section" data-tab="expert">
+        <div class="section-label">Numerics</div>
+
+        <div class="slider-row" title="Physics time step Δt in femtoseconds. Larger = faster simulation but less accurate. Stability limit ~0.2 fs for 10 eV barrier.">
+          <div class="slider-header">
+            <span class="slider-name">Δt</span>
+            <span class="slider-val" id="dt-val">0.10 fs</span>
+          </div>
+          <input type="range" id="dt" min="1" max="10" step="1" value="2" />
         </div>
 
         <div class="slider-row">
@@ -112,38 +145,73 @@
           </select>
         </div>
 
-        <div class="slider-row">
+        <div class="slider-row" title="Thickness of the absorbing boundary layer as a fraction of domain size. Thicker = less reflection but smaller effective simulation area.">
           <div class="slider-header">
-            <span class="slider-name">Absorb layer</span>
-            <span class="slider-val" id="absthick-val">10%</span>
+            <span class="slider-name">Absorber %</span>
+            <span class="slider-val" id="absthick-val">15%</span>
           </div>
-          <input type="range" id="absthick" min="0.02" max="0.20" step="0.01" value="0.05" />
+          <input type="range" id="absthick" min="0.02" max="0.35" step="0.01" value="0.15" />
+        </div>
+
+        <div class="slider-row" title="Exponential absorption strength. Higher = wave killed faster inside the absorber layer. At 20 amplitude drops to ~10⁻⁹ at the outer edge.">
+          <div class="slider-header">
+            <span class="slider-name">Absorber strength</span>
+            <span class="slider-val" id="absstrength-val">35</span>
+          </div>
+          <input type="range" id="absstrength" min="1" max="50" step="1" value="35" />
         </div>
       </div>
 
-      <!-- Appearance -->
-      <div class="panel-section">
-        <div class="section-label">Appearance</div>
+      <!-- Expert: Initial state -->
+      <div class="panel-section" data-tab="expert">
+        <div class="section-label">Initial State</div>
 
-        <div class="slider-row">
+        <div class="slider-row" title="Initial x-position of the wave packet centre (nm from left edge). Move left to observe more free propagation before the slits.">
           <div class="slider-header">
-            <span class="slider-name">Wave palette</span>
+            <span class="slider-name">x₀ position</span>
+            <span class="slider-val" id="x0-val">55 nm</span>
           </div>
-          <div id="palette-btn" class="palette-btn">
-            <div id="palette-strip-cur" class="palette-strip-cur"></div>
-            <span id="palette-label-cur" class="palette-label-cur">Plasma</span>
-            <span class="palette-arrow">▾</span>
-          </div>
+          <input type="range" id="x0" min="20" max="80" step="5" value="55" />
         </div>
+      </div>
 
-        <div class="slider-row">
-          <div class="slider-header">
-            <span class="slider-name">Particle color</span>
+      <!-- Expert: Run control -->
+      <div class="panel-section" data-tab="expert">
+        <div class="section-label">Run Control</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Auto-stop when wave exits domain</div>
+        <button id="btn-autostop" class="btn-toggle" style="width:100%">Auto-stop: ON</button>
+      </div>
+
+      <!-- Expert: Performance -->
+      <div class="panel-section" data-tab="expert">
+        <div class="section-label">Performance</div>
+        <div id="perf-hud" style="font-size:11px;line-height:1.7;color:var(--accent);font-family:monospace;">—</div>
+      </div>
+
+      <!-- Appearance -->
+      <div class="panel-section" data-tab="expert">
+        <div class="section-label">Appearance</div>
+        <div class="appearance-row">
+          <div class="appearance-col">
+            <span class="appearance-label">Wave</span>
+            <div id="palette-btn" class="palette-btn palette-btn-compact">
+              <div id="palette-strip-cur" class="palette-strip-cur"></div>
+              <span class="palette-arrow">▾</span>
+            </div>
           </div>
-          <div id="particle-btn" class="palette-btn">
-            <div id="particle-dot-cur" class="particle-dot-cur"></div>
-            <span id="particle-label-cur" class="palette-label-cur">Yellow</span>
-            <span class="palette-arrow">▾</span>
+          <div class="appearance-col">
+            <span class="appearance-label">Particle</span>
+            <div id="particle-btn" class="palette-btn palette-btn-compact">
+              <div id="particle-dot-cur" class="particle-dot-cur"></div>
+              <span class="palette-arrow">▾</span>
+            </div>
+          </div>
+          <div class="appearance-col">
+            <span class="appearance-label">Wall</span>
+            <div id="wall-btn" class="palette-btn palette-btn-compact">
+              <div id="wall-dot-cur" class="particle-dot-cur"></div>
+              <span class="palette-arrow">▾</span>
+            </div>
           </div>
         </div>
       </div>
@@ -152,11 +220,24 @@
       <div class="panel-section">
         <div class="section-label">Controls</div>
         <div class="btn-row">
-          <button id="btn-reset">↺ Reset Simulation</button>
-          <button id="btn-pause" class="btn-running">⏸ Stop</button>
-          <button id="btn-bohmian">Hide Particles</button>
-          <button id="btn-view">🗺 2D Density</button>
-          <button id="btn-wire">Wireframe</button>
+          <div class="btn-row-inline">
+            <button id="btn-reset">↺ Reset</button>
+            <button id="btn-pause" class="btn-running">⏸ Stop</button>
+          </div>
+          <div class="btn-row-inline">
+            <button id="btn-defaults" style="flex:1;font-size:0.72rem;opacity:0.75;">Restore defaults</button>
+          </div>
+          <div class="btn-row-inline">
+            <button id="btn-particles" class="btn-toggle">Particles</button>
+            <button id="btn-trails" class="btn-toggle">Trajectories</button>
+          </div>
+          <div class="btn-row-inline">
+            <button id="btn-view">2D Density</button>
+            <button id="btn-wire">Wireframe</button>
+          </div>
+          <div class="btn-row-inline">
+            <button id="btn-fdmode" class="btn-toggle" style="flex:1;font-size:0.72rem;">Solver: FFT split-op</button>
+          </div>
         </div>
       </div>
 
@@ -230,6 +311,8 @@
   <div id="palette-popup" class="palette-popup"></div>
   <!-- Particle colour popup -->
   <div id="particle-popup" class="particle-popup"></div>
+  <!-- Wall colour popup -->
+  <div id="wall-popup" class="particle-popup"></div>
 
   <script type="module" src="js/main.js"></script>
 </body>

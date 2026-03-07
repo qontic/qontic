@@ -1,0 +1,2663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Tunneling &amp; Bohmian Mechanics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #080818;
+    color: #c8d0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    padding: 8px 20px;
+    background: #0d0d28;
+    border-bottom: 1px solid #222248;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #a0e8ff;
+    white-space: nowrap;
+  }
+  .mode-tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .mode-tab {
+    padding: 5px 16px;
+    border-radius: 6px;
+    border: 1px solid #334;
+    background: transparent;
+    color: #778;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: all 0.15s;
+  }
+  .mode-tab.active {
+    background: #1a2a4a;
+    border-color: #4080c0;
+    color: #80c0ff;
+  }
+  .mode-tab:hover:not(.active) { border-color: #556; color: #99a; }
+
+  .main-layout {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+  /* === NUMERICAL LAYOUT === */
+  #numerical-panel {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    gap: 0;
+  }
+  .num-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 8px;
+    gap: 6px;
+  }
+  #canvas2d {
+    flex: 1;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #1a2a3a;
+    background: #04040e;
+    display: block;
+    min-height: 0;
+  }
+  #canvas3d-wrap {
+    height: 200px;
+    flex-shrink: 0;
+    position: relative;
+    border-radius: 8px;
+    border: 1px solid #1a2a3a;
+    overflow: hidden;
+  }
+  #canvas3d { width: 100%; height: 100%; display: block; }
+  #canvas-num-2d {
+    flex: 1;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #1a2a3a;
+    background: #04040e;
+    display: block;
+    min-height: 0;
+  }
+  #canvas-ana-2d, #canvas-spec-2d {
+    flex: 1;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #1a2a3a;
+    background: #04040e;
+    display: block;
+    min-height: 0;
+  }
+
+  /* === ANALYTICAL LAYOUT === */
+  #analytical-panel, #spectral-panel {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    gap: 0;
+  }
+  .ana-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 8px;
+    gap: 6px;
+  }
+  #canvas-ana-wave, #canvas-spec-wave {
+    flex: 1;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #1a2a3a;
+    background: #04040e;
+    display: block;
+    min-height: 0;
+  }
+
+  /* === SHARED CONTROLS === */
+  .controls-panel {
+    width: 240px;
+    flex-shrink: 0;
+    background: #0a0a20;
+    border-left: 1px solid #181830;
+    padding: 12px 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ctrl-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ctrl-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4a6080;
+    border-bottom: 1px solid #182030;
+    padding-bottom: 4px;
+  }
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ctrl-label {
+    flex: 0 0 80px;
+    font-size: 0.75rem;
+    color: #8090a8;
+  }
+  .ctrl-val {
+    flex: 0 0 36px;
+    text-align: right;
+    font-size: 0.75rem;
+    color: #60c0ff;
+    font-family: monospace;
+  }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: #1a2a3a;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #4090d0;
+    cursor: pointer;
+  }
+  .ctrl-btn {
+    flex: 1;
+    padding: 5px 0;
+    border-radius: 5px;
+    border: 1px solid #304060;
+    background: #101828;
+    color: #80b0d8;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .ctrl-btn:hover { background: #1a2840; border-color: #4060a0; }
+  .ctrl-btn.active { background: #1a3858; border-color: #4090d0; color: #90d0ff; }
+
+  .info-box {
+    background: #0c0c22;
+    border: 1px solid #1a2a40;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.74rem;
+    line-height: 1.7;
+  }
+  .info-box .lbl { color: #506080; margin-right: 4px; }
+  .info-box .val { color: #60e0a0; font-family: monospace; }
+  .info-box .formula {
+    margin-top: 6px;
+    color: #7090c0;
+    font-size: 0.69rem;
+    line-height: 1.6;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .leg-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    color: #7090a8;
+  }
+  .leg-dot { width: 10px; height: 4px; border-radius: 2px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚛ Quantum Tunneling + Bohmian Mechanics</h1>
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tab-num" onclick="switchMode('numerical')">
+      Numerical — Wave Packet (TDSE)
+    </button>
+    <button class="mode-tab" id="tab-ana" onclick="switchMode('analytical')">
+      Analytical — Stationary State
+    </button>
+    <button class="mode-tab" id="tab-spec" onclick="switchMode('spectral')">
+      Exact Packet — Spectral (no boundaries)
+    </button>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- ============================================================ -->
+  <!-- NUMERICAL PANEL                                              -->
+  <!-- ============================================================ -->
+  <div id="numerical-panel">
+    <div class="num-left">
+      <canvas id="canvas2d"></canvas>
+      <canvas id="canvas-num-2d" class="hidden"></canvas>
+      <div id="canvas3d-wrap">
+        <canvas id="canvas3d"></canvas>
+      </div>
+    </div>
+    <div class="controls-panel" id="ctrl-num">
+      <div class="ctrl-section">
+        <div class="ctrl-title">Simulation</div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-play" onclick="togglePlay()">⏸ Pause</button>
+          <button class="ctrl-btn" onclick="resetNum()">↺ Reset</button>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Speed</span>
+          <input type="range" id="speed-sl" min="1" max="20" value="6" oninput="updateNumSlider('speed')">
+          <span class="ctrl-val" id="speed-val">6</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Loop delay</span>
+          <input type="range" id="num-loop-sl" min="0" max="10" step="1" value="0" oninput="updateNumSlider('loopDelay')">
+          <span class="ctrl-val" id="num-loop-val">off</span>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Wave Packet</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Momentum k₀</span>
+          <input type="range" id="k0-sl" min="1" max="8" step="0.1" value="3.5" oninput="updateNumSlider('k0')">
+          <span class="ctrl-val" id="k0-val">3.5</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Width σ</span>
+          <input type="range" id="sigma-sl" min="0.3" max="3" step="0.1" value="1.0" oninput="updateNumSlider('sigma')">
+          <span class="ctrl-val" id="sigma-val">1.0</span>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Barrier</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Height V₀</span>
+          <input type="range" id="V0-sl" min="0" max="20" step="0.5" value="7.0" oninput="updateNumSlider('V0')">
+          <span class="ctrl-val" id="V0-val">7.0</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Width L</span>
+          <input type="range" id="bw-sl" min="0.2" max="5" step="0.1" value="1.5" oninput="updateNumSlider('bw')">
+          <span class="ctrl-val" id="bw-val">1.5</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Shape</span>
+          <select id="barrier-shape" onchange="resetNum()" style="flex:1;background:#101828;color:#80b0d8;border:1px solid #304060;border-radius:4px;padding:3px;font-size:0.75rem;">
+            <option value="square">Square</option>
+            <option value="gaussian">Gaussian</option>
+            <option value="double">Double</option>
+          </select>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Particles</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Count</span>
+          <input type="range" id="np-sl" min="1" max="40" step="1" value="20" oninput="updateNumSlider('np')">
+          <span class="ctrl-val" id="np-val">20</span>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-bohm" onclick="toggleBohm()">● Particles</button>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">View</div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-re" onclick="toggleLayer('re')">Re(ψ)</button>
+          <button class="ctrl-btn active" id="btn-im" onclick="toggleLayer('im')">Im(ψ)</button>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-prob" onclick="toggleLayer('prob')">|ψ|²</button>
+          <button class="ctrl-btn active" id="btn-3d" onclick="toggle3D()">3D View</button>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn" id="btn-num-2d" onclick="toggle2DNum()">⬡ 2D View</button>
+        </div>
+        <div class="ctrl-row" id="row-num-sigy" style="display:none">
+          <span class="ctrl-label">σᵧ width</span>
+          <input type="range" id="num-sigy-sl" min="0.3" max="5" step="0.1" value="1.5" oninput="updateNumSlider('sigY')">
+          <span class="ctrl-val" id="num-sigy-val">1.5</span>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Boundary Absorption (CAP)</div>
+        <div style="font-size:0.69rem;color:#4a6888;line-height:1.5;padding:2px 0 4px">
+          Absorbs outgoing waves at the<br>domain edges — kills FFT wrap-around.
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-cap" onclick="toggleCAP()">⬛ Absorb On</button>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Strength</span>
+          <input type="range" id="cap-str-sl" min="0.05" max="2" step="0.05" value="0.4" oninput="updateNumSlider('capStr')">
+          <span class="ctrl-val" id="cap-str-val">0.40</span>
+        </div>
+      </div>
+      <div class="info-box" id="num-info">
+        <div><span class="lbl">Energy E:</span><span class="val" id="info-E">–</span></div>
+        <div><span class="lbl">E / V₀:</span><span class="val" id="info-EV">–</span></div>
+        <div><span class="lbl">Transmitted:</span><span class="val" id="info-T">–</span></div>
+        <div><span class="lbl">Reflected:</span><span class="val" id="info-R">–</span></div>
+        <div><span class="lbl">Time:</span><span class="val" id="info-time">–</span></div>
+        <div class="formula">ℏ = m = 1 (natural units)<br>E = k₀²/2</div>
+      </div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#3080ff"></div>Re(ψ)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ff8030"></div>Im(ψ)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#20d080"></div>|ψ|²</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ff4444"></div>V(x)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#00e8ff;height:10px;width:10px;border-radius:50%"></div>Particles</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ANALYTICAL PANEL                                             -->
+  <!-- ============================================================ -->
+  <div id="analytical-panel" class="hidden">
+    <div class="ana-left">
+      <canvas id="canvas-ana-wave"></canvas>
+      <canvas id="canvas-ana-2d" class="hidden"></canvas>
+    </div>
+    <div class="controls-panel" id="ctrl-ana">
+      <div class="ctrl-section">
+        <div class="ctrl-title">Energy</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">E / V₀</span>
+          <input type="range" id="ana-EV-sl" min="0.05" max="3" step="0.01" value="0.7" oninput="updateAnaSlider('EV')">
+          <span class="ctrl-val" id="ana-EV-val">0.70</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">V₀</span>
+          <input type="range" id="ana-V0-sl" min="1" max="20" step="0.5" value="8" oninput="updateAnaSlider('V0')">
+          <span class="ctrl-val" id="ana-V0-val">8.0</span>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Barrier</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Width L</span>
+          <input type="range" id="ana-L-sl" min="0.1" max="6" step="0.1" value="2.0" oninput="updateAnaSlider('L')">
+          <span class="ctrl-val" id="ana-L-val">2.0</span>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Particles</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Count</span>
+          <input type="range" id="ana-np-sl" min="1" max="30" step="1" value="15" oninput="updateAnaSlider('np')">
+          <span class="ctrl-val" id="ana-np-val">15</span>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-ana-bohm" onclick="toggleAnaBohm()">● Particles</button>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-ana-trails" onclick="toggleAnaTrails()">∿ Trails On</button>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Display</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Loop delay</span>
+          <input type="range" id="ana-loop-sl" min="0" max="30" step="1" value="0" oninput="updateAnaSlider('loopDelay')">
+          <span class="ctrl-val" id="ana-loop-val">off</span>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-ana-vel" onclick="toggleAnaVel()">∇ Velocity Field</button>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-ana-phase" onclick="toggleAnaPhase()">⟲ Animate Phase</button>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn" id="btn-ana-2d" onclick="toggle2DAna()">⬡ 2D View</button>
+        </div>
+      </div>
+      <div class="info-box" id="ana-info">
+        <div><span class="lbl">E:</span><span class="val" id="ana-info-E">–</span></div>
+        <div><span class="lbl">V₀:</span><span class="val" id="ana-info-V0">–</span></div>
+        <div><span class="lbl">k₁:</span><span class="val" id="ana-info-k1">–</span></div>
+        <div><span class="lbl">κ / k₂:</span><span class="val" id="ana-info-k2">–</span></div>
+        <div><span class="lbl">T (exact):</span><span class="val" id="ana-info-T">–</span></div>
+        <div><span class="lbl">R (exact):</span><span class="val" id="ana-info-R">–</span></div>
+        <div class="formula">
+          E &lt; V₀: κ = √(2(V₀−E))<br>
+          T = [1 + sinh²(κL)(k₁²+κ²)²/(4k₁²κ²)]⁻¹<br><br>
+          E &gt; V₀: k₂ = √(2(E−V₀))<br>
+          T = [1 + sin²(k₂L)(k₁²−k₂²)²/(4k₁²k₂²)]⁻¹
+        </div>
+      </div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#3080ff"></div>Re(ψ)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#20d080"></div>|ψ|²</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ff4444"></div>V(x)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ffaa20"></div>velocity v(x)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#00e8ff;height:10px;width:10px;border-radius:50%"></div>Particles</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SPECTRAL EXACT WAVE PACKET PANEL                             -->
+  <!-- ============================================================ -->
+  <div id="spectral-panel" class="hidden">
+    <div class="ana-left">
+      <canvas id="canvas-spec-wave"></canvas>
+      <canvas id="canvas-spec-2d" class="hidden"></canvas>
+    </div>
+    <div class="controls-panel" id="ctrl-spec">
+      <div class="ctrl-section">
+        <div class="ctrl-title">Simulation</div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-spec-play" onclick="toggleSpecPlay()">⏸ Pause</button>
+          <button class="ctrl-btn" onclick="resetSpec(true)">↺ Reset</button>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Speed</span>
+          <input type="range" id="spec-speed-sl" min="1" max="30" step="1" value="8" oninput="updateSpecSlider('speed')">
+          <span class="ctrl-val" id="spec-speed-val">8</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Loop delay (s)</span>
+          <input type="range" id="spec-loop-sl" min="0" max="10" step="0.5" value="1.5" oninput="updateSpecSlider('loop')">
+          <span class="ctrl-val" id="spec-loop-val">1.5s</span>
+        </div>
+
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Wave Packet</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Momentum k₀</span>
+          <input type="range" id="spec-k0-sl" min="1" max="8" step="0.1" value="3.5" oninput="updateSpecSlider('k0')">
+          <span class="ctrl-val" id="spec-k0-val">3.5</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Width σ</span>
+          <input type="range" id="spec-sigma-sl" min="0.3" max="3" step="0.1" value="1.2" oninput="updateSpecSlider('sigma')">
+          <span class="ctrl-val" id="spec-sigma-val">1.2</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Start x₀</span>
+          <input type="range" id="spec-x0-sl" min="-15" max="-2" step="0.5" value="-8" oninput="updateSpecSlider('x0')">
+          <span class="ctrl-val" id="spec-x0-val">-8.0</span>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Barrier</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Height V₀</span>
+          <input type="range" id="spec-V0-sl" min="0" max="20" step="0.5" value="7.0" oninput="updateSpecSlider('V0')">
+          <span class="ctrl-val" id="spec-V0-val">7.0</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Width L</span>
+          <input type="range" id="spec-L-sl" min="0.2" max="5" step="0.1" value="1.5" oninput="updateSpecSlider('L')">
+          <span class="ctrl-val" id="spec-L-val">1.5</span>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">k modes</span>
+          <input type="range" id="spec-nk-sl" min="40" max="300" step="10" value="150" oninput="updateSpecSlider('nk')">
+          <span class="ctrl-val" id="spec-nk-val">150</span>
+        </div>
+      </div>
+      <div class="ctrl-section">
+        <div class="ctrl-title">Particles</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Count</span>
+          <input type="range" id="spec-np-sl" min="1" max="1000" step="10" value="200" oninput="updateSpecSlider('np')">
+          <span class="ctrl-val" id="spec-np-val">200</span>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn active" id="btn-spec-bohm" onclick="toggleSpecBohm()">● Particles</button>
+          <button class="ctrl-btn active" id="btn-spec-trails" onclick="toggleSpecTrails()">∿ Trails</button>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn" id="btn-spec-2d" onclick="toggle2DSpec()">⬡ 2D View</button>
+        </div>
+        <div class="ctrl-row" id="row-spec-sigy" style="display:none">
+          <span class="ctrl-label">σᵧ width</span>
+          <input type="range" id="spec-sigy-sl" min="0.3" max="5" step="0.1" value="1.5" oninput="updateSpecSlider('sigY')">
+          <span class="ctrl-val" id="spec-sigy-val">1.5</span>
+        </div>
+      </div>
+      <div class="info-box" id="spec-info" style="font-size:0.7rem;line-height:1.65">
+        <div><span class="lbl">Method:</span><span class="val">Spectral sum</span></div>
+        <div><span class="lbl">E:</span><span class="val" id="spec-info-E">–</span></div>
+        <div><span class="lbl">E/V₀:</span><span class="val" id="spec-info-EV">–</span></div>
+        <div><span class="lbl">T (mean):</span><span class="val" id="spec-info-T">–</span></div>
+        <div><span class="lbl">Time:</span><span class="val" id="spec-info-t">–</span></div>
+        <div><span class="lbl">Ptcl T/R/N:</span><span class="val" id="spec-info-P" style="color:#8cf">–</span></div>
+        <div><span class="lbl">ψ₀ norm:</span><span class="val" id="spec-info-N0" style="color:#fc8">–</span></div>
+        <div class="formula">
+          ψ(x,t) = ∫ φ(k) ψₖˢᶜᵃᵗ(x) e⁻ⁱᵏ²ᵗ/² dk<br>
+          φ(k) = Gaussian centred at k₀<br>
+          ψₖˢᶜᵃᵗ — exact transfer-matrix eigenstate<br><br>
+          <span style="color:#60e0a0">✓ No boundaries · No CAP · No FFT<br>Mathematically exact on ℝ</span>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#3080ff"></div>Re(ψ)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#20d080"></div>|ψ|²</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ff4444"></div>V(x)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#00e8ff;height:10px;width:10px;border-radius:50%"></div>Particles</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+// ================================================================
+// UTILITIES
+// ================================================================
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// In-place Cooley-Tukey FFT
+// re, im: Float64Array of length N (must be power of 2)
+// inverse: bool
+function fft(re, im, inverse) {
+  const n = re.length;
+  // bit-reversal
+  let j = 0;
+  for (let i = 1; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      let t = re[i]; re[i] = re[j]; re[j] = t;
+          t = im[i]; im[i] = im[j]; im[j] = t;
+    }
+  }
+  // FFT butterfly
+  const sign = inverse ? 1 : -1;
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = sign * 2 * Math.PI / len;
+    const wRe = Math.cos(ang), wIm = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let curRe = 1, curIm = 0;
+      const half = len >> 1;
+      for (let k = 0; k < half; k++) {
+        const uR = re[i+k],      uI = im[i+k];
+        const vR = re[i+k+half] * curRe - im[i+k+half] * curIm;
+        const vI = re[i+k+half] * curIm + im[i+k+half] * curRe;
+        re[i+k]      = uR + vR;  im[i+k]      = uI + vI;
+        re[i+k+half] = uR - vR;  im[i+k+half] = uI - vI;
+        const nR = curRe * wRe - curIm * wIm;
+        curIm = curRe * wIm + curIm * wRe;
+        curRe = nR;
+      }
+    }
+  }
+  if (inverse) {
+    for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+  }
+}
+
+// fftshift: put negative frequencies first (standard physics convention)
+function fftshift(arr) {
+  const n = arr.length, h = n >> 1;
+  for (let i = 0; i < h; i++) {
+    const t = arr[i]; arr[i] = arr[i+h]; arr[i+h] = t;
+  }
+}
+
+// ================================================================
+// ======  NUMERICAL MODULE  ======================================
+// ================================================================
+const NUM = {
+  N: 1024, xmin: -25, xmax: 25,
+  psi_re: null, psi_im: null,
+  V: null, k: null, dx: 0, dk: 0,
+  // half-step operators
+  Ur_re: null, Ur_im: null,  // real-space half-step
+  Uk_re: null, Uk_im: null,  // k-space full-step
+  // CAP — Complex Absorbing Potential
+  Gamma: null, capStrength: 0.4, capFrac: 0.18, capOn: true,
+  // state
+  t: 0, dt: 0.012,
+  playing: true, bohmOn: true, show3d: true, show2d: false,
+  loopDelay: 0, initialNorm: 1, restartPending: false,
+  layers: { re: true, im: true, prob: true },
+  // params
+  k0: 3.5, sigma: 1.0, V0: 7.0, bw: 1.5, shape: 'square', np: 20, speed: 6, sigY: 1.5,
+  // bohmian
+  bx: null, bTrails: null,
+  // stats
+  T_frac: 0, R_frac: 0,
+};
+
+function numDx() { return (NUM.xmax - NUM.xmin) / NUM.N; }
+function numX(i) { return NUM.xmin + i * numDx(); }
+
+function buildBarrier() {
+  const N = NUM.N, V = NUM.V = new Float64Array(N);
+  const shape = document.getElementById('barrier-shape').value;
+  NUM.shape = shape;
+  const cx = 0, L = NUM.bw, V0 = NUM.V0;
+  for (let i = 0; i < N; i++) {
+    const x = numX(i);
+    if (shape === 'square') {
+      V[i] = Math.abs(x - cx) <= L / 2 ? V0 : 0;
+    } else if (shape === 'gaussian') {
+      V[i] = V0 * Math.exp(-2 * (x - cx) ** 2 / (L * L));
+    } else { // double
+      V[i] = V0 * (Math.exp(-2*(x+L)**2/(0.6*L)**2) + Math.exp(-2*(x-L)**2/(0.6*L)**2));
+    }
+  }
+}
+
+function buildKGrid() {
+  const N = NUM.N;
+  const dx = numDx();
+  NUM.dx = dx;
+  NUM.dk = 2 * Math.PI / (N * dx);
+  NUM.k = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    NUM.k[i] = i < N/2 ? i * NUM.dk : (i - N) * NUM.dk;
+  }
+}
+
+// Build Γ(x): smooth cubic absorber over capFrac of domain on each side.
+// Uses a sin²-taper which is reflectionless to leading order.
+function buildCAP() {
+  const N = NUM.N, xmin = NUM.xmin, xmax = NUM.xmax;
+  const span = xmax - xmin;
+  const absorb = span * NUM.capFrac; // width of each absorbing zone
+  NUM.Gamma = new Float64Array(N);
+  if (!NUM.capOn) return;
+  for (let i = 0; i < N; i++) {
+    const x = numX(i);
+    // left zone: [xmin, xmin+absorb]
+    if (x < xmin + absorb) {
+      const s = (xmin + absorb - x) / absorb; // 1 at wall, 0 at inner edge
+      NUM.Gamma[i] = NUM.capStrength * s * s * s;
+    }
+    // right zone: [xmax-absorb, xmax]
+    else if (x > xmax - absorb) {
+      const s = (x - (xmax - absorb)) / absorb; // 0 at inner edge, 1 at wall
+      NUM.Gamma[i] = NUM.capStrength * s * s * s;
+    }
+  }
+}
+
+function buildOperators() {
+  const N = NUM.N, dt = NUM.dt;
+  NUM.Ur_re = new Float64Array(N); NUM.Ur_im = new Float64Array(N);
+  NUM.Uk_re = new Float64Array(N); NUM.Uk_im = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const phi_r = -0.5 * NUM.V[i] * dt;
+    // CAP damping: multiply by exp(-Gamma * dt/2)
+    const damp = NUM.Gamma ? Math.exp(-NUM.Gamma[i] * dt * 0.5) : 1.0;
+    NUM.Ur_re[i] = damp * Math.cos(phi_r);
+    NUM.Ur_im[i] = damp * Math.sin(phi_r);
+    const phi_k = -0.5 * NUM.k[i] * NUM.k[i] * dt;
+    NUM.Uk_re[i] = Math.cos(phi_k);
+    NUM.Uk_im[i] = Math.sin(phi_k);
+  }
+}
+
+function initWavePacket() {
+  const N = NUM.N, dx = numDx();
+  const x0 = -8.0, k0 = NUM.k0, sig = NUM.sigma;
+  NUM.psi_re = new Float64Array(N);
+  NUM.psi_im = new Float64Array(N);
+  const norm = 1.0 / Math.pow(2 * Math.PI * sig * sig, 0.25);
+  let s = 0;
+  for (let i = 0; i < N; i++) {
+    const x = numX(i);
+    const env = norm * Math.exp(-(x - x0) * (x - x0) / (4 * sig * sig));
+    NUM.psi_re[i] = env * Math.cos(k0 * x);
+    NUM.psi_im[i] = env * Math.sin(k0 * x);
+    s += (NUM.psi_re[i]**2 + NUM.psi_im[i]**2) * dx;
+  }
+  // normalise
+  const nf = 1 / Math.sqrt(s);
+  for (let i = 0; i < N; i++) { NUM.psi_re[i] *= nf; NUM.psi_im[i] *= nf; }
+}
+
+function initBohmian() {
+  const N = NUM.N, dx = numDx(), np = NUM.np;
+  // sample from |psi|^2 at t=0 (cumulative method)
+  const prob = new Float64Array(N);
+  let tot = 0;
+  for (let i = 0; i < N; i++) {
+    prob[i] = (NUM.psi_re[i]**2 + NUM.psi_im[i]**2) * dx;
+    tot += prob[i];
+  }
+  const cum = new Float64Array(N+1);
+  for (let i = 0; i < N; i++) cum[i+1] = cum[i] + prob[i] / tot;
+
+  NUM.bx = new Float64Array(np);
+  NUM.bTrails = Array.from({length: np}, () => []);
+  for (let p = 0; p < np; p++) {
+    const u = (p + 0.5 + 0.3 * (Math.random() - 0.5)) / np;
+    // find grid index via bisection
+    let lo = 0, hi = N;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (cum[mid] < u) lo = mid; else hi = mid;
+    }
+    NUM.bx[p] = numX(lo) + dx * (u - cum[lo]) / (cum[lo+1] - cum[lo] + 1e-30);
+  }
+}
+
+// Split-operator step
+function stepNum(nSteps) {
+  const N = NUM.N, re = NUM.psi_re, im = NUM.psi_im;
+  const Ur_r = NUM.Ur_re, Ur_i = NUM.Ur_im;
+  const Uk_r = NUM.Uk_re, Uk_i = NUM.Uk_im;
+
+  for (let s = 0; s < nSteps; s++) {
+    // half step in real space
+    for (let i = 0; i < N; i++) {
+      const r = re[i], c = im[i];
+      re[i] = r * Ur_r[i] - c * Ur_i[i];
+      im[i] = r * Ur_i[i] + c * Ur_r[i];
+    }
+    // FFT to k-space
+    fft(re, im, false);
+    // full step in k-space
+    for (let i = 0; i < N; i++) {
+      const r = re[i], c = im[i];
+      re[i] = r * Uk_r[i] - c * Uk_i[i];
+      im[i] = r * Uk_i[i] + c * Uk_r[i];
+    }
+    // IFFT
+    fft(re, im, true);
+    // half step in real space
+    for (let i = 0; i < N; i++) {
+      const r = re[i], c = im[i];
+      re[i] = r * Ur_r[i] - c * Ur_i[i];
+      im[i] = r * Ur_i[i] + c * Ur_r[i];
+    }
+    NUM.t += NUM.dt;
+  }
+}
+
+// Bohmian velocity: v(x) = Im(psi* d/dx psi) / |psi|^2
+//                        = (re * im' - im * re') / |psi|^2   (where ' = spatial deriv)
+function bohmVelocityAt(x) {
+  const dx = numDx(), N = NUM.N;
+  const i = clamp(Math.floor((x - NUM.xmin) / dx), 1, N - 2);
+  const re  = NUM.psi_re[i],   im  = NUM.psi_im[i];
+  const reP = (NUM.psi_re[i+1] - NUM.psi_re[i-1]) / (2 * dx);
+  const imP = (NUM.psi_im[i+1] - NUM.psi_im[i-1]) / (2 * dx);
+  const denom = re * re + im * im;
+  if (denom < 1e-20) return 0;
+  return (re * imP - im * reP) / denom;
+}
+
+function stepBohmian(nSteps) {
+  const np = NUM.np, dt = NUM.dt;
+  for (let p = 0; p < np; p++) {
+    for (let s = 0; s < nSteps; s++) {
+      const v = bohmVelocityAt(NUM.bx[p]);
+      NUM.bx[p] += v * dt;
+    }
+    // wrap / clamp
+    if (NUM.bx[p] < NUM.xmin || NUM.bx[p] > NUM.xmax) {
+      NUM.bx[p] = clamp(NUM.bx[p], NUM.xmin + 0.1, NUM.xmax - 0.1);
+    }
+    // record trail (max 80 points)
+    const trail = NUM.bTrails[p];
+    trail.push(NUM.bx[p]);
+    if (trail.length > 80) trail.shift();
+  }
+}
+
+function computeTR() {
+  const N = NUM.N, dx = numDx();
+  let T = 0, R = 0, tot = 0;
+  for (let i = 0; i < N; i++) {
+    const p = (NUM.psi_re[i]**2 + NUM.psi_im[i]**2) * dx;
+    tot += p;
+    if (numX(i) > NUM.bw) T += p;
+    else if (numX(i) < -NUM.bw) R += p;
+  }
+  NUM.T_frac = T / (tot + 1e-30);
+  NUM.R_frac = R / (tot + 1e-30);
+}
+
+// ----------------------------------------------------------------
+// 2D CANVAS RENDERING — NUMERICAL
+// ----------------------------------------------------------------
+function renderNum2D() {
+  const cv = document.getElementById('canvas2d');
+  const W = cv.clientWidth || 800, H = cv.clientHeight || 400;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const N = NUM.N, dx = numDx();
+  const xr = NUM.xmax - NUM.xmin;
+  const mx = (x) => ((x - NUM.xmin) / xr) * W;
+  const my = (v, scale, base) => base - v * scale;
+
+  const midY = H * 0.55;
+  const scaleWave = H * 0.22;
+  const scaleProb = H * 0.38;
+  const scaleV    = H * 0.30;
+
+  // --- absorbing region shading (CAP zones) ---
+  if (NUM.capOn && NUM.Gamma) {
+    const xL = NUM.xmin + (NUM.xmax - NUM.xmin) * NUM.capFrac;
+    const xR = NUM.xmax - (NUM.xmax - NUM.xmin) * NUM.capFrac;
+    const gradL = ctx.createLinearGradient(mx(NUM.xmin), 0, mx(xL), 0);
+    gradL.addColorStop(0, 'rgba(160,60,255,0.18)');
+    gradL.addColorStop(1, 'rgba(160,60,255,0.00)');
+    ctx.fillStyle = gradL;
+    ctx.fillRect(mx(NUM.xmin), 0, mx(xL) - mx(NUM.xmin), H);
+    const gradR = ctx.createLinearGradient(mx(xR), 0, mx(NUM.xmax), 0);
+    gradR.addColorStop(0, 'rgba(160,60,255,0.00)');
+    gradR.addColorStop(1, 'rgba(160,60,255,0.18)');
+    ctx.fillStyle = gradR;
+    ctx.fillRect(mx(xR), 0, mx(NUM.xmax) - mx(xR), H);
+    // label
+    ctx.fillStyle = 'rgba(160,60,255,0.55)'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('absorber', mx((NUM.xmin + xL) / 2), 10);
+    ctx.fillText('absorber', mx((xR + NUM.xmax) / 2), 10);
+  }
+
+  // --- grid lines ---
+  ctx.strokeStyle = '#0d1520';
+  ctx.lineWidth = 1;
+  for (let xi = NUM.xmin; xi <= NUM.xmax; xi += 5) {
+    ctx.beginPath(); ctx.moveTo(mx(xi), 0); ctx.lineTo(mx(xi), H); ctx.stroke();
+  }
+  ctx.strokeStyle = '#0a1218';
+  for (let yi = -2; yi <= 2; yi++) {
+    const y = midY - yi * scaleWave * 0.5;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // --- barrier fill ---
+  ctx.fillStyle = 'rgba(255,50,50,0.07)';
+  for (let i = 1; i < N; i++) {
+    if (NUM.V[i] > 0.001) {
+      const x1 = mx(numX(i-1)), x2 = mx(numX(i));
+      ctx.fillRect(x1, 0, x2-x1, H);
+    }
+  }
+
+  // --- potential V(x) ---
+  const Vmax = Math.max(...NUM.V) || 1;
+  ctx.beginPath(); ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < N; i++) {
+    const x = mx(numX(i)), y = my(NUM.V[i] / Vmax, scaleV * 0.9, H - 10);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // --- Re(psi) ---
+  if (NUM.layers.re) {
+    ctx.beginPath(); ctx.strokeStyle = '#3080ff'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < N; i++) {
+      const x = mx(numX(i)), y = my(NUM.psi_re[i], scaleWave, midY);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // --- Im(psi) ---
+  if (NUM.layers.im) {
+    ctx.beginPath(); ctx.strokeStyle = '#ff8030'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < N; i++) {
+      const x = mx(numX(i)), y = my(NUM.psi_im[i], scaleWave, midY);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // --- |psi|^2 filled ---
+  if (NUM.layers.prob) {
+    const grad = ctx.createLinearGradient(0, midY - scaleProb, 0, midY);
+    grad.addColorStop(0, 'rgba(32,208,128,0.6)');
+    grad.addColorStop(1, 'rgba(32,208,128,0.02)');
+    ctx.beginPath();
+    ctx.moveTo(mx(numX(0)), midY);
+    for (let i = 0; i < N; i++) {
+      const p = NUM.psi_re[i]**2 + NUM.psi_im[i]**2;
+      ctx.lineTo(mx(numX(i)), my(p, scaleProb, midY));
+    }
+    ctx.lineTo(W, midY); ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+    ctx.beginPath(); ctx.strokeStyle = '#20d080'; ctx.lineWidth = 2;
+    for (let i = 0; i < N; i++) {
+      const p = NUM.psi_re[i]**2 + NUM.psi_im[i]**2;
+      i === 0 ? ctx.moveTo(mx(numX(0)), my(p, scaleProb, midY))
+              : ctx.lineTo(mx(numX(i)), my(p, scaleProb, midY));
+    }
+    ctx.stroke();
+  }
+
+  // --- axis ---
+  ctx.strokeStyle = '#334455'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(W, midY); ctx.stroke();
+
+  // --- x-axis labels ---
+  ctx.fillStyle = '#445566'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+  for (let xi = NUM.xmin; xi <= NUM.xmax; xi += 5) {
+    ctx.fillText(xi, mx(xi), H - 2);
+  }
+
+  // --- E line ---
+  const E = 0.5 * NUM.k0 ** 2;
+  if (Vmax > 0) {
+    const yE = my(E / Vmax, scaleV * 0.9, H - 10);
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = '#ffd060'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, yE); ctx.lineTo(W, yE); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffd060'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(`E=${E.toFixed(2)}`, 4, yE - 3);
+  }
+
+  // --- Bohmian particles ---
+  if (NUM.bohmOn) {
+    for (let p = 0; p < NUM.np; p++) {
+      // trail
+      const trail = NUM.bTrails[p];
+      if (trail.length > 1) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(0,232,255,0.15)';
+        ctx.lineWidth = 1;
+        for (let ti = 0; ti < trail.length; ti++) {
+          const tx = mx(trail[ti]);
+          const ty = midY - 12; // small offset above axis
+          ti === 0 ? ctx.moveTo(tx, ty) : ctx.lineTo(tx, ty);
+        }
+        ctx.stroke();
+      }
+      // dot
+      const bxPix = mx(NUM.bx[p]);
+      const probP = (() => {
+        const di = clamp(Math.round((NUM.bx[p] - NUM.xmin) / dx), 0, N-1);
+        return Math.sqrt(NUM.psi_re[di]**2 + NUM.psi_im[di]**2);
+      })();
+      const r = 5 + probP * 8;
+      const grd = ctx.createRadialGradient(bxPix, midY, 0, bxPix, midY, r + 4);
+      grd.addColorStop(0, 'rgba(0,240,255,0.9)');
+      grd.addColorStop(0.5, 'rgba(0,200,255,0.4)');
+      grd.addColorStop(1, 'rgba(0,200,255,0)');
+      ctx.beginPath(); ctx.arc(bxPix, midY, r+4, 0, 2*Math.PI);
+      ctx.fillStyle = grd; ctx.fill();
+      ctx.beginPath(); ctx.arc(bxPix, midY, 3.5, 0, 2*Math.PI);
+      ctx.fillStyle = '#00f0ff'; ctx.fill();
+    }
+  }
+
+  // --- labels ---
+  ctx.fillStyle = '#4a6080'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('x (natural units)', W/2, H - 2);
+  ctx.save(); ctx.rotate(-Math.PI/2);
+  ctx.fillText('ψ(x,t)', -midY-20, 12);
+  ctx.restore();
+
+  // --- info ---
+  computeTR();
+  document.getElementById('info-E').textContent = (0.5*NUM.k0**2).toFixed(3);
+  document.getElementById('info-EV').textContent = (0.5*NUM.k0**2 / (NUM.V0 || 1)).toFixed(3);
+  document.getElementById('info-T').textContent = (NUM.T_frac * 100).toFixed(1) + '%';
+  document.getElementById('info-R').textContent = (NUM.R_frac * 100).toFixed(1) + '%';
+  document.getElementById('info-time').textContent = NUM.t.toFixed(2);
+}
+
+// ================================================================
+// 3D THREE.JS VIEW
+// ================================================================
+let th_renderer = null, th_scene = null, th_camera = null;
+let th_lineMesh = null, th_probMesh = null, th_bohmSpheres = [];
+let th_animReq = null;
+
+function init3D() {
+  const cv = document.getElementById('canvas3d');
+  if (!th_renderer) {
+    th_renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+    th_renderer.setPixelRatio(window.devicePixelRatio);
+    th_renderer.setClearColor(0x04040e, 1);
+  }
+  const W = cv.parentElement.clientWidth, H = cv.parentElement.clientHeight;
+  th_renderer.setSize(W, H);
+
+  th_scene = new THREE.Scene();
+  th_camera = new THREE.PerspectiveCamera(55, W / H, 0.01, 500);
+  th_camera.position.set(0, 8, 22);
+  th_camera.lookAt(0, 0, 0);
+
+  // Axis
+  const axGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-12, 0, 0), new THREE.Vector3(12, 0, 0)
+  ]);
+  th_scene.add(new THREE.Line(axGeo, new THREE.LineBasicMaterial({ color: 0x334455 })));
+}
+
+function update3D() {
+  if (!th_renderer || !NUM.show3d) return;
+  const N = NUM.N, step = 4; // subsample
+  const pts = [];
+  const colors = [];
+  for (let i = 0; i < N; i += step) {
+    const x = numX(i) * 0.5;
+    const y = NUM.psi_re[i] * 4;
+    const z = NUM.psi_im[i] * 4;
+    const prob = Math.sqrt(NUM.psi_re[i]**2 + NUM.psi_im[i]**2);
+    pts.push(new THREE.Vector3(x, y, z));
+    // color by probability: blue → green → red
+    const r = clamp(prob * 5, 0, 1);
+    const g = clamp(1 - Math.abs(prob * 5 - 1), 0, 1);
+    const b = clamp(1 - prob * 5, 0, 1);
+    colors.push(r, g, b);
+  }
+
+  if (th_lineMesh) { th_scene.remove(th_lineMesh); th_lineMesh.geometry.dispose(); }
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  th_lineMesh = new THREE.Line(geo, new THREE.LineBasicMaterial({
+    vertexColors: true, linewidth: 2
+  }));
+  th_scene.add(th_lineMesh);
+
+  // barrier
+  const bpts = [
+    new THREE.Vector3(-NUM.bw * 0.5, 0, 0),
+    new THREE.Vector3(NUM.bw * 0.5, 0, 0)
+  ];
+  const bGeo = new THREE.BufferGeometry().setFromPoints(bpts);
+  const bLine = new THREE.Line(bGeo, new THREE.LineBasicMaterial({ color: 0xff4444, linewidth: 3 }));
+  th_scene.add(bLine);
+
+  // Bohmian spheres
+  th_bohmSpheres.forEach(s => th_scene.remove(s));
+  th_bohmSpheres = [];
+  if (NUM.bohmOn) {
+    const sGeo = new THREE.SphereGeometry(0.18, 8, 8);
+    const sMat = new THREE.MeshBasicMaterial({ color: 0x00e8ff });
+    for (let p = 0; p < NUM.np; p++) {
+      const xi = NUM.bx[p];
+      if (xi < NUM.xmin || xi > NUM.xmax) continue;
+      const idx = clamp(Math.round((xi - NUM.xmin) / numDx()), 0, N-1);
+      const s = new THREE.Mesh(sGeo, sMat);
+      s.position.set(xi * 0.5, NUM.psi_re[idx] * 4, NUM.psi_im[idx] * 4);
+      th_scene.add(s);
+      th_bohmSpheres.push(s);
+    }
+  }
+
+  // pan slowly
+  const angle = NUM.t * 0.05;
+  th_camera.position.set(22 * Math.sin(angle), 8, 22 * Math.cos(angle));
+  th_camera.lookAt(0, 0, 0);
+  th_renderer.render(th_scene, th_camera);
+}
+
+// ================================================================
+// NUMERICAL MAIN LOOP
+// ================================================================
+let numAnimId = null;
+
+function numLoop() {
+  if (!NUM.playing) { numAnimId = requestAnimationFrame(numLoop); return; }
+  const steps = NUM.speed;
+  stepNum(steps);
+  if (NUM.bohmOn) stepBohmian(steps);
+  renderNum2D();
+  if (NUM.show3d) update3D();
+  if (NUM.show2d) render2DNum();
+  // auto-restart: when CAP has absorbed enough of the wavefunction
+  if (!NUM.restartPending && NUM.loopDelay > 0 && NUM.capOn) {
+    let norm = 0;
+    for (let i = 0; i < NUM.N; i++) norm += NUM.psi_re[i]*NUM.psi_re[i] + NUM.psi_im[i]*NUM.psi_im[i];
+    norm *= NUM.dx;
+    if (norm < 0.04 * NUM.initialNorm) {
+      NUM.restartPending = true;
+      NUM.playing = false;
+      const pb = document.getElementById('btn-play');
+      if (pb) { pb.textContent = '▶ Play'; pb.classList.remove('active'); }
+      setTimeout(() => {
+        NUM.restartPending = false;
+        resetNum();
+        NUM.playing = true;
+        const pb2 = document.getElementById('btn-play');
+        if (pb2) { pb2.textContent = '⏸ Pause'; pb2.classList.add('active'); }
+      }, NUM.loopDelay * 1000);
+    }
+  }
+  numAnimId = requestAnimationFrame(numLoop);
+}
+
+function resetNum() {
+  NUM.k0    = +document.getElementById('k0-sl').value;
+  NUM.sigma = +document.getElementById('sigma-sl').value;
+  NUM.V0    = +document.getElementById('V0-sl').value;
+  NUM.bw    = +document.getElementById('bw-sl').value;
+  NUM.np    = +document.getElementById('np-sl').value;
+  NUM.t = 0;
+  buildBarrier();
+  buildKGrid();
+  buildCAP();
+  buildOperators();
+  initWavePacket();
+  initBohmian();
+  // record initial norm for auto-restart detection
+  let n0 = 0;
+  for (let i = 0; i < NUM.N; i++) n0 += NUM.psi_re[i]*NUM.psi_re[i] + NUM.psi_im[i]*NUM.psi_im[i];
+  NUM.initialNorm = n0 * NUM.dx || 1;
+  NUM.restartPending = false;
+  if (!numAnimId) numLoop();
+}
+
+function togglePlay() {
+  NUM.playing = !NUM.playing;
+  document.getElementById('btn-play').textContent = NUM.playing ? '⏸ Pause' : '▶ Play';
+  document.getElementById('btn-play').classList.toggle('active', NUM.playing);
+}
+
+function toggleBohm() {
+  NUM.bohmOn = !NUM.bohmOn;
+  const btn = document.getElementById('btn-bohm');
+  btn.textContent = NUM.bohmOn ? '● Particles' : '○ Particles Off';
+  btn.classList.toggle('active', NUM.bohmOn);
+}
+
+function toggle3D() {
+  NUM.show3d = !NUM.show3d;
+  document.getElementById('canvas3d-wrap').style.display = NUM.show3d ? 'block' : 'none';
+  document.getElementById('btn-3d').classList.toggle('active', NUM.show3d);
+}
+
+function toggleLayer(name) {
+  NUM.layers[name] = !NUM.layers[name];
+  document.getElementById('btn-'+name).classList.toggle('active', NUM.layers[name]);
+}
+
+function updateNumSlider(name) {
+  if (name === 'loopDelay') {
+    const v = +document.getElementById('num-loop-sl').value;
+    NUM.loopDelay = v;
+    document.getElementById('num-loop-val').textContent = v > 0 ? v + 's' : 'off';
+    return;
+  }
+  if (name === 'sigY') {
+    NUM.sigY = +document.getElementById('num-sigy-sl').value;
+    document.getElementById('num-sigy-val').textContent = NUM.sigY.toFixed(1);
+    return;
+  }
+  const map = { k0:'k0', sigma:'sigma', V0:'V0', bw:'bw', np:'np', speed:'speed',
+                capStr:'capStrength' };
+  const sliders = { k0:'k0-sl', sigma:'sigma-sl', V0:'V0-sl', bw:'bw-sl',
+                    np:'np-sl', speed:'speed-sl', capStr:'cap-str-sl' };
+  const vals    = { k0:'k0-val', sigma:'sigma-val', V0:'V0-val', bw:'bw-val',
+                    np:'np-val', speed:'speed-val', capStr:'cap-str-val' };
+  const v = +document.getElementById(sliders[name]).value;
+  document.getElementById(vals[name]).textContent =
+    v.toFixed(name==='sigma'||name==='bw'||name==='capStr'?2:name==='np'||name==='speed'?0:1);
+  NUM[map[name]] = v;
+  if (name === 'np') { initBohmian(); return; }
+  if (name === 'speed') { return; }
+  // For CAP strength, rebuild CAP + operators without resetting wavefunction
+  if (name === 'capStr') { buildCAP(); buildOperators(); return; }
+  resetNum();
+}
+
+function toggleCAP() {
+  NUM.capOn = !NUM.capOn;
+  const btn = document.getElementById('btn-cap');
+  btn.textContent = NUM.capOn ? '⬛ Absorb On' : '▭ Absorb Off';
+  btn.classList.toggle('active', NUM.capOn);
+  buildCAP(); buildOperators();
+}
+
+// ================================================================
+// ======  ANALYTICAL MODULE  =====================================
+// ================================================================
+const ANA = {
+  V0: 8, E_ratio: 0.7, L: 2.0, np: 15,
+  bohmOn: true, showVel: true, phaseAnim: true, showTrails: true,
+  show2d: false, loopDelay: 0, loopT: 0,
+  phase: 0, dt: 0.04,
+  bx: null, bTrails: null,
+  animId: null,
+};
+
+// Compute scattering amplitudes for rectangular barrier [0, L]
+// Returns { r, t, T, R, k1, k2_or_kappa, tunneling }
+function analyticScatter(E, V0, L) {
+  const k1 = Math.sqrt(2 * E);
+  const tunneling = E < V0;
+  let r_re, r_im, t_re, t_im, T, R;
+
+  if (tunneling) {
+    const kappa = Math.sqrt(2 * (V0 - E) + 1e-20);
+    // Using transfer matrix method
+    const c2k = Math.cosh(kappa * L), s2k = Math.sinh(kappa * L);
+    // t = e^(-ik1*L) / (cosh(kL) + i/2*(kappa/k1 - k1/kappa)*sinh(kL))
+    const dRe = c2k, dIm = 0.5 * (kappa / k1 - k1 / kappa) * s2k;
+    const dMod2 = dRe * dRe + dIm * dIm;
+    // t = e^{-ik1 L} / (dRe+i*dIm)
+    const eRe = Math.cos(k1 * L), eIm = -Math.sin(k1 * L);
+    t_re = (eRe * dRe + eIm * dIm) / dMod2;
+    t_im = (eIm * dRe - eRe * dIm) / dMod2;
+    T = t_re * t_re + t_im * t_im;
+    R = 1 - T;
+    // r from boundary conditions
+    // r = -i/2*(kappa/k1 + k1/kappa)*sinh(kL) * t * e^{ik1 L}
+    const rFac_re = 0, rFac_im = -0.5 * (kappa / k1 + k1 / kappa) * s2k;
+    // r = (rFac_re + i*rFac_im) * (t_re + i*t_im) * (cos(k1L)+i*sin(k1L))
+    const eP_re = Math.cos(k1*L), eP_im = Math.sin(k1*L);
+    // (rFac * t): multiply purely imaginary rFac by t
+    const rt_re = rFac_re * t_re - rFac_im * t_im;
+    const rt_im = rFac_re * t_im + rFac_im * t_re;
+    r_re = rt_re * eP_re - rt_im * eP_im;
+    r_im = rt_re * eP_im + rt_im * eP_re;
+    return { k1, kappa, tunneling, T, R, r_re, r_im, t_re, t_im };
+  } else {
+    const k2 = Math.sqrt(2 * (E - V0) + 1e-20);
+    const c2k = Math.cos(k2 * L), s2k = Math.sin(k2 * L);
+    const dRe = c2k, dIm = -0.5 * (k2 / k1 + k1 / k2) * s2k;
+    const dMod2 = dRe * dRe + dIm * dIm;
+    const eRe = Math.cos(k1 * L), eIm = -Math.sin(k1 * L);
+    t_re = (eRe * dRe + eIm * dIm) / dMod2;
+    t_im = (eIm * dRe - eRe * dIm) / dMod2;
+    T = t_re * t_re + t_im * t_im;
+    R = 1 - T;
+    const rFac_im = 0.5 * (k1 / k2 - k2 / k1) * s2k;
+    const rt_re = -rFac_im * t_im;
+    const rt_im =  rFac_im * t_re;
+    const eP_re = Math.cos(k1*L), eP_im = Math.sin(k1*L);
+    r_re = rt_re * eP_re - rt_im * eP_im;
+    r_im = rt_re * eP_im + rt_im * eP_re;
+    return { k1, k2, tunneling, T, R, r_re, r_im, t_re, t_im };
+  }
+}
+
+// evalPsi removed — evalPsiR is the canonical implementation below
+
+// Simpler/more reliable: evaluate psi analytically using continuous formulas
+// for each region by computing A,B from BC at x=L, then propagate
+function evalPsiR(x, sc) {
+  const { k1, tunneling, r_re, r_im, t_re, t_im } = sc;
+  const L = ANA.L;
+  const kk = tunneling ? sc.kappa : sc.k2;
+
+  // Region III (x > L): psi3 = t * exp(ik1*x)
+  if (x >= L) {
+    const cr = Math.cos(k1*x), si = Math.sin(k1*x);
+    return [t_re*cr - t_im*si, t_re*si + t_im*cr];
+  }
+
+  // Region I (x < 0): psi1 = exp(ik1*x) + r*exp(−ik1*x)
+  if (x < 0) {
+    const c1 = Math.cos(k1*x), s1 = Math.sin(k1*x);
+    const cm = Math.cos(k1*x), sm = -Math.sin(k1*x); // exp(−ik1x)= cos - i sin
+    return [
+      c1 + r_re*cm - r_im*sm,
+      s1 + r_re*sm + r_im*cm  // note: exp(-ik1x) imaginary = -sin(k1x)
+    ];
+  }
+
+  // Region II: compute A,B from boundary at x=L
+  // ψ₃(L) = t*e^{ik1L}, ψ₃'(L) = ik1*t*e^{ik1L}
+  const tEr = t_re*Math.cos(k1*L) - t_im*Math.sin(k1*L);
+  const tEi = t_re*Math.sin(k1*L) + t_im*Math.cos(k1*L);
+  // ψ₃'(L) = ik1 * tE
+  const dtEr = -k1*tEi, dtEi = k1*tEr;
+
+  if (tunneling) {
+    const k = kk;
+    // ψ₂ = A*e^{kx} + B*e^{-kx},  ψ₂' = k(Ae^{kx}-Be^{-kx})
+    // At x=L: Ae^{kL}+Be^{-kL}=tE,  k(Ae^{kL}-Be^{-kL})=dtE
+    const ekL = Math.exp(k*L), emkL = Math.exp(-k*L);
+    // let U=A*e^{kL}, V=B*e^{-kL}
+    // U+V=tE, k(U-V)=dtE  => U=(tE+dtE/k)/2, V=(tE-dtE/k)/2
+    const Ur = (tEr + dtEr/k)*0.5, Ui = (tEi + dtEi/k)*0.5;
+    const Vr = (tEr - dtEr/k)*0.5, Vi = (tEi - dtEi/k)*0.5;
+    // ψ₂(x) = U*e^{k(x-L)} + V*e^{−k(x-L)}
+    const epxL = Math.exp(k*(x-L)), emxL = Math.exp(-k*(x-L));
+    return [Ur*epxL + Vr*emxL, Ui*epxL + Vi*emxL];
+  } else {
+    const k2 = kk;
+    // ψ₂ = A*e^{ik2x}+B*e^{-ik2x},  ψ₂'= ik2(Ae^{ik2x}-Be^{-ik2x})
+    // At x=L: same idea
+    // U=Ae^{ik2L}, V=Be^{-ik2L}
+    // U+V=tE, ik2(U-V)=dtE => U=(tE+dtE/(ik2))/2 = (tE-i*dtE/k2)/2, V=tE-U
+    const Ur = (tEr + dtEi/k2)*0.5, Ui = (tEi - dtEr/k2)*0.5;
+    const Vr = tEr - Ur, Vi = tEi - Ui;
+    // ψ₂(x) = U*e^{ik2(x-L)} + V*e^{-ik2(x-L)}
+    const c = Math.cos(k2*(x-L)), s = Math.sin(k2*(x-L));
+    return [Ur*c - Ui*s + Vr*c + Vi*s, Ur*s + Ui*c - Vr*s + Vi*c];
+  }
+}
+
+// Bohmian velocity for analytical stationary state:
+// v(x) = Im( dψ/dx / ψ ) = (Re dψ * Im ψ - Im dψ * Re ψ) / |ψ|²
+function anaBohmV(x, sc) {
+  const dx = 0.02;
+  const pL = evalPsiR(x - dx, sc);
+  const pR = evalPsiR(x + dx, sc);
+  const dRe = (pR[0] - pL[0]) / (2*dx);
+  const dIm = (pR[1] - pL[1]) / (2*dx);
+  const p   = evalPsiR(x, sc);
+  const denom = p[0]*p[0] + p[1]*p[1];
+  if (denom < 1e-12) return 0;
+  return (p[0]*dIm - p[1]*dRe) / denom;
+}
+
+function initAnaBohmian(sc) {
+  const np = ANA.np;
+  ANA.bx = new Float64Array(np);
+  ANA.bTrails = Array.from({length: np}, () => []);
+  const xmin = -10, xmax = ANA.L + 10;
+  // distribute proportional to |ψ|²
+  const M = 400, dxs = (xmax-xmin)/M;
+  const prob = new Float64Array(M);
+  let tot = 0;
+  for (let i = 0; i < M; i++) {
+    const x = xmin + (i+0.5)*dxs;
+    const p = evalPsiR(x, sc);
+    prob[i] = (p[0]**2 + p[1]**2)*dxs;
+    tot += prob[i];
+  }
+  const cum = new Float64Array(M+1);
+  for (let i = 0; i < M; i++) cum[i+1] = cum[i] + prob[i]/tot;
+  for (let p = 0; p < np; p++) {
+    const u = (p + 0.5) / np;
+    let lo = 0, hi = M;
+    while (hi-lo > 1) { const m=(lo+hi)>>1; if(cum[m]<u) lo=m; else hi=m; }
+    ANA.bx[p] = xmin + (lo+0.5)*dxs;
+  }
+}
+
+function stepAnaBohmian(sc) {
+  const dt = ANA.dt;
+  for (let p = 0; p < ANA.np; p++) {
+    const v = anaBohmV(ANA.bx[p], sc);
+    ANA.bx[p] += v * dt;
+    // wrap if too far
+    ANA.bx[p] = clamp(ANA.bx[p], -12, ANA.L + 12);
+    if (ANA.showTrails) {
+      ANA.bTrails[p].push(ANA.bx[p]);
+      if (ANA.bTrails[p].length > 100) ANA.bTrails[p].shift();
+    }
+  }
+}
+
+// ----------------------------------------------------------------
+// CANVAS RENDERING — ANALYTICAL
+// ----------------------------------------------------------------
+function renderAnaWave(sc) {
+  const cv = document.getElementById('canvas-ana-wave');
+  const W = cv.clientWidth || 700, H = cv.clientHeight || 300;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const xmin = -10, xmax = ANA.L + 8;
+  const xR = xmax - xmin;
+  const mx = x => (x - xmin) / xR * W;
+  const midY = H * 0.52;
+  const scaleW = H * 0.30;
+  const scaleP = H * 0.38;
+  const scaleV = H * 0.22;
+
+  // grid
+  ctx.strokeStyle = '#0d1520'; ctx.lineWidth = 1;
+  for (let xi = Math.ceil(xmin); xi <= xmax; xi += 2) {
+    ctx.beginPath(); ctx.moveTo(mx(xi),0); ctx.lineTo(mx(xi),H); ctx.stroke();
+  }
+
+  // barrier fill
+  ctx.fillStyle = 'rgba(255,50,50,0.08)';
+  ctx.fillRect(mx(0), 0, mx(ANA.L)-mx(0), H);
+
+  // barrier outline (correct: V=0 outside, V=V₀ inside [0,L])
+  ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(mx(xmin), midY);
+  ctx.lineTo(mx(0),    midY);
+  ctx.lineTo(mx(0),    midY - scaleV);
+  ctx.lineTo(mx(ANA.L),midY - scaleV);
+  ctx.lineTo(mx(ANA.L),midY);
+  ctx.lineTo(mx(xmax), midY);
+  ctx.stroke();
+  ctx.fillStyle = '#ff4444'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('V₀', mx(ANA.L/2), midY - scaleV - 4);
+
+  // evaluate psi on fine grid
+  const M = 800;
+  const dxs = xR / M;
+  const psis = [], probs = [];
+  let pMax = 0;
+  for (let i = 0; i <= M; i++) {
+    const x = xmin + i*dxs;
+    const phase_factor = ANA.phaseAnim ? ANA.phase : 0;
+    const raw = evalPsiR(x, sc);
+    // apply time phase exp(-iEt): psi(x,t) = psi(x)*exp(-iEt)
+    const cosP = Math.cos(phase_factor), sinP = Math.sin(phase_factor);
+    const re = raw[0]*cosP + raw[1]*sinP;
+    const im = -raw[0]*sinP + raw[1]*cosP;
+    psis.push([re, im]);
+    const p = re*re + im*im;
+    probs.push(p);
+    if (p > pMax) pMax = p;
+  }
+  if (pMax < 1e-10) pMax = 1;
+  const wScale = scaleW / Math.sqrt(pMax); // scale psi to look nice
+
+  // |psi|^2 fill
+  const grad = ctx.createLinearGradient(0, midY-scaleP, 0, midY);
+  grad.addColorStop(0, 'rgba(32,208,128,0.55)');
+  grad.addColorStop(1, 'rgba(32,208,128,0.03)');
+  ctx.beginPath();
+  ctx.moveTo(mx(xmin), midY);
+  for (let i = 0; i <= M; i++) {
+    const x = xmin + i*dxs;
+    ctx.lineTo(mx(x), midY - probs[i]/pMax * scaleP);
+  }
+  ctx.lineTo(W, midY); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath(); ctx.strokeStyle = '#20d080'; ctx.lineWidth = 1.8;
+  for (let i = 0; i <= M; i++) {
+    const x = xmin + i*dxs;
+    i===0 ? ctx.moveTo(mx(x), midY - probs[i]/pMax * scaleP)
+          : ctx.lineTo(mx(x), midY - probs[i]/pMax * scaleP);
+  }
+  ctx.stroke();
+
+  // Re(psi)
+  ctx.beginPath(); ctx.strokeStyle = '#3080ff'; ctx.lineWidth = 1.5;
+  for (let i = 0; i <= M; i++) {
+    const x = xmin + i*dxs;
+    const y = midY - psis[i][0] * wScale;
+    i===0 ? ctx.moveTo(mx(x), y) : ctx.lineTo(mx(x), y);
+  }
+  ctx.stroke();
+
+  // velocity field arrows
+  if (ANA.showVel) {
+    ctx.strokeStyle = '#ffaa20'; ctx.lineWidth = 1;
+    const nArrows = 40;
+    for (let ai = 0; ai < nArrows; ai++) {
+      const x = xmin + (ai+0.5) * xR / nArrows;
+      const v = anaBohmV(x, sc);
+      const vClamp = clamp(v, -sc.k1*2, sc.k1*2);
+      const len = vClamp / (sc.k1 * 2) * 18;
+      const px = mx(x), py = midY + 18;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px+len, py);
+      ctx.stroke();
+      if (Math.abs(len) > 2) {
+        // arrowhead
+        ctx.beginPath();
+        const sign = len > 0 ? 1 : -1;
+        ctx.moveTo(px+len, py);
+        ctx.lineTo(px+len-sign*5, py-3);
+        ctx.lineTo(px+len-sign*5, py+3);
+        ctx.closePath(); ctx.fillStyle='#ffaa20'; ctx.fill();
+      }
+    }
+    ctx.fillStyle = '#ffaa20'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('v(x)', 4, midY + 16);
+  }
+
+  // axis
+  ctx.strokeStyle = '#334455'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,midY); ctx.lineTo(W,midY); ctx.stroke();
+
+  // region labels
+  ctx.fillStyle = '#3050709'; ctx.font = '10px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle = '#446688';
+  ctx.fillText('Region I (incident+reflected)', mx(-5), 14);
+  ctx.fillText('Region II', mx(ANA.L/2), 14);
+  ctx.fillText('Region III (transmitted)', mx(ANA.L+4), 14);
+
+  // x labels
+  ctx.fillStyle = '#445566'; ctx.font = '10px monospace'; ctx.textAlign='center';
+  for (let xi = Math.ceil(xmin); xi <= xmax; xi += 2) {
+    ctx.fillText(xi, mx(xi), H-2);
+  }
+
+  // Bohmian
+  if (ANA.bohmOn && ANA.bx) {
+    for (let p = 0; p < ANA.np; p++) {
+      // trail
+      if (ANA.showTrails && ANA.bTrails[p].length > 1) {
+        ctx.beginPath(); ctx.strokeStyle='rgba(0,232,255,0.15)'; ctx.lineWidth=1;
+        for (let ti = 0; ti < ANA.bTrails[p].length; ti++) {
+          const tx = mx(ANA.bTrails[p][ti]), ty = midY+8;
+          ti===0 ? ctx.moveTo(tx,ty) : ctx.lineTo(tx,ty);
+        }
+        ctx.stroke();
+      }
+      // dot
+      const bxP = mx(ANA.bx[p]);
+      const probAt = (() => {
+        const pp = evalPsiR(ANA.bx[p], sc);
+        return Math.sqrt(pp[0]**2 + pp[1]**2);
+      })();
+      const r = 4 + probAt / Math.sqrt(pMax) * 6;
+      const grd = ctx.createRadialGradient(bxP, midY, 0, bxP, midY, r+3);
+      grd.addColorStop(0, 'rgba(0,240,255,0.9)');
+      grd.addColorStop(1, 'rgba(0,200,255,0)');
+      ctx.beginPath(); ctx.arc(bxP, midY, r+3, 0, 2*Math.PI);
+      ctx.fillStyle = grd; ctx.fill();
+      ctx.beginPath(); ctx.arc(bxP, midY, 3, 0, 2*Math.PI);
+      ctx.fillStyle = '#00f0ff'; ctx.fill();
+    }
+  }
+}
+
+// Draw T(E) inset onto an arbitrary canvas context at (x0,y0,iw,ih)
+function drawAnaTInset(sc, ctx, x0, y0, iw, ih) {
+  ctx.save();
+  // semi-transparent background
+  ctx.fillStyle = 'rgba(4,8,20,0.78)';
+  ctx.fillRect(x0, y0, iw, ih);
+  ctx.strokeStyle = '#203040'; ctx.lineWidth = 1;
+  ctx.strokeRect(x0, y0, iw, ih);
+
+  const pad = { l: 26, r: 8, t: 14, b: 16 };
+  const pw = iw - pad.l - pad.r, ph = ih - pad.t - pad.b;
+  const ox = x0 + pad.l, oy = y0 + pad.t;
+
+  // axis box
+  ctx.strokeStyle = '#2a3f55'; ctx.lineWidth = 1;
+  ctx.strokeRect(ox, oy, pw, ph);
+  ctx.fillStyle = '#334455'; ctx.font = '8px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('E / V₀', ox + pw/2, y0 + ih - 2);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#334455';
+  ctx.fillText('T', ox - 2, oy + ph/2 + 3);
+
+  // gradient fill under T(E) curve
+  const nPts = 200;
+  const grd = ctx.createLinearGradient(ox, oy, ox, oy + ph);
+  grd.addColorStop(0, 'rgba(96,200,255,0.30)');
+  grd.addColorStop(1, 'rgba(96,200,255,0.02)');
+  ctx.beginPath(); ctx.moveTo(ox, oy + ph);
+  for (let i = 0; i <= nPts; i++) {
+    const ratio = 0.01 + (i/nPts) * 3.0;
+    const E = ratio * ANA.V0;
+    const s2 = analyticScatter(E, ANA.V0, ANA.L);
+    ctx.lineTo(ox + (ratio/3.0)*pw, oy + ph - s2.T*ph);
+  }
+  ctx.lineTo(ox + pw, oy + ph); ctx.closePath();
+  ctx.fillStyle = grd; ctx.fill();
+
+  ctx.beginPath(); ctx.strokeStyle = '#60c8ff'; ctx.lineWidth = 1.2;
+  for (let i = 0; i <= nPts; i++) {
+    const ratio = 0.01 + (i/nPts) * 3.0;
+    const E = ratio * ANA.V0;
+    const s2 = analyticScatter(E, ANA.V0, ANA.L);
+    const px = ox + (ratio/3.0)*pw, py = oy + ph - s2.T*ph;
+    i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+
+  // E=V₀ line
+  const xV0 = ox + (1/3.0)*pw;
+  ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 1; ctx.setLineDash([2,2]);
+  ctx.beginPath(); ctx.moveTo(xV0, oy); ctx.lineTo(xV0, oy+ph); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // current E dot
+  const xCur = ox + (ANA.E_ratio/3.0)*pw;
+  const yCur = oy + ph - sc.T*ph;
+  ctx.beginPath(); ctx.arc(xCur, yCur, 4, 0, 6.2832);
+  ctx.fillStyle = '#ffdd40'; ctx.fill();
+
+  // axis tick labels
+  ctx.fillStyle = '#445566'; ctx.font = '7px monospace'; ctx.textAlign = 'center';
+  for (let r = 0; r <= 3; r++) {
+    ctx.fillText(r, ox + (r/3.0)*pw, oy + ph + 10);
+  }
+  ctx.textAlign = 'right';
+  for (let tv = 0; tv <= 1; tv += 0.5) {
+    ctx.fillText(tv.toFixed(1), ox - 2, oy + ph - tv*ph + 3);
+  }
+
+  // T/R readout
+  ctx.fillStyle = '#ffdd40'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(`T=${(sc.T*100).toFixed(1)}%  R=${(sc.R*100).toFixed(1)}%`, ox + 2, oy + 10);
+  ctx.restore();
+}
+
+function renderAnaT(sc) {
+  // Draw the T(E) chart as an inset overlay on whichever ana canvas is visible
+  const cvId = ANA.show2d ? 'canvas-ana-2d' : 'canvas-ana-wave';
+  const cv = document.getElementById(cvId);
+  if (!cv || cv.classList.contains('hidden')) return;
+  const W = cv.width || cv.clientWidth, H = cv.height || cv.clientHeight;
+  const iw = Math.min(220, W * 0.38), ih = Math.min(120, H * 0.35);
+  drawAnaTInset(sc, cv.getContext('2d'), W - iw - 8, 8, iw, ih);
+}
+
+function updateAnaInfo(sc) {
+  document.getElementById('ana-info-E').textContent  = (ANA.E_ratio * ANA.V0).toFixed(3);
+  document.getElementById('ana-info-V0').textContent = ANA.V0.toFixed(1);
+  document.getElementById('ana-info-k1').textContent = sc.k1.toFixed(4);
+  document.getElementById('ana-info-k2').textContent = sc.tunneling
+    ? `κ = ${sc.kappa.toFixed(4)}` : `k₂ = ${sc.k2.toFixed(4)}`;
+  document.getElementById('ana-info-T').textContent  = (sc.T*100).toFixed(2) + '%';
+  document.getElementById('ana-info-R').textContent  = (sc.R*100).toFixed(2) + '%';
+}
+
+// ----------------------------------------------------------------
+// ANALYTICAL MAIN LOOP
+// ----------------------------------------------------------------
+let anaScatter = null;
+
+function anaGetSc() {
+  return analyticScatter(ANA.E_ratio * ANA.V0, ANA.V0, ANA.L);
+}
+
+function anaLoop() {
+  const sc = anaGetSc();
+  anaScatter = sc;
+  if (ANA.phaseAnim) ANA.phase -= ANA.V0 * ANA.E_ratio * ANA.dt;
+  ANA.loopT += ANA.dt;
+  if (ANA.loopDelay > 0 && ANA.loopT > ANA.loopDelay) {
+    ANA.loopT = 0;
+    resetAna();
+  }
+  if (ANA.bohmOn && ANA.bx) stepAnaBohmian(sc);
+  renderAnaWave(sc);
+  renderAnaT(sc);
+  if (ANA.show2d) render2DAna(sc);
+  updateAnaInfo(sc);
+  ANA.animId = requestAnimationFrame(anaLoop);
+}
+
+function resetAna() {
+  const sc = anaGetSc();
+  ANA.loopT = 0;
+  initAnaBohmian(sc);
+  ANA.bTrails = Array.from({length: ANA.np}, () => []);
+}
+
+function updateAnaSlider(name) {
+  if (name === 'loopDelay') {
+    const v = +document.getElementById('ana-loop-sl').value;
+    ANA.loopDelay = v; ANA.loopT = 0;
+    document.getElementById('ana-loop-val').textContent = v > 0 ? v + 's' : 'off';
+    return;
+  }
+  const map = { EV:'E_ratio', V0:'V0', L:'L', np:'np' };
+  const sls = { EV:'ana-EV-sl', V0:'ana-V0-sl', L:'ana-L-sl', np:'ana-np-sl' };
+  const vs  = { EV:'ana-EV-val', V0:'ana-V0-val', L:'ana-L-val', np:'ana-np-val' };
+  const v = +document.getElementById(sls[name]).value;
+  document.getElementById(vs[name]).textContent = v.toFixed(2);
+  ANA[map[name]] = v;
+  resetAna();
+}
+
+function toggleAnaBohm() {
+  ANA.bohmOn = !ANA.bohmOn;
+  const btn = document.getElementById('btn-ana-bohm');
+  btn.textContent = ANA.bohmOn ? '● Particles' : '○ Particles Off';
+  btn.classList.toggle('active', ANA.bohmOn);
+}
+function toggleAnaTrails() {
+  ANA.showTrails = !ANA.showTrails;
+  const btn = document.getElementById('btn-ana-trails');
+  btn.textContent = ANA.showTrails ? '∿ Trails On' : '∿ Trails Off';
+  btn.classList.toggle('active', ANA.showTrails);
+  if (!ANA.showTrails && ANA.bTrails) ANA.bTrails = Array.from({length:ANA.np},()=>[]);
+}
+function toggleAnaVel() {
+  ANA.showVel = !ANA.showVel;
+  const btn = document.getElementById('btn-ana-vel');
+  btn.classList.toggle('active', ANA.showVel);
+}
+function toggleAnaPhase() {
+  ANA.phaseAnim = !ANA.phaseAnim;
+  const btn = document.getElementById('btn-ana-phase');
+  btn.classList.toggle('active', ANA.phaseAnim);
+}
+
+// ================================================================
+// PANEL SWITCHING
+// ================================================================
+// ================================================================
+// ======  SPECTRAL EXACT WAVE PACKET  ============================
+// ================================================================
+// Method: ψ(x,t) = Σ_k  φ(k) · ψ_k^scat(x) · exp(-i k² t/2) · Δk
+//
+// φ(k) = (σ/√(2π))^(1/2) · exp(-(k-k0)²·σ²/2) · exp(-i·k·x0)
+//   is the Fourier transform of the initial Gaussian centred at x0
+//
+// ψ_k^scat(x) is the exact right-incident scattering eigenstate
+//   computed via the transfer-matrix (same as analytical mode).
+//
+// The sum is truncated to ±4σ_k around k0 where σ_k = 1/(2σ).
+// No boundary conditions, no CAP, no FFT — exact on ℝ.
+// ================================================================
+
+const SPEC = {
+  k0: 3.5, sigma: 1.2, x0: -8.0, V0: 7.0, L: 1.5,
+  nk: 150, np: 200, speed: 8, sigY: 1.5,
+  bohmOn: true, showTrails: true,
+  t: 0, dt: 0.015, playing: true,
+  animId: null,
+  show2d: false, loopDelay: 1.5,
+  finalPtT: -1, finalPtR: -1, finalPtN: 0,  // last-cycle particle result
+  // pre-computed: arrays of length nk
+  ks: null,       // k values
+  phi: null,      // φ(k)·Δk  [complex: 2*nk]
+  // pre-computed spatial: psiK[ik][2*ix] = [re,im] at each x point
+  psiK: null,
+  xs: null,       // x grid (for rendering)
+  nx: 600,
+  xmin: -20, xmax: 20,
+  // current wavefunction
+  psi_re: null, psi_im: null,
+  // bohmian
+  bx: null, bTrails: null,
+  // info
+  T_mean: 0,
+};
+
+// Precompute scattering states for all k modes and all x positions.
+// This is done once on reset; per-frame we only update time phases.
+function specPrecompute() {
+  const { k0, sigma, x0, V0, L, nk, nx, xmin, xmax } = SPEC;
+  const dx = (xmax - xmin) / (nx - 1);
+  SPEC.xs = new Float64Array(nx);
+  for (let i = 0; i < nx; i++) SPEC.xs[i] = xmin + i * dx;
+
+  // k range: k0 ± 4σ_k,  σ_k = 1/(2σ)  (momentum-space width)
+  const sig_k = 1.0 / (2.0 * sigma);
+  const kmin = Math.max(0.05, k0 - 5.0 * sig_k);
+  const kmax = k0 + 5.0 * sig_k;
+  const dk = (kmax - kmin) / (nk - 1);
+
+  SPEC.ks  = new Float64Array(nk);
+  SPEC.phi = new Float64Array(2 * nk); // [re0, im0, re1, im1, ...]
+  // psiK: Float32 to save memory  [nk * nx * 2]
+  SPEC.psiK = new Float32Array(nk * nx * 2);
+
+  const norm_phi = Math.pow(2.0 * Math.PI * sigma * sigma, -0.25); // normalisation
+  let T_sum = 0, w_sum = 0;
+
+  for (let ik = 0; ik < nk; ik++) {
+    const k = kmin + ik * dk;
+    SPEC.ks[ik] = k;
+
+    // φ(k) · Δk  — Gaussian envelope × initial position phase × Δk
+    const env = norm_phi * Math.exp(-0.5 * (k - k0) * (k - k0) * sigma * sigma);
+    const wt  = env * dk;
+    const phR =  wt * Math.cos(k * x0);   // exp(-ikx0) = cos(-kx0)+i·sin(-kx0)
+    const phI = -wt * Math.sin(k * x0);
+    SPEC.phi[2*ik]   = phR;
+    SPEC.phi[2*ik+1] = phI;
+
+    // Scattering eigenstate for this k
+    const E = 0.5 * k * k;
+    const sc = analyticScatter(E, V0, L);
+    T_sum += sc.T * wt * wt;
+    w_sum += wt * wt;
+
+    // Evaluate ψ_k^scat(x) at all x points using a local L offset:
+    // barrier sits at [0, L] (same convention as analytical mode)
+    for (let ix = 0; ix < nx; ix++) {
+      const p = evalPsiRspecL(SPEC.xs[ix], sc, L);
+      SPEC.psiK[2*(ik*nx + ix)]   = p[0];
+      SPEC.psiK[2*(ik*nx + ix)+1] = p[1];
+    }
+  }
+  SPEC.T_mean = w_sum > 0 ? T_sum / w_sum : 0;
+
+  SPEC.psi_re = new Float64Array(nx);
+  SPEC.psi_im = new Float64Array(nx);
+}
+
+// evalPsiR but with explicit barrier position [0, L] (matching analytical convention)
+function evalPsiRspecL(x, sc, L) {
+  const { k1, tunneling, r_re, r_im, t_re, t_im } = sc;
+  const kk = tunneling ? sc.kappa : sc.k2;
+
+  if (x >= L) {
+    const cr = Math.cos(k1*x), si = Math.sin(k1*x);
+    return [t_re*cr - t_im*si, t_re*si + t_im*cr];
+  }
+  if (x < 0) {
+    const c1 = Math.cos(k1*x), s1 = Math.sin(k1*x);
+    const cm = c1, sm = -s1;
+    return [c1 + r_re*cm - r_im*sm, s1 + r_re*sm + r_im*cm];
+  }
+  const tEr = t_re*Math.cos(k1*L) - t_im*Math.sin(k1*L);
+  const tEi = t_re*Math.sin(k1*L) + t_im*Math.cos(k1*L);
+  const dtEr = -k1*tEi, dtEi = k1*tEr;
+  if (tunneling) {
+    const k = kk;
+    const Ur = (tEr + dtEr/k)*0.5, Ui = (tEi + dtEi/k)*0.5;
+    const Vr = (tEr - dtEr/k)*0.5, Vi = (tEi - dtEi/k)*0.5;
+    const epxL = Math.exp(k*(x-L)), emxL = Math.exp(-k*(x-L));
+    return [Ur*epxL + Vr*emxL, Ui*epxL + Vi*emxL];
+  } else {
+    const k2 = kk;
+    const Ur = (tEr + dtEi/k2)*0.5, Ui = (tEi - dtEr/k2)*0.5;
+    const Vr = tEr - Ur, Vi = tEi - Ui;
+    const c = Math.cos(k2*(x-L)), s = Math.sin(k2*(x-L));
+    return [Ur*c - Ui*s + Vr*c + Vi*s, Ur*s + Ui*c - Vr*s + Vi*c];
+  }
+}
+
+// Per-frame: update ψ(x,t) = Σ_k φ(k)·ψ_k(x)·exp(-ik²t/2)·Δk
+// φ(k)·Δk is pre-absorbed into SPEC.phi.
+function specEvalPsi(t) {
+  const { nk, nx, ks, phi, psiK, psi_re, psi_im } = SPEC;
+  psi_re.fill(0); psi_im.fill(0);
+  for (let ik = 0; ik < nk; ik++) {
+    const k  = ks[ik];
+    const E  = 0.5 * k * k;
+    // time phase: exp(-iEt) = cos(Et) - i·sin(Et)
+    const tpR =  Math.cos(E * t);
+    const tpI = -Math.sin(E * t);
+    // combined weight = phi(k) * exp(-iEt)
+    const phR = phi[2*ik], phI = phi[2*ik+1];
+    const wR = phR*tpR - phI*tpI;
+    const wI = phR*tpI + phI*tpR;
+    const base = 2 * ik * nx;
+    for (let ix = 0; ix < nx; ix++) {
+      const psR = psiK[base + 2*ix];
+      const psI = psiK[base + 2*ix + 1];
+      psi_re[ix] += wR*psR - wI*psI;
+      psi_im[ix] += wR*psI + wI*psR;
+    }
+  }
+}
+
+// Bohmian velocity on the spectral grid using finite differences
+function specBohmV(x) {
+  const { psi_re, psi_im, nx, xmin, xmax } = SPEC;
+  const dx = (xmax - xmin) / (nx - 1);
+  const fi  = (x - xmin) / dx;
+  const i0  = clamp(Math.floor(fi), 1, nx - 2);
+  const i1  = Math.min(i0 + 1, nx - 2);
+  const frac = fi - i0;          // sub-cell fractional position [0,1)
+
+  // Linearly interpolate ψ to exact particle position
+  const re  = psi_re[i0]*(1-frac) + psi_re[i1]*frac;
+  const im  = psi_im[i0]*(1-frac) + psi_im[i1]*frac;
+  const den = re*re + im*im;
+  if (den < 1e-12) return 0;
+
+  // Linearly interpolate central-difference ∇ψ to exact position
+  const reP0 = (psi_re[i0+1] - psi_re[i0-1]) / (2*dx);
+  const imP0 = (psi_im[i0+1] - psi_im[i0-1]) / (2*dx);
+  const reP1 = (psi_re[i1+1] - psi_re[i1-1]) / (2*dx);
+  const imP1 = (psi_im[i1+1] - psi_im[i1-1]) / (2*dx);
+  const reP  = reP0*(1-frac) + reP1*frac;
+  const imP  = imP0*(1-frac) + imP1*frac;
+
+  // v = Im(ψ*∇ψ) / |ψ|²  — cap to prevent blow-ups near nodes
+  const v = (re*imP - im*reP) / den;
+  return v > 50 ? 50 : v < -50 ? -50 : v;
+}
+
+function initSpecBohmian() {
+  const { nx, xs, psi_re, psi_im, np, xmin, xmax } = SPEC;
+  const dx = (xmax - xmin) / (nx - 1);
+  // Sample from |ψ|² at t=0
+  const prob = new Float64Array(nx);
+  let tot = 0;
+  for (let i = 0; i < nx; i++) {
+    prob[i] = (psi_re[i]*psi_re[i] + psi_im[i]*psi_im[i]) * dx;
+    tot += prob[i];
+  }
+  const cum = new Float64Array(nx + 1);
+  for (let i = 0; i < nx; i++) cum[i+1] = cum[i] + prob[i] / (tot + 1e-30);
+  SPEC.bx = new Float64Array(np);
+  SPEC.bDecided = new Int8Array(np);   // -1=undecided, 0=reflected, 1=transmitted
+  SPEC.bTrails = Array.from({length: np}, () => []);
+  for (let p = 0; p < np; p++) {
+    SPEC.bDecided[p] = -1;
+    const u = (p + 0.5) / np;
+    let lo = 0, hi = nx;
+    while (hi - lo > 1) { const m = (lo+hi)>>1; if (cum[m] < u) lo=m; else hi=m; }
+    const frac = (u - cum[lo]) / (cum[lo+1] - cum[lo] + 1e-30);
+    SPEC.bx[p] = xs[lo] + frac * dx;
+  }
+}
+
+function stepSpecBohmian() {
+  const { np, bx, bDecided, bTrails, dt, showTrails, xmin, xmax, L } = SPEC;
+  const threshR = xmin + 0.2;  // past here going left = reflected
+  const threshT = xmax - 0.2;  // past here going right = transmitted
+  for (let p = 0; p < np; p++) {
+    if (bDecided[p] !== -1) continue;  // already decided, ignore
+    const v = specBohmV(bx[p]);
+    bx[p] += v * dt;
+    // Check if particle has exited — mark decided and push off-screen
+    if (bx[p] < threshR) {
+      bDecided[p] = 0;  // reflected
+      bx[p] = xmin - 999; // remove from view
+    } else if (bx[p] > threshT) {
+      bDecided[p] = 1;  // transmitted
+      bx[p] = xmax + 999; // remove from view
+    }
+    if (showTrails && bDecided[p] === -1) {
+      bTrails[p].push(bx[p]);
+      if (bTrails[p].length > 120) bTrails[p].shift();
+    }
+  }
+}
+
+// ----------------------------------------------------------------
+// Rendering — Spectral mode
+// ----------------------------------------------------------------
+function renderSpec() {
+  const { xs, psi_re, psi_im, nx, L, V0, t, bx, np, bohmOn, bTrails, showTrails } = SPEC;
+  if (!psi_re) return;
+
+  const cvW = document.getElementById('canvas-spec-wave');
+  const W = cvW.clientWidth || 700, H = cvW.clientHeight || 260;
+  cvW.width = W; cvW.height = H;
+  const ctx = cvW.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  const xmin = SPEC.xmin, xmax = SPEC.xmax;
+  const xR = xmax - xmin;
+  const mx = x => (x - xmin) / xR * W;
+  const midY = H * 0.54;
+  const scaleW = H * 0.28;
+  const scaleP = H * 0.40;
+
+  // barrier fill
+  ctx.fillStyle = 'rgba(255,60,60,0.08)';
+  ctx.fillRect(mx(0), 0, mx(L) - mx(0), H);
+
+  // barrier outline (correct: V=0 outside, V=V₀ inside [0,L])
+  ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 1.5;
+  const bV = scaleP * 0.8;
+  ctx.beginPath();
+  ctx.moveTo(mx(xmin), midY); ctx.lineTo(mx(0), midY);
+  ctx.lineTo(mx(0), midY - bV); ctx.lineTo(mx(L), midY - bV);
+  ctx.lineTo(mx(L), midY); ctx.lineTo(mx(xmax), midY);
+  ctx.stroke();
+  ctx.fillStyle = '#ff4444'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('V₀', mx(L/2), midY - bV - 4);
+
+  // Use fixed initial-frame scale so amplitude doesn't auto-rescale as packet
+  // moves off; small reflected/transmitted tails show at their true relative size.
+  const pMax = SPEC.initialPMax || 1;
+  const wSc = scaleW / Math.sqrt(pMax);
+
+  // |ψ|² filled
+  const grd = ctx.createLinearGradient(0, midY - scaleP, 0, midY);
+  grd.addColorStop(0, 'rgba(32,208,128,0.55)');
+  grd.addColorStop(1, 'rgba(32,208,128,0.02)');
+  ctx.beginPath(); ctx.moveTo(mx(xs[0]), midY);
+  for (let i = 0; i < nx; i++) {
+    const p = psi_re[i]*psi_re[i] + psi_im[i]*psi_im[i];
+    ctx.lineTo(mx(xs[i]), midY - p/pMax * scaleP);
+  }
+  ctx.lineTo(W, midY); ctx.closePath();
+  ctx.fillStyle = grd; ctx.fill();
+
+  ctx.beginPath(); ctx.strokeStyle = '#20d080'; ctx.lineWidth = 2;
+  for (let i = 0; i < nx; i++) {
+    const p = psi_re[i]*psi_re[i] + psi_im[i]*psi_im[i];
+    i===0 ? ctx.moveTo(mx(xs[0]), midY - p/pMax*scaleP)
+          : ctx.lineTo(mx(xs[i]), midY - p/pMax*scaleP);
+  }
+  ctx.stroke();
+
+  // Re(ψ)
+  ctx.beginPath(); ctx.strokeStyle = '#3080ff'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < nx; i++) {
+    i===0 ? ctx.moveTo(mx(xs[i]), midY - psi_re[i]*wSc)
+          : ctx.lineTo(mx(xs[i]), midY - psi_re[i]*wSc);
+  }
+  ctx.stroke();
+
+  // ── Axes ──────────────────────────────────────────────────────
+  // x-axis baseline
+  ctx.strokeStyle = '#3a5060'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(W, midY); ctx.stroke();
+
+  // x minor grid + ticks every 1 unit
+  ctx.strokeStyle = '#111e2a'; ctx.lineWidth = 1;
+  for (let xi = Math.ceil(xmin); xi <= xmax; xi++) {
+    const xp = mx(xi);
+    ctx.beginPath(); ctx.moveTo(xp, 0); ctx.lineTo(xp, H); ctx.stroke();
+    // minor tick mark on axis
+    ctx.strokeStyle = '#2a4050'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xp, midY - 3); ctx.lineTo(xp, midY + 3); ctx.stroke();
+    ctx.strokeStyle = '#111e2a';
+  }
+
+  // x major ticks + labels every 5 units
+  ctx.font = '10px monospace'; ctx.textAlign = 'center';
+  for (let xi = Math.round(xmin/5)*5; xi <= xmax; xi += 5) {
+    const xp = mx(xi);
+    ctx.strokeStyle = '#1e3345'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xp, 0); ctx.lineTo(xp, H); ctx.stroke();
+    ctx.strokeStyle = '#4a7090'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(xp, midY - 6); ctx.lineTo(xp, midY + 6); ctx.stroke();
+    ctx.fillStyle = '#607888'; ctx.fillText(xi, xp, midY + 17);
+  }
+  // x-axis label
+  ctx.fillStyle = '#5080a0'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText('x (a.u.)', W - 4, midY + 17);
+
+  // y-axis line (left edge)
+  const yAxisX = mx(xmin) + 28;
+  ctx.strokeStyle = '#3a5060'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(yAxisX, 4); ctx.lineTo(yAxisX, H - 20); ctx.stroke();
+
+  // y ticks: show |ψ| scale; peak = sqrt(pMax), wSc px per unit amplitude
+  // draw ticks at 0, ±0.25·peak, ±0.5·peak, ±peak (normalised labels 0..1)
+  const peakA = Math.sqrt(pMax);
+  const ySteps = [0, 0.25, 0.5, 0.75, 1.0];
+  ctx.font = '9px monospace'; ctx.textAlign = 'right';
+  ySteps.forEach(f => {
+    const dyPx = f * peakA * wSc;
+    [1, -1].forEach(sign => {
+      if (f === 0 && sign === -1) return;
+      const yp = midY - sign * dyPx;
+      ctx.strokeStyle = sign > 0 ? 'rgba(48,128,80,0.18)' : 'rgba(80,80,120,0.12)';
+      ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+      ctx.beginPath(); ctx.moveTo(yAxisX, yp); ctx.lineTo(W, yp); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = '#4a7090'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(yAxisX - 5, yp); ctx.lineTo(yAxisX + 5, yp); ctx.stroke();
+      if (sign > 0 || f > 0) {
+        ctx.fillStyle = '#5a8090';
+        ctx.fillText((sign * f).toFixed(2), yAxisX - 7, yp + 3);
+      }
+    });
+  });
+  // y-axis label (rotated)
+  ctx.save(); ctx.translate(yAxisX - 20, midY); ctx.rotate(-Math.PI/2);
+  ctx.fillStyle = '#5080a0'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('|ψ| (norm.)', 0, 0); ctx.restore();
+
+  // Bohmian
+  if (bohmOn && bx) {
+    const simpleDots = np > 60;  // skip expensive radial gradients for large counts
+    for (let p = 0; p < np; p++) {
+      const bxVal = bx[p];
+      if (bxVal < xmin || bxVal > xmax) continue;  // off-screen (exited)
+      if (showTrails && bTrails[p] && bTrails[p].length > 1) {
+        ctx.beginPath(); ctx.strokeStyle = 'rgba(0,232,255,0.12)'; ctx.lineWidth = 1;
+        for (let ti = 0; ti < bTrails[p].length; ti++) {
+          const tx = mx(bTrails[p][ti]), ty = midY + 8;
+          ti===0 ? ctx.moveTo(tx,ty) : ctx.lineTo(tx,ty);
+        }
+        ctx.stroke();
+      }
+      const bxP = mx(bxVal);
+      if (simpleDots) {
+        ctx.beginPath(); ctx.arc(bxP, midY, 2, 0, 6.2832);
+        ctx.fillStyle = '#00d0ee'; ctx.fill();
+      } else {
+        const fi = clamp(Math.round((bxVal - xmin) / ((xmax-xmin)/(nx-1))), 0, nx-1);
+        const probAt = Math.sqrt(psi_re[fi]*psi_re[fi] + psi_im[fi]*psi_im[fi]);
+        const r = 4 + probAt / Math.sqrt(pMax) * 8;
+        const g2 = ctx.createRadialGradient(bxP, midY, 0, bxP, midY, r+3);
+        g2.addColorStop(0, 'rgba(0,240,255,0.9)'); g2.addColorStop(1, 'rgba(0,200,255,0)');
+        ctx.beginPath(); ctx.arc(bxP, midY, r+3, 0, 2*Math.PI);
+        ctx.fillStyle = g2; ctx.fill();
+        ctx.beginPath(); ctx.arc(bxP, midY, 3, 0, 2*Math.PI);
+        ctx.fillStyle = '#00f0ff'; ctx.fill();
+      }
+    }
+  }
+
+  // === T/R inset overlay (bottom-left corner of wave canvas) ===
+  // Wave: use exact spectral T_mean — the k-weighted transfer matrix integral.
+  // This is independent of where the packet is on screen.
+  // Particles: show frozen last-cycle result if available,
+  // otherwise show in-progress decided count for current cycle.
+  let ptT = 0, ptR = 0, ptNdisp = np, ptLabel = np;
+  if (SPEC.finalPtN > 0) {
+    // use last completed cycle
+    ptT = SPEC.finalPtT; ptR = SPEC.finalPtR; ptNdisp = SPEC.finalPtN;
+  } else if (bohmOn && SPEC.bDecided) {
+    for (let p = 0; p < np; p++) {
+      if (SPEC.bDecided[p] === 1) ptT++;
+      else if (SPEC.bDecided[p] === 0) ptR++;
+    }
+    ptNdisp = ptT + ptR; // only decided so far
+  }
+  drawTRInset(ctx, W, H, SPEC.T_mean, 1 - SPEC.T_mean, ptT, ptR, ptNdisp, bohmOn);
+
+  // done overlay (only shown when not auto-looping)
+  if (SPEC.done && SPEC.loopDelay === 0) {
+    ctx.fillStyle = 'rgba(10,30,20,0.72)';
+    ctx.fillRect(W*0.25, H*0.35, W*0.5, H*0.3);
+    ctx.strokeStyle = '#20c080'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(W*0.25, H*0.35, W*0.5, H*0.3);
+    ctx.fillStyle = '#20e090'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Packet exited domain', W*0.5, H*0.5 - 6);
+    ctx.font = '11px sans-serif'; ctx.fillStyle = '#60c0a0';
+    ctx.fillText('Press ↺ Reset to replay', W*0.5, H*0.5 + 12);
+  }
+
+  // info
+  document.getElementById('spec-info-E').textContent  = (0.5*SPEC.k0*SPEC.k0).toFixed(3);
+  document.getElementById('spec-info-EV').textContent = SPEC.V0 > 0 ? (0.5*SPEC.k0*SPEC.k0/SPEC.V0).toFixed(3) : '∞';
+  document.getElementById('spec-info-T').textContent  = (SPEC.T_mean*100).toFixed(1) + '%';
+  document.getElementById('spec-info-t').textContent  = SPEC.t.toFixed(2);
+  if (SPEC.initialNorm) document.getElementById('spec-info-N0').textContent = SPEC.initialNorm.toFixed(4);
+  // Live debug: show raw finalPtT/R/N so we can verify correctness
+  {
+    const el = document.getElementById('spec-info-P');
+    if (el) {
+      if (SPEC.finalPtN > 0) {
+        const pct = (SPEC.finalPtT / SPEC.finalPtN * 100).toFixed(1);
+        el.textContent = SPEC.finalPtT + '/' + SPEC.finalPtR + '/' + SPEC.finalPtN + ' (' + pct + '%)';
+      } else if (SPEC.bDecided) {
+        let t=0,r=0,u=0;
+        for (let p=0;p<SPEC.np;p++) {
+          if(SPEC.bDecided[p]===1)t++; else if(SPEC.bDecided[p]===0)r++; else u++;
+        }
+        el.textContent = 't:'+t+' r:'+r+' u:'+u;
+      }
+    }
+  }
+}
+
+// ----------------------------------------------------------------
+// Spectral main loop
+// ----------------------------------------------------------------
+function specLoop() {
+  if (SPEC.playing && !SPEC.done) {
+    for (let s = 0; s < SPEC.speed; s++) {
+      SPEC.t += SPEC.dt;
+      specEvalPsi(SPEC.t);
+      if (SPEC.bohmOn) stepSpecBohmian();
+    }
+    // auto-stop / auto-restart: check remaining norm
+    const dxS = (SPEC.xmax - SPEC.xmin) / (SPEC.nx - 1);
+    let norm = 0;
+    for (let i = 0; i < SPEC.nx; i++)
+      norm += (SPEC.psi_re[i]*SPEC.psi_re[i] + SPEC.psi_im[i]*SPEC.psi_im[i]) * dxS;
+    if (norm < 0.005 * SPEC.initialNorm) {  // 0.5%: wave fully exited, classify all
+      SPEC.done = true;
+      SPEC.playing = false;
+      // Force-classify all undecided particles. By this point the T and R
+      // wave packets are fully separated: anything right of the barrier
+      // midpoint is travelling with the transmitted packet, anything left
+      // with the reflected packet.
+      if (SPEC.bohmOn && SPEC.bDecided) {
+        const mid = SPEC.L / 2;
+        let nForced = 0, nAlreadyT = 0, nAlreadyR = 0;
+        for (let p = 0; p < SPEC.np; p++) {
+          if (SPEC.bDecided[p] === 1) { nAlreadyT++; continue; }
+          if (SPEC.bDecided[p] === 0) { nAlreadyR++; continue; }
+          nForced++;
+          SPEC.bDecided[p] = SPEC.bx[p] > mid ? 1 : 0;
+          SPEC.bx[p] = SPEC.bDecided[p] === 1 ? SPEC.xmax + 999 : SPEC.xmin - 999;
+        }
+        let finalT = 0, finalR = 0;
+        for (let p = 0; p < SPEC.np; p++) {
+          if (SPEC.bDecided[p] === 1) finalT++;
+          else if (SPEC.bDecided[p] === 0) finalR++;
+        }
+        // Freeze for display — survives the reset/restart
+        SPEC.finalPtT = finalT;
+        SPEC.finalPtR = finalR;
+        SPEC.finalPtN = SPEC.np;
+        console.log('[Bohmian done] np=' + SPEC.np +
+          ' alreadyT=' + nAlreadyT + ' alreadyR=' + nAlreadyR +
+          ' forced=' + nForced + ' finalT=' + finalT + ' finalR=' + finalR +
+          ' T%=' + (finalT/SPEC.np*100).toFixed(1) +
+          ' T_mean%=' + (SPEC.T_mean*100).toFixed(1));
+      }
+      const btn = document.getElementById('btn-spec-play');
+      if (btn) { btn.textContent = '▶ Play'; btn.classList.remove('active'); }
+      if (SPEC.loopDelay > 0) {
+        setTimeout(() => {
+          SPEC.done = false;
+          SPEC.playing = true;
+          resetSpec();
+          const btn2 = document.getElementById('btn-spec-play');
+          if (btn2) { btn2.textContent = '⏸ Pause'; btn2.classList.add('active'); }
+        }, SPEC.loopDelay * 1000);
+      }
+    }
+  }
+  renderSpec();
+  if (SPEC.show2d) render2DSpec();
+  SPEC.animId = requestAnimationFrame(specLoop);
+}
+
+function resetSpec(clearHistory) {
+  if (clearHistory) { SPEC.finalPtT = -1; SPEC.finalPtR = -1; SPEC.finalPtN = 0; }
+  SPEC.k0    = +document.getElementById('spec-k0-sl').value;
+  SPEC.sigma = +document.getElementById('spec-sigma-sl').value;
+  SPEC.x0    = +document.getElementById('spec-x0-sl').value;
+  SPEC.V0    = +document.getElementById('spec-V0-sl').value;
+  SPEC.L     = +document.getElementById('spec-L-sl').value;
+  SPEC.nk    = +document.getElementById('spec-nk-sl').value;
+  SPEC.np    = +document.getElementById('spec-np-sl').value;
+  SPEC.t     = 0;
+  SPEC.done  = false;
+  specPrecompute();
+  specEvalPsi(0);
+  // record initial norm for auto-stop
+  const dxS = (SPEC.xmax - SPEC.xmin) / (SPEC.nx - 1);
+  let n0 = 0, nLeft = 0, nRight = 0;
+  for (let i = 0; i < SPEC.nx; i++) {
+    const p2 = (SPEC.psi_re[i]*SPEC.psi_re[i] + SPEC.psi_im[i]*SPEC.psi_im[i]) * dxS;
+    n0 += p2;
+    if (SPEC.xs[i] < 0) nLeft += p2; else nRight += p2;
+  }
+  SPEC.initialNorm = n0 || 1;
+  // Diagnostic: verify norm and probability distribution
+  console.log('[resetSpec] initialNorm=' + n0.toFixed(4) +
+    ' nLeft=' + nLeft.toFixed(4) + ' nRight=' + nRight.toFixed(4) +
+    ' T_mean=' + (SPEC.T_mean*100).toFixed(2) + '%' +
+    ' rightFrac=' + (nRight/n0*100).toFixed(2) + '%');
+  // Record initial peak amplitude and probability density for fixed-scale rendering
+  let maxA0 = 0, maxP0 = 0;
+  for (let i = 0; i < SPEC.nx; i++) {
+    const p = SPEC.psi_re[i]*SPEC.psi_re[i] + SPEC.psi_im[i]*SPEC.psi_im[i];
+    if (p > maxP0) maxP0 = p;
+  }
+  SPEC.initialMaxA = Math.sqrt(maxP0) || 1;
+  SPEC.initialPMax  = maxP0 || 1;
+  initSpecBohmian();
+}
+
+function toggleSpecPlay() {
+  SPEC.playing = !SPEC.playing;
+  const btn = document.getElementById('btn-spec-play');
+  btn.textContent = SPEC.playing ? '⏸ Pause' : '▶ Play';
+  btn.classList.toggle('active', SPEC.playing);
+}
+function toggleSpecBohm() {
+  SPEC.bohmOn = !SPEC.bohmOn;
+  const btn = document.getElementById('btn-spec-bohm');
+  btn.textContent = SPEC.bohmOn ? '● Particles' : '○ Particles Off';
+  btn.classList.toggle('active', SPEC.bohmOn);
+}
+function toggleSpecTrails() {
+  SPEC.showTrails = !SPEC.showTrails;
+  const btn = document.getElementById('btn-spec-trails');
+  btn.classList.toggle('active', SPEC.showTrails);
+  if (!SPEC.showTrails && SPEC.bTrails) SPEC.bTrails = Array.from({length:SPEC.np},()=>[]);
+}
+function updateSpecSlider(name) {
+  if (name === 'loop') {
+    const v = +document.getElementById('spec-loop-sl').value;
+    SPEC.loopDelay = v;
+    document.getElementById('spec-loop-val').textContent = v > 0 ? v + 's' : 'off';
+    return;
+  }
+  if (name === 'sigY') {
+    SPEC.sigY = +document.getElementById('spec-sigy-sl').value;
+    document.getElementById('spec-sigy-val').textContent = SPEC.sigY.toFixed(1);
+    return;
+  }
+  const sls = {k0:'spec-k0-sl', sigma:'spec-sigma-sl', x0:'spec-x0-sl',
+               V0:'spec-V0-sl', L:'spec-L-sl', nk:'spec-nk-sl',
+               np:'spec-np-sl', speed:'spec-speed-sl'};
+  const vs  = {k0:'spec-k0-val', sigma:'spec-sigma-val', x0:'spec-x0-val',
+               V0:'spec-V0-val', L:'spec-L-val', nk:'spec-nk-val',
+               np:'spec-np-val', speed:'spec-speed-val'};
+  const v = +document.getElementById(sls[name]).value;
+  const dec = (name==='sigma'||name==='L') ? 1 : (name==='np'||name==='nk'||name==='speed') ? 0 : 1;
+  document.getElementById(vs[name]).textContent = v.toFixed(dec);
+  SPEC[name === 'nk' ? 'nk' : name === 'np' ? 'np' : name === 'speed' ? 'speed' : name] = v;
+  if (name === 'speed') return;
+  resetSpec(true);  // user changed params, clear history
+}
+
+// ================================================================
+// 2D WAVE VISUALISATION
+// Renders ψ(x) as a 2D colour map: x = horizontal position,
+// y = transverse beam axis, colour = quantum phase (HSV),
+// brightness = amplitude × Gaussian transverse envelope.
+// ================================================================
+function hsvToRgb255(h, s, v) {
+  // h in [0,360], s,v in [0,1] → [r,g,b] each in [0,255]
+  const i = Math.floor(h / 60) % 6;
+  const f = h / 60 - Math.floor(h / 60);
+  const p = v*(1-s), q = v*(1-f*s), t = v*(1-(1-f)*s);
+  let r, g, b;
+  if      (i===0){r=v;g=t;b=p} else if (i===1){r=q;g=v;b=p}
+  else if (i===2){r=p;g=v;b=t} else if (i===3){r=p;g=q;b=v}
+  else if (i===4){r=t;g=p;b=v} else           {r=v;g=p;b=q}
+  return [r*255|0, g*255|0, b*255|0];
+}
+
+// ----------------------------------------------------------------
+// Compact T/R inset badge drawn onto any canvas context
+// ----------------------------------------------------------------
+function drawTRInset(ctx, W, H, fracT, fracR, ptT, ptR, ptN, bohmOn) {
+  const showP = bohmOn && ptN > 0;
+  const rows  = showP ? 4 : 2;
+  const iw = 148, rowH = 16, padY = 10, sep = 6;
+  const ih = padY*2 + rows*rowH + (showP ? sep + 8 : 0);
+  const x0 = 8, y0 = H - ih - 8;
+  ctx.save();
+  ctx.fillStyle = 'rgba(4,10,22,0.84)';
+  roundRect(ctx, x0, y0, iw, ih, 5); ctx.fill();
+  ctx.strokeStyle = '#1a2a3a'; ctx.lineWidth = 1;
+  roundRect(ctx, x0, y0, iw, ih, 5); ctx.stroke();
+
+  const labelX = x0 + 8;
+  const barX   = x0 + 38;
+  const barW   = iw - 50;
+  const pctX   = barX + barW + 4;
+
+  function drawRow(y, label, frac, trackCol, fillCol, pctCol) {
+    // label
+    ctx.fillStyle = '#607080'; ctx.font = '9px monospace';
+    ctx.textAlign = 'left'; ctx.fillText(label, labelX, y + rowH - 4);
+    // track
+    ctx.fillStyle = trackCol; ctx.fillRect(barX, y + 2, barW, rowH - 5);
+    // fill
+    ctx.fillStyle = fillCol;
+    ctx.fillRect(barX, y + 2, Math.min(frac, 1) * barW, rowH - 5);
+    // pct
+    ctx.fillStyle = pctCol; ctx.font = '9px monospace'; ctx.textAlign = 'left';
+    ctx.fillText((frac * 100).toFixed(1) + '%', pctX, y + rowH - 4);
+  }
+
+  // Wave section header
+  ctx.fillStyle = '#3a6070'; ctx.font = 'bold 8px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('WAVE  ψ', labelX, y0 + 8);
+
+  const wy = y0 + padY;
+  drawRow(wy,            'T', fracT, '#0e2218', '#20c080', '#20e090');
+  drawRow(wy + rowH,     'R', fracR, '#1a0c12', '#c03050', '#e06080');
+
+  if (showP) {
+    // separator
+    const sepY = wy + 2*rowH + 3;
+    ctx.strokeStyle = '#1a2a3a'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0+6, sepY); ctx.lineTo(x0+iw-6, sepY); ctx.stroke();
+
+    // Particle section header
+    ctx.fillStyle = '#2a5868'; ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('PARTICLES  ● ' + ptN, labelX, sepY + 8);
+
+    const py = sepY + sep + 4;
+    const ptDec = ptT + ptR;
+    drawRow(py,        'T', ptDec > 0 ? ptT / ptDec : 0, '#0e2218', '#00b870', '#00d890');
+    drawRow(py + rowH, 'R', ptDec > 0 ? ptR / ptDec : 0, '#1a0c12', '#a02040', '#c04060');
+    // show raw counts
+    ctx.fillStyle = '#3a6070'; ctx.font = '8px monospace'; ctx.textAlign = 'right';
+    ctx.fillText(ptT + '+' + ptR + '/' + ptN, x0 + iw - 4, sepY + 8);
+  }
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+  ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
+}
+
+// ----------------------------------------------------------------
+// 2D wave visualisation
+// ψ₂D(x,y,t) = ψ₁D(x,t) × G_y(y,t)
+// G_y is a free-particle Gaussian on the transverse axis with initial
+// width sigY0. Its variance grows as σ_y(t)² = sigY0² + t²/(4·sigY0²)
+// Color hue = arg(ψ₁D), brightness ∝ |ψ₁D| × exp(-y²/(2·σ_y(t)²))
+// ----------------------------------------------------------------
+function render2DWave(canvasId, psi_re, psi_im, nx, xmin, xmax, bL, bR, bohmOn, bx, bxNp, sigY0, simT, extraDraw, normRef) {
+  const cv = document.getElementById(canvasId);
+  if (!cv || cv.classList.contains('hidden')) return;
+  const W = cv.clientWidth || 700, H = cv.clientHeight || 180;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+
+  let maxA2 = 0;
+  for (let i = 0; i < nx; i++) {
+    const a2 = psi_re[i]*psi_re[i] + psi_im[i]*psi_im[i];
+    if (a2 > maxA2) maxA2 = a2;
+  }
+  const maxA = Math.sqrt(maxA2 || 1);
+  // normRef: fixed reference amplitude (e.g. initial max) so colour brightness
+  // reflects true relative amplitude across the whole simulation, not just
+  // the current-frame max (which would make tiny reflected tails look full-bright).
+  const normDenom = normRef ? Math.max(normRef, maxA * 0.02) : maxA;
+
+  const xRange = xmax - xmin;
+  const nxm1 = nx - 1;
+  const halfH = H >> 1;
+
+  // Transverse axis: y in [-yLim, +yLim] physics units
+  const sigYt = sigY0 ? Math.sqrt(sigY0*sigY0 + (simT||0)*(simT||0)/(4*sigY0*sigY0)) : null;
+  // yLim tracks sigYt so edges are always at ~3.5σ_y(t) — keeps beam localized visually
+  const yLim  = sigYt ? 3.5 * sigYt : 1;
+  const inv2sig2 = sigYt ? 0.5 / (sigYt * sigYt) : 0;
+
+  // Barrier pixel bounds
+  const bxPxL = (bL - xmin) / xRange * W;
+  const bxPxR = (bR - xmin) / xRange * W;
+
+  const imgData = ctx.createImageData(W, H);
+  const data = imgData.data;
+  for (let px = 0; px < W; px++) {
+    const ix = clamp(((px / W) * nxm1 + 0.5) | 0, 0, nxm1);
+    const re = psi_re[ix], im = psi_im[ix];
+    const amp = Math.sqrt(re*re + im*im);
+    const phase = Math.atan2(im, re);
+    const hue = ((phase / (2*Math.PI) + 0.5) * 360 + 180) % 360;
+    const normA = amp / normDenom;
+    const inBarrier = px >= bxPxL && px <= bxPxR;
+
+    for (let py = 0; py < H; py++) {
+      let transv;
+      if (sigYt) {
+        const y_phys = (py - halfH) / halfH * yLim;
+        transv = Math.exp(-y_phys * y_phys * inv2sig2);
+      } else {
+        const dy = py - halfH;
+        transv = Math.exp(-0.5 * dy*dy / ((H*0.22)*(H*0.22)));
+      }
+      // Use amp2d = normA*transv directly (no aggressive gamma) so regions
+      // beyond ~2σ in y truly fall off to black, giving a localized 2D blob
+      const amp2d = normA * transv;
+      const v = Math.min(1, Math.pow(amp2d, 0.65) * 1.1);
+      let [r, g, b] = hsvToRgb255(hue, 0.92, v);
+      if (inBarrier) { r = (r*0.5 + 115)|0; g = (g*0.5 + 42)|0; b = (b*0.5 + 6)|0; }
+      const idx = 4*(py*W+px);
+      data[idx]   = r > 255 ? 255 : r;
+      data[idx+1] = g > 255 ? 255 : g;
+      data[idx+2] = b > 255 ? 255 : b;
+      data[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // σ_y envelope marker lines
+  if (sigYt) {
+    const envy = halfH - (sigYt / yLim) * halfH;
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(0, envy); ctx.lineTo(W, envy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, H-envy); ctx.lineTo(W, H-envy); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // x-axis labels
+  ctx.fillStyle = '#2a3f55'; ctx.font = '9px monospace'; ctx.textAlign = 'center';
+  for (let xi = Math.ceil(xmin); xi <= xmax; xi += 5) {
+    ctx.fillText(xi, (xi - xmin) / xRange * W, H - 2);
+  }
+  // y-axis label
+  if (sigYt) {
+    ctx.save(); ctx.rotate(-Math.PI/2);
+    ctx.fillStyle = '#2a3f55'; ctx.font = '8px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('y', -halfH, 10);
+    ctx.restore();
+  }
+
+  // particles
+  if (bohmOn && bx) {
+    for (let p = 0; p < bxNp; p++) {
+      const bxP = (bx[p] - xmin) / xRange * W;
+      ctx.beginPath(); ctx.arc(bxP, halfH, 4, 0, 6.2832);
+      ctx.fillStyle = '#00f0ff'; ctx.fill();
+    }
+  }
+
+  if (extraDraw) extraDraw(ctx, W, H);
+}
+
+function render2DNum() {
+  render2DWave('canvas-num-2d', NUM.psi_re, NUM.psi_im, NUM.N,
+    NUM.xmin, NUM.xmax, -NUM.bw/2, NUM.bw/2,
+    NUM.bohmOn, NUM.bx, NUM.np, NUM.sigY, NUM.t);
+}
+
+function render2DSpec() {
+  render2DWave('canvas-spec-2d', SPEC.psi_re, SPEC.psi_im, SPEC.nx,
+    SPEC.xmin, SPEC.xmax, 0, SPEC.L,
+    SPEC.bohmOn, SPEC.bx, SPEC.np, SPEC.sigY, SPEC.t,
+    (ctx, W, H) => {
+      let ptT2 = 0, ptR2 = 0, ptN2 = SPEC.np;
+      if (SPEC.finalPtN > 0) {
+        ptT2 = SPEC.finalPtT; ptR2 = SPEC.finalPtR; ptN2 = SPEC.finalPtN;
+      } else if (SPEC.bohmOn && SPEC.bDecided) {
+        for (let p = 0; p < SPEC.np; p++) {
+          if (SPEC.bDecided[p] === 1) ptT2++;
+          else if (SPEC.bDecided[p] === 0) ptR2++;
+        }
+        ptN2 = ptT2 + ptR2;
+      }
+      drawTRInset(ctx, W, H, SPEC.T_mean, 1 - SPEC.T_mean, ptT2, ptR2, ptN2, SPEC.bohmOn);
+    },
+    SPEC.initialMaxA);
+}
+
+function render2DAna(sc) {
+  const cv = document.getElementById('canvas-ana-2d');
+  if (!cv || cv.classList.contains('hidden')) return;
+  const nx = 400;
+  const xmin = -10, xmax = Math.max(3 + ANA.L, 6);
+  const psi_re = new Float32Array(nx), psi_im = new Float32Array(nx);
+  const cosP = Math.cos(ANA.phase), sinP = Math.sin(ANA.phase);
+  for (let i = 0; i < nx; i++) {
+    const x = xmin + (xmax - xmin) * i / (nx - 1);
+    const z = evalPsiRspecL(x, sc, ANA.L);
+    psi_re[i] = z[0]*cosP - z[1]*sinP;
+    psi_im[i] = z[0]*sinP + z[1]*cosP;
+  }
+  // For stationary state, σ_y stays constant (continuous beam, no spreading)
+  render2DWave('canvas-ana-2d', psi_re, psi_im, nx, xmin, xmax, 0, ANA.L,
+    ANA.bohmOn, ANA.bx, ANA.np, 1.5, 0,
+    (ctx, W, H) => drawAnaTInset(sc, ctx, W - Math.min(210, W*0.36) - 8, 8,
+      Math.min(210, W*0.36), Math.min(110, H*0.34)));
+}
+
+function toggle2DNum() {
+  NUM.show2d = !NUM.show2d;
+  document.getElementById('canvas2d').classList.toggle('hidden', NUM.show2d);
+  document.getElementById('canvas-num-2d').classList.toggle('hidden', !NUM.show2d);
+  document.getElementById('row-num-sigy').style.display = NUM.show2d ? 'flex' : 'none';
+  document.getElementById('btn-num-2d').classList.toggle('active', NUM.show2d);
+  if (NUM.show2d) render2DNum();
+}
+function toggle2DAna() {
+  ANA.show2d = !ANA.show2d;
+  document.getElementById('canvas-ana-wave').classList.toggle('hidden', ANA.show2d);
+  document.getElementById('canvas-ana-2d').classList.toggle('hidden', !ANA.show2d);
+  document.getElementById('btn-ana-2d').classList.toggle('active', ANA.show2d);
+  if (ANA.show2d && anaScatter) render2DAna(anaScatter);
+}
+function toggle2DSpec() {
+  SPEC.show2d = !SPEC.show2d;
+  document.getElementById('canvas-spec-wave').classList.toggle('hidden', SPEC.show2d);
+  document.getElementById('canvas-spec-2d').classList.toggle('hidden', !SPEC.show2d);
+  document.getElementById('row-spec-sigy').style.display = SPEC.show2d ? 'flex' : 'none';
+  document.getElementById('btn-spec-2d').classList.toggle('active', SPEC.show2d);
+  if (SPEC.show2d) render2DSpec();
+}
+
+// ================================================================
+// TAB SWITCHING
+// ================================================================
+function switchMode(mode) {
+  document.getElementById('numerical-panel').classList.toggle('hidden', mode !== 'numerical');
+  document.getElementById('analytical-panel').classList.toggle('hidden', mode !== 'analytical');
+  document.getElementById('spectral-panel').classList.toggle('hidden', mode !== 'spectral');
+
+  document.getElementById('tab-num').classList.toggle('active', mode === 'numerical');
+  document.getElementById('tab-ana').classList.toggle('active', mode === 'analytical');
+  document.getElementById('tab-spec').classList.toggle('active', mode === 'spectral');
+
+  if (mode === 'analytical' && !ANA.animId) { resetAna(); anaLoop(); }
+  if (mode === 'numerical'  && !numAnimId)  { numLoop(); }
+  if (mode === 'spectral'   && !SPEC.animId) { resetSpec(true); specLoop(); }
+}
+
+// ================================================================
+// WINDOW RESIZE
+// ================================================================
+function onResize() {
+  const anaHidden = document.getElementById('analytical-panel').classList.contains('hidden');
+  const numHidden = document.getElementById('numerical-panel').classList.contains('hidden');
+  const specHidden = document.getElementById('spectral-panel').classList.contains('hidden');
+  if (!anaHidden) { const sc = anaGetSc(); renderAnaWave(sc); renderAnaT(sc); if (ANA.show2d && anaScatter) render2DAna(anaScatter); }
+  if (!numHidden) { renderNum2D(); if (NUM.show2d) render2DNum(); }
+  if (!specHidden) { renderSpec(); if (SPEC.show2d) render2DSpec(); }
+  if (th_renderer) {
+    const cv = document.getElementById('canvas3d');
+    const W = cv.parentElement.clientWidth, H = cv.parentElement.clientHeight;
+    th_renderer.setSize(W, H);
+    if (th_camera) { th_camera.aspect = W/H; th_camera.updateProjectionMatrix(); }
+  }
+}
+
+window.addEventListener('resize', onResize);
+
+// ================================================================
+// BOOT
+// ================================================================
+(function init() {
+  // numerical
+  resetNum();   // already calls buildCAP() now
+  init3D();
+  numLoop();
+  // analytical starts lazily when tab clicked
+})();
+</script>
+</body>
+</html>
