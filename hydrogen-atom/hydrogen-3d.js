@@ -1833,20 +1833,118 @@ function integrate(){
     // Cloud mode: fast Euler grid step for all particles (no trails)
     stepCloudParticles();
   }else{
-    // Trail mode: accurate RK4 for small number of trail particles
-    for(const p of particles){
-      const{x,y,z}=p;
-      const[k1x,k1y,k1z]=bohmV(comps,x,y,z,t);
-      const[k2x,k2y,k2z]=bohmV(comps,x+.5*dt*k1x,y+.5*dt*k1y,z+.5*dt*k1z,t+.5*dt);
-      const[k3x,k3y,k3z]=bohmV(comps,x+.5*dt*k2x,y+.5*dt*k2y,z+.5*dt*k2z,t+.5*dt);
-      const[k4x,k4y,k4z]=bohmV(comps,x+dt*k3x,y+dt*k3y,z+dt*k3z,t+dt);
-      const nx=x+dt*(k1x+2*k2x+2*k3x+k4x)/6;
-      const ny=y+dt*(k1y+2*k2y+2*k3y+k4y)/6;
-      const nz=z+dt*(k1z+2*k2z+2*k3z+k4z)/6;
-      if(isNaN(nx)||Math.sqrt(nx*nx+ny*ny+nz*nz)>rMax()*1.4){respawn(p);continue;}
-      p.trail.push([p.x,p.y,p.z]);
-      if(p.trail.length>trailLen)p.trail.shift();
-      p.x=nx;p.y=ny;p.z=nz;p.age++;
+    // Trail mode — exact integrators where possible, sub-stepped RK4 otherwise.
+    const rmSq=(rMax()*1.4)**2;
+
+    if(spinEnabled&&spinComps.length){
+      // ── 1s + spin: exact Rodrigues rotation (radius conserved by construction) ──
+      const is1s=comps.length===1&&comps[0].n===1&&comps[0].l===0;
+      if(is1s){
+        let nax,nay,naz;
+        if(spinMode==='product'){
+          nax=Math.sin(spinTheta)*Math.cos(spinPhi);
+          nay=Math.sin(spinTheta)*Math.sin(spinPhi);
+          naz=Math.cos(spinTheta);
+        }else{
+          const sg=spinComps[0].upRe>0.5?1:-1;
+          nax=0;nay=0;naz=sg;
+        }
+        for(const p of particles){
+          if(isNaN(p.x)||p.x*p.x+p.y*p.y+p.z*p.z>rmSq){respawn(p);continue;}
+          const pr=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+          if(pr<0.15) continue;
+          const ang=dt/pr,cosA=Math.cos(ang),sinA=Math.sin(ang),ocA=1-cosA;
+          const dotN=nax*p.x+nay*p.y+naz*p.z;
+          const cpx=nay*p.z-naz*p.y,cpy=naz*p.x-nax*p.z,cpz=nax*p.y-nay*p.x;
+          const nx=p.x*cosA+cpx*sinA+nax*dotN*ocA;
+          const ny=p.y*cosA+cpy*sinA+nay*dotN*ocA;
+          const nz=p.z*cosA+cpz*sinA+naz*dotN*ocA;
+          p.trail.push([p.x,p.y,p.z]);
+          if(p.trail.length>trailLen)p.trail.shift();
+          p.x=nx;p.y=ny;p.z=nz;p.age++;
+        }
+      }else{
+        // General spin eigenstate / superposition: sub-stepped exact azimuthal
+        // rotation for pure m≠0 j-eigenstates (single spinor component, azimuthal
+        // velocity only), or sub-stepped RK2 midpoint for everything else.
+        // The azimuthal-exact path mirrors the no-spin eigenstate path and is
+        // drift-free at any speed.
+        const isSingleComp = spinComps.length===1;
+        const sc0 = spinComps[0];
+        // A pure j-state with a single spinor component has only one orbital (m value).
+        // Its Bohmian velocity is v = Im(∇ψ/ψ) = m/(r sinθ) in φ̂, i.e. purely azimuthal.
+        // We can integrate exactly the same way as the no-spin m≠0 eigenstate.
+        const isPureAzimuthal = isSingleComp &&
+          (sc0.upRe*sc0.upRe+sc0.upIm*sc0.upIm > 0.99 ||
+           sc0.dnRe*sc0.dnRe+sc0.dnIm*sc0.dnIm > 0.99);
+        const mSpin = isSingleComp ? sc0.m : 0;
+
+        if(isPureAzimuthal && mSpin !== 0){
+          for(const p of particles){
+            if(isNaN(p.x)||p.x*p.x+p.y*p.y+p.z*p.z>rmSq){respawn(p);continue;}
+            const rho2=p.x*p.x+p.y*p.y;
+            if(rho2<1e-14) continue;
+            const dphi=mSpin*dt/rho2;
+            const cv=Math.cos(dphi),sv=Math.sin(dphi);
+            const nx=p.x*cv-p.y*sv,ny=p.x*sv+p.y*cv,nz=p.z;
+            p.trail.push([p.x,p.y,p.z]);
+            if(p.trail.length>trailLen)p.trail.shift();
+            p.x=nx;p.y=ny;p.z=nz;p.age++;
+          }
+        }else{
+          // General spin (mixed j-states, superpositions): sub-stepped RK2 midpoint.
+          // dtSub=0.05 keeps ω·dtSub < 0.5 even at r=0.15 (ω≈6.7).
+          // No cap on nSub — correctness at any speed takes priority.
+          const DT_SUB=0.05;
+          const nSub=Math.max(1,Math.ceil(Math.abs(dt)/DT_SUB));
+          const dtSub=dt/nSub;
+          for(const p of particles){
+            if(isNaN(p.x)||p.x*p.x+p.y*p.y+p.z*p.z>rmSq){respawn(p);continue;}
+            let px=p.x,py=p.y,pz=p.z,escaped=false;
+            for(let sub=0;sub<nSub;sub++){
+              const[k1x,k1y,k1z]=bohmVPauli(spinComps,px,py,pz,t);
+              const mx=px+0.5*dtSub*k1x,my=py+0.5*dtSub*k1y,mz=pz+0.5*dtSub*k1z;
+              const[k2x,k2y,k2z]=bohmVPauli(spinComps,mx,my,mz,t);
+              px+=dtSub*k2x;py+=dtSub*k2y;pz+=dtSub*k2z;
+              if(px*px+py*py+pz*pz>rmSq){escaped=true;break;}
+            }
+            if(escaped||isNaN(px)){respawn(p);continue;}
+            p.trail.push([p.x,p.y,p.z]);
+            if(p.trail.length>trailLen)p.trail.shift();
+            p.x=px;p.y=py;p.z=pz;p.age++;
+          }
+        }
+      }
+    }else{
+      // Spinless trail integration
+      const isEigenstate=comps.length===1;
+      for(const p of particles){
+        const{x,y,z}=p;
+        let nx,ny,nz;
+
+        if(isEigenstate&&comps[0].m!==0){
+          // Pure m≠0 eigenstate: exact azimuthal rotation (ρ_cyl conserved exactly).
+          const rho2=x*x+y*y;
+          if(rho2<1e-14){respawn(p);continue;}
+          const dphi=comps[0].m*dt/rho2;
+          const cv=Math.cos(dphi),sv=Math.sin(dphi);
+          nx=x*cv-y*sv;ny=x*sv+y*cv;nz=z;
+        }else{
+          // General superposition or m=0: standard RK4
+          const[k1x,k1y,k1z]=bohmV(comps,x,y,z,t);
+          const[k2x,k2y,k2z]=bohmV(comps,x+.5*dt*k1x,y+.5*dt*k1y,z+.5*dt*k1z,t+.5*dt);
+          const[k3x,k3y,k3z]=bohmV(comps,x+.5*dt*k2x,y+.5*dt*k2y,z+.5*dt*k2z,t+.5*dt);
+          const[k4x,k4y,k4z]=bohmV(comps,x+dt*k3x,y+dt*k3y,z+dt*k3z,t+dt);
+          nx=x+dt*(k1x+2*k2x+2*k3x+k4x)/6;
+          ny=y+dt*(k1y+2*k2y+2*k3y+k4y)/6;
+          nz=z+dt*(k1z+2*k2z+2*k3z+k4z)/6;
+        }
+
+        if(isNaN(nx)||nx*nx+ny*ny+nz*nz>rmSq){respawn(p);continue;}
+        p.trail.push([p.x,p.y,p.z]);
+        if(p.trail.length>trailLen)p.trail.shift();
+        p.x=nx;p.y=ny;p.z=nz;p.age++;
+      }
     }
   }
 }
@@ -2437,6 +2535,190 @@ function runAnalyticalChecks(){
   box.textContent=msg+'\n\n(Click to close)';
   // Auto-close after 12 seconds
   clearTimeout(box._t);box._t=setTimeout(()=>box.remove(),12000);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  COMPREHENSIVE VERIFICATION SWEEP
+// ════════════════════════════════════════════════════════════════
+// Checks the continuity equation ∂ρ/∂t + ∇·(ρv) = 0 at several
+// test points.  This is the gold-standard equivariance test: if
+// satisfied, the velocity field correctly transports the Born
+// distribution for ANY state (eigenstate, superposition, spinor).
+// compsArg / useSpinArg / spinCompsArg are evaluated directly —
+// the function saves & restores the globals so callers need not
+// worry about global state.
+function verifyContinuity(compsArg, useSpinArg, spinCompsArg, time_t, nTests, rBox) {
+  // Temporarily set globals so bohmV dispatches correctly
+  const savedSpin = spinEnabled, savedSC = spinComps, savedComps = comps;
+  spinEnabled = useSpinArg; spinComps = spinCompsArg; comps = compsArg;
+
+  const h = 0.25, dt_c = 0.003;
+  const getRho = (x,y,z,T) =>
+    useSpinArg ? rhoSpinAt(spinCompsArg,x,y,z,T) : rhoAt(compsArg,x,y,z,T);
+  const getV = (x,y,z) => bohmV(compsArg,x,y,z,time_t); // dispatches via globals
+
+  // Deterministic test points distributed inside rBox using Fibonacci sphere
+  const pts = [];
+  const golden = 2.39996322972865; // 2π/φ²
+  for(let i = 0; pts.length < nTests && i < nTests * 8; i++) {
+    const u = (i + 0.5) / (nTests * 8);
+    const r = rBox * Math.cbrt(u * 0.9 + 0.1);
+    const th = Math.acos(1 - 2 * u);
+    const ph = i * golden;
+    const x = r*Math.sin(th)*Math.cos(ph), y = r*Math.sin(th)*Math.sin(ph), z = r*Math.cos(th);
+    const rho0 = getRho(x,y,z,time_t);
+    if(rho0 < 1e-7) continue;
+    pts.push([x, y, z]);
+  }
+
+  let maxRelErr = 0, nValid = 0;
+  for(const [x,y,z] of pts) {
+    // ∂ρ/∂t  (central time difference)
+    const drhodt = (getRho(x,y,z,time_t+dt_c) - getRho(x,y,z,time_t-dt_c)) / (2*dt_c);
+    // ∇·(ρv): central differences of each Jᵢ = ρ·vᵢ  
+    const Jpx = getRho(x+h,y,z,time_t) * getV(x+h,y,z)[0];
+    const Jnx = getRho(x-h,y,z,time_t) * getV(x-h,y,z)[0];
+    const Jpy = getRho(x,y+h,z,time_t) * getV(x,y+h,z)[1];
+    const Jny = getRho(x,y-h,z,time_t) * getV(x,y-h,z)[1];
+    const Jpz = getRho(x,y,z+h,time_t) * getV(x,y,z+h)[2];
+    const Jnz = getRho(x,y,z-h,time_t) * getV(x,y,z-h)[2];
+    const divJ = (Jpx-Jnx)/(2*h) + (Jpy-Jny)/(2*h) + (Jpz-Jnz)/(2*h);
+    const residual = Math.abs(drhodt + divJ);
+    const scale = Math.max(Math.abs(drhodt), Math.abs(divJ), 1e-12);
+    maxRelErr = Math.max(maxRelErr, residual / scale);
+    nValid++;
+  }
+
+  spinEnabled = savedSpin; spinComps = savedSC; comps = savedComps;
+  return { maxRelErr, nValid };
+}
+
+// Sweep all scalar-Bohm eigenstates + representative superpositions and
+// report pass/fail for (a) the exact velocity formula and (b) the
+// continuity equation for each case.
+function runSweep() {
+  // Show a "Computing…" placeholder immediately so the user sees a response
+  let box = document.getElementById('verifyResultBox');
+  if(!box) {
+    box = document.createElement('div'); box.id = 'verifyResultBox';
+    box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'
+      + 'background:rgba(6,11,22,.97);border:1px solid #16213a;padding:18px 22px;z-index:500;'
+      + 'max-width:560px;width:90%;border-radius:4px;font-size:10.5px;line-height:1.75;'
+      + 'white-space:pre;cursor:pointer;max-height:80vh;overflow-y:auto;font-family:monospace;';
+    box.title = 'Click to close';
+    box.onclick = () => box.remove();
+    document.querySelector('.canvas-wrap').appendChild(box);
+  }
+  box.textContent = 'Running sweep \u2014 please wait\u2026';
+
+  // Defer actual work one frame so the browser paints the placeholder first
+  requestAnimationFrame(() => {
+  try {
+  const PASS = '\u2713', FAIL = '\u2717';
+  const lines = [];
+  let pass = 0, fail = 0;
+
+  // Save & override globals so bohmV uses scalar path for every sub-test
+  const saveSpin = spinEnabled, saveSC = spinComps, saveComps = comps;
+  spinEnabled = false; spinComps = [];
+
+  lines.push('SCALAR BOHM \u2014 ALL PURE EIGENSTATES (n=1\u20136)');
+  lines.push('\u2500'.repeat(50));
+
+  for(const orb of ORBITALS) {
+    const c1 = [{n:orb.n, l:orb.l, m:orb.m, cRe:1, cIm:0}];
+    comps = c1; // needed so bohmV dispatch is correct
+    const label = orb.label.padEnd(7);
+
+    // Scale test points to the orbital's natural radius n² so density is non-negligible.
+    // Six equatorial points (z=0 → sinθ=1, avoids angular nodal planes for all m)
+    // plus two off-equator points. Scaling by n² places them near the radial peak.
+    const rScale = orb.n * orb.n;
+    const orbPts = [
+      [rScale,      0,          0         ],
+      [0,           rScale,     0         ],
+      [rScale*0.71, rScale*0.71,0         ],
+      [-rScale*0.5, rScale*0.87,0         ],
+      [rScale*0.6,  rScale*0.6, rScale*0.4],
+      [0,           rScale*0.8, rScale*0.4],
+    ];
+
+    if(orb.m === 0) {
+      let maxSpd = 0;
+      for(const [x,y,z] of orbPts) {
+        const [vx,vy,vz] = bohmV(c1, x, y, z, 0);
+        maxSpd = Math.max(maxSpd, Math.sqrt(vx*vx+vy*vy+vz*vz));
+      }
+      const ok = maxSpd < 0.005;
+      ok ? pass++ : fail++;
+      lines.push(`${ok?PASS:FAIL} ${label} m= 0   v\u22480:  max|v|=${maxSpd.toExponential(2)}`);
+    } else {
+      let maxErr = 0, nTested = 0;
+      for(const [x,y,z] of orbPts) {
+        const rho2 = x*x+y*y; if(rho2 < 0.01) continue;
+        // Skip near-nodal points: when |ψ|² ≈ 0, bohmV returns [0,0,0] by convention
+        // (0/0 is undefined), so comparing with the analytical formula is meaningless.
+        const psi = psiXYZ(c1, x, y, z, 0);
+        if(psi[0]*psi[0]+psi[1]*psi[1] < 1e-8) continue;
+        const [vx,vy,vz] = bohmV(c1, x, y, z, 0);
+        const evx = -orb.m*y/rho2, evy = orb.m*x/rho2;
+        const ref = Math.abs(orb.m)/Math.sqrt(rho2);
+        maxErr = Math.max(maxErr, Math.sqrt((vx-evx)**2+(vy-evy)**2+vz**2)/ref);
+        nTested++;
+      }
+      const ok = nTested > 0 && maxErr < 0.025;
+      ok ? pass++ : fail++;
+      const note = nTested === 0 ? ' (all pts nodal!)' : '';
+      lines.push(`${ok?PASS:FAIL} ${label} m=${orb.m>0?'+':''}${orb.m}  FD err: ${(maxErr*100).toFixed(2)}% (n=${nTested})${note}`);
+    }
+  }
+
+  lines.push('');
+  lines.push(`Eigenstate velocity checks: ${pass}/${pass+fail} passed`);
+
+  // Continuity equation ∂ρ/∂t + ∇·(ρv) = 0 — only meaningful for superpositions
+  // where ρ(t) oscillates and both terms are large, so their cancellation is a
+  // non-trivial test of the guidance velocity.
+  // Pure m≠0 eigenstates are excluded: ∂ρ/∂t ≡ 0 and ∇·J ≡ 0 analytically, but both
+  // are also ~0 numerically (FD noise), making the ratio ε/ε ≈ 100% regardless of correctness.
+  // Those states are already validated by the exact velocity formula test above.
+  lines.push('');
+  lines.push('CONTINUITY \u2202\u03c1/\u2202t + \u2207\u00b7(\u03c1v) = 0  (superpositions only — equivariance check)');
+  lines.push('\u2500'.repeat(50));
+
+  const contCases = [
+    {label:'1s+2s   superpos  ', c:[{n:1,l:0,m:0,cRe:1/Math.SQRT2,cIm:0},{n:2,l:0,m:0,cRe:1/Math.SQRT2,cIm:0}], sp:false, sc:[], T:4,  rb:12},
+    {label:'1s+2pz  sp super  ', c:[{n:1,l:0,m:0,cRe:1/Math.SQRT2,cIm:0},{n:2,l:1,m:0,cRe:1/Math.SQRT2,cIm:0}], sp:false, sc:[], T:3,  rb:12},
+    {label:'2pz+3dz pd beat   ', c:[{n:2,l:1,m:0,cRe:1/Math.SQRT2,cIm:0},{n:3,l:2,m:0,cRe:1/Math.SQRT2,cIm:0}], sp:false, sc:[], T:3,  rb:24},
+    {label:'2p++3d+ circ      ', c:[{n:2,l:1,m:+1,cRe:1/Math.SQRT2,cIm:0},{n:3,l:2,m:+1,cRe:1/Math.SQRT2,cIm:0}],sp:false,sc:[],T:5, rb:22},
+    {label:'3p++4d+ circ      ', c:[{n:3,l:1,m:+1,cRe:1/Math.SQRT2,cIm:0},{n:4,l:2,m:+1,cRe:1/Math.SQRT2,cIm:0}],sp:false,sc:[],T:6, rb:35},
+    {label:'2p-+3p- CW circ   ', c:[{n:2,l:1,m:-1,cRe:1/Math.SQRT2,cIm:0},{n:3,l:1,m:-1,cRe:1/Math.SQRT2,cIm:0}],sp:false,sc:[],T:4, rb:22},
+  ];
+
+  let cPass = 0, cFail = 0;
+  for(const ct of contCases) {
+    const {maxRelErr, nValid} = verifyContinuity(ct.c, ct.sp, ct.sc, ct.T, 16, ct.rb);
+    const ok = maxRelErr < 0.06;
+    ok ? (pass++, cPass++) : (fail++, cFail++);
+    lines.push(`${ok?PASS:FAIL} ${ct.label} err=${(maxRelErr*100).toFixed(2)}% (n=${nValid})`);
+  }
+  lines.push('');
+  lines.push(`Continuity checks: ${cPass}/${cPass+cFail} passed`);
+  lines.push('');
+  lines.push(`\u2550 GRAND TOTAL: ${pass}/${pass+fail} passed \u2550`);
+
+  // Restore globals
+  spinEnabled = saveSpin; spinComps = saveSC; comps = saveComps;
+
+  // Display (box was already created and shown at the top of runSweep)
+  box.textContent = 'Comprehensive Verification Sweep\n' + '\u2550'.repeat(40) + '\n' + lines.join('\n') + '\n\n(Click to close)';
+  clearTimeout(box._t); box._t = setTimeout(() => box.remove(), 60000);
+  console.log(lines.join('\n'));
+  } catch(e) {
+    box.textContent = 'Sweep error:\n' + e.message + '\n\n' + e.stack + '\n\n(Click to close)';
+    console.error('runSweep error:', e);
+  }
+  }); // end requestAnimationFrame
 }
 
 function toggleAxes(){

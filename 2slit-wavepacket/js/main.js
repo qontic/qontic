@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GPUSim } from './gpu-sim.js?v=5';
+import { GPUSim } from './gpu-sim.js?v=7';
 
 // ─────────────────────────────────────────────────────────────
 //  Wave colormaps  (dynamic LUT, 512 entries)
@@ -873,13 +873,13 @@ function dispatchFrame(rho, trajX, trajY, time, norm) {
   updateBohmianMesh(trajX, trajY, Np);
   updateTrailMesh(Np);
 
-  // Auto-stop: particle-based criterion fires early when all post-slit particles exit;
-  // time-based limit always applies as a hard cap (prevents stranded-particle hangs).
+  // Auto-stop: norm-based criterion fires when the wave has been mostly absorbed
+  // (i.e. it has exited the domain). This is display-agnostic — fires at the same
+  // time regardless of whether particles/trails are shown. timeStop is a safety cap.
   if (!paused && useGPU && autoStop) {
-    const particleStop = (showParticles || showTrails) && bohmAnyPassedSlit && bohmPosX &&
-      !bohmPosX.some((x, i) => !isNaN(x) && bohmPassedSlit[i]);
+    const normStop = norm < 0.02;   // wave >98% absorbed → effectively gone
     const timeStop = gpuSim.simTime >= gpuSim.stopTime;
-    if (particleStop || timeStop) {
+    if (normStop || timeStop) {
       paused = true;
       const btn = document.getElementById('btn-pause');
       btn.textContent = '\u25b6 Start';
@@ -899,10 +899,11 @@ function gpuTick(n) {
   const { dispNx: Nx, Ny, Lx, Ly, Dt } = gpuSim;
   if (n > 0) {
     gpuSim.step(n);
-    if ((showParticles || showTrails) && bohmPosX && gpuSim.psi) {
+    // Always step Bohmian particles regardless of display state, so their positions
+    // keep evolving even when particles/trails are hidden.
+    if (bohmPosX && gpuSim.psi) {
       for (let s = 0; s < n; s++)
         stepBohmian(gpuSim.psi, bohmNp, Nx, Ny, Lx, Ly, Dt, gpuSim._absThick);
-      // Respawn any particles that died this frame so the count stays at bohmNp
       respawnDeadParticles(gpuSim.rho, bohmNp, Nx, Ny, gpuSim._absThick);
     }
   }

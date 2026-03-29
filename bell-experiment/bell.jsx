@@ -24,8 +24,10 @@ import * as THREE from "three";
 //          to the correlated branch (non-local quantum potential).
 // ═══════════════════════════════════════════════════════════════════════════
 
-const Z_SRC  =  0;
-const Z_DET  =  7.0;   // detector distance from source
+const Z_SRC      =  0;
+const Z_DET      =  7.0;          // first-measured detector distance
+const Z_DET_FAR  =  Z_DET * 2.0;  // second-measured detector (2× farther)
+const FRAC_FIRST =  Z_DET / Z_DET_FAR;  // 0.50 — first particle arrives at half-way
 const SIG    =  0.40;  // initial Gaussian width
 const KICK   =  1.6;   // transverse separation at detector
 const STEPS  =  120;
@@ -57,42 +59,59 @@ function singletProbs(phiA, phiB) {
   return { pp, pm, mp: pm, mm: pp };
 }
 
-// ── Bohmian guidance for one particle in the Bell setup ──────────────────────
-// After measurement of A, the effective wave function of B collapses to the
-// correlated spinor. We model the pre-measurement trajectory as guided by
-// the superposition of two transverse Gaussians (the two spinor branches).
-// The particle's transverse position determines which branch it "follows."
-function integrateBohmian(x0, isUpOutcome, phi, side) {
-  // side: +1 = particle B (goes to +Z), -1 = particle A (goes to -Z)
+// ── Bohmian guidance for one particle ────────────────────────────────────────
+//
+// x0:           initial n̂-projection of position, drawn from Born distribution.
+//               NOT pre-assigned to any outcome — the guidance equation alone
+//               determines which branch the particle ends up in.
+// collapseStep: (second-measured particle only) step index at which the first
+//               detector fires non-locally. After this step the joint wave
+//               function's other branch has been "emptied" so the velocity
+//               field jumps to ±KICK/STEPS (pure single-branch guidance).
+// forcedIsUp:   which branch survives for this particle after collapse.
+//
+// Returns { pts, isUp }  — isUp is read from the final position for the first
+// particle (pure dynamics), or equals forcedIsUp for the second.
+function integrateBohmian(x0, phi, side, detDist, collapseStep, forcedIsUp) {
   const nn = nHat(phi);
   const pts = [];
   let tx = x0 * nn.x, ty = x0 * nn.y;
-  const zSign = side; // direction of travel
+  const hasCollapse = collapseStep !== undefined;
 
-  // The two branch centres separate as particle flies outward
   for (let i = 0; i <= STEPS; i++) {
     const frac = i / STEPS;
-    const z = zSign * lerp(0, Z_DET, frac);
+    const z = side * lerp(0, detDist, frac);
     pts.push(new THREE.Vector3(tx, ty, z));
 
-    if (frac >= 0.5) {
+    if (frac >= 0.5 && i < STEPS) {
       const pp2 = (frac - 0.5) / 0.5;
       const sep = pp2 * KICK;
       const sig = SIG * (1 + pp2 * 0.5);
-      // Upper branch centre (spin-up along n̂)
       const upCx = nn.x * sep, upCy = nn.y * sep;
-      // Lower branch centre (spin-down along n̂)
       const dnCx = -nn.x * sep, dnCy = -nn.y * sep;
-      const rUp2 = ((tx - upCx) ** 2 + (ty - upCy) ** 2) / sig ** 2;
-      const rDn2 = ((tx - dnCx) ** 2 + (ty - dnCy) ** 2) / sig ** 2;
-      const rhoUp = 0.5 * Math.exp(-rUp2);
-      const rhoDn = 0.5 * Math.exp(-rDn2);
-      const vn = (rhoUp - rhoDn) / (rhoUp + rhoDn + 1e-12) * KICK / STEPS;
+      let vn;
+      if (hasCollapse && i >= collapseStep) {
+        // Post-collapse: empty branch vanishes, surviving branch drives at full rate.
+        // This is the non-local effect: the velocity field changes instantaneously
+        // even though this particle is still in flight far from the first detector.
+        vn = (forcedIsUp ? 1 : -1) * KICK / STEPS;
+      } else {
+        // Both branches active — standard Bohmian guidance from superposition.
+        const rUp2 = ((tx - upCx) ** 2 + (ty - upCy) ** 2) / sig ** 2;
+        const rDn2 = ((tx - dnCx) ** 2 + (ty - dnCy) ** 2) / sig ** 2;
+        const rhoUp = 0.5 * Math.exp(-rUp2);
+        const rhoDn = 0.5 * Math.exp(-rDn2);
+        vn = (rhoUp - rhoDn) / (rhoUp + rhoDn + 1e-12) * KICK / STEPS;
+      }
       tx += nn.x * vn;
       ty += nn.y * vn;
     }
   }
-  return pts;
+  // For the first particle: outcome emerges purely from dynamics (initial position).
+  // For the second particle: forcedIsUp is the forced correlated outcome.
+  const last = pts[STEPS];
+  const nComp = last.x * nn.x + last.y * nn.y;
+  return { pts, isUp: hasCollapse ? forcedIsUp : (nComp > 0) };
 }
 
 // ── Tooltip ──────────────────────────────────────────────────────────────────
@@ -239,8 +258,8 @@ const ControlPanel = React.memo(({
         <div style={{ fontSize: 12, color: '#99b8e8', lineHeight: 1.6 }}>{VIEW_DESC[interp]}</div>
       </SL>
 
-      {/* Measured side — which particle gets measured first */}
-      <SL label="Measure first" tip={"Which particle is measured first.\nThe other is the 'remote' particle\nwhose wave function changes non-locally."}>
+      {/* Measured side — which particle's detector is closer */}
+      <SL label="Measured first" tip={"Which particle reaches its detector first.\nThat detector is at distance 7, the other\nis 2× farther (14) — so it arrives later.\nIn Copenhagen: both wave functions collapse\nthe instant the first detector fires.\nIn Bohmian: the other particle's guiding\nfield changes non-locally at that moment."}>
         <div style={{ display: 'flex', gap: 4 }}>
           {[['A', 'Left (A)'], ['B', 'Right (B)']].map(([k, label]) => (
             <button key={k} onClick={() => setMeasuredSide(k)} style={{
@@ -347,25 +366,24 @@ const ControlPanel = React.memo(({
 // ═══════════════════════════════════════════════════════════════════════════
 // ── Theory Panel ─────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
-const theoryHtml = `<!DOCTYPE html>
+// ── Trajectories tab (Bohmian) ──────────────────────────────────────────────
+const trajectoryHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/>
 <style>
   body{margin:0;padding:22px 26px;background:#040a1c;color:#cce0ff;
     font-family:'Georgia',serif;font-size:14px;line-height:1.9;}
-  h1{font-size:20px;color:#aaccff;margin-bottom:4px;}
-  h2{font-size:15px;color:#7ab8ff;font-weight:700;margin:24px 0 8px;
+  h1{font-size:19px;color:#44ddff;margin-bottom:2px;}
+  .sub{font-size:12px;color:#336688;margin-bottom:20px;}
+  h2{font-size:14px;color:#7ab8ff;font-weight:700;margin:22px 0 8px;
     border-bottom:1px solid rgba(60,120,255,0.25);padding-bottom:5px;}
-  h3{font-size:13px;color:#88ccff;font-weight:700;margin:16px 0 6px;}
   p{margin:8px 0 12px;}
   .eq{margin:12px 0;padding:10px 20px;text-align:center;
     background:rgba(20,45,110,0.5);border:1px solid rgba(80,140,255,0.25);
     border-radius:7px;font-size:15px;overflow-x:auto;}
-  .box{border-radius:8px;padding:12px 16px;margin:14px 0;}
-  .cph{background:rgba(60,20,10,0.4);border:1px solid rgba(255,120,60,0.3);}
-  .bhm{background:rgba(10,40,60,0.4);border:1px solid rgba(60,180,220,0.3);}
-  .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
-  .lbl-c{color:#ff9966;} .lbl-b{color:#44ddff;}
-  a{color:#4488aa;}
+  .step{background:rgba(10,30,65,0.6);border-left:3px solid #44ddff;
+    border-radius:0 7px 7px 0;padding:10px 14px;margin:10px 0;}
+  .nb{font-size:11px;font-weight:700;color:#44ddff;text-transform:uppercase;
+    letter-spacing:.08em;margin-right:8px;}
 </style>
 <script>
 MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},
@@ -373,55 +391,110 @@ MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head><body>
-<h1>Bell Experiment &mdash; Theory</h1>
+<h1>Bohmian Mechanics &mdash; Pilot-Wave Trajectories</h1>
+<div class="sub">de Broglie&ndash;Bohm interpretation &nbsp;&middot;&nbsp; particles always have definite positions, outcomes emerge from dynamics</div>
 
-<h2>1. The Singlet State</h2>
-<p>Two spin-&frac12; particles are produced in the maximally entangled singlet state:</p>
+<h2>1. The Pilot Wave</h2>
+<p>The singlet state is a real field &mdash; the <em>pilot wave</em> &mdash; that evolves in the two-particle configuration space:</p>
 <div class="eq">$$|\\Psi^-\\rangle = \\frac{1}{\\sqrt{2}}\\bigl(|{+}\\rangle_A|{-}\\rangle_B - |{-}\\rangle_A|{+}\\rangle_B\\bigr)$$</div>
-<p>Particle A flies toward the left detector (angle $\\varphi_A$), particle B toward the right ($\\varphi_B$). Each particle's reduced state is an <em>equal</em> superposition of spin-up and spin-down &mdash; the two colored wave-packet branches you see superimposed on each particle before measurement.</p>
+<p>Each particle has a definite (but unknown) position $\\mathbf{Q}_A(t),\\,\\mathbf{Q}_B(t)$ at every moment. The wave does <em>not</em> collapse &mdash; it guides the particles. Uncertainty is epistemic (we don't know the initial positions), not ontological. This is why the particle dot in the simulation is shown in blue while in flight: the outcome is not yet <em>known</em>, even though the position is definite.</p>
 
-<h2>2. Quantum Correlations</h2>
-<p>Born-rule probabilities for the singlet:</p>
-<div class="eq">$$P({+},{-}) = P({-},{+}) = \\frac{1}{2}\\cos^2\\!\\tfrac{\\Delta\\varphi}{2}, \\quad P({+},{+}) = P({-},{-}) = \\frac{1}{2}\\sin^2\\!\\tfrac{\\Delta\\varphi}{2}$$</div>
-<p>where $\\Delta\\varphi = \\varphi_A - \\varphi_B$. The quantum correlation function is:</p>
-<div class="eq">$$C(\\varphi_A,\\varphi_B) = \\langle \\sigma_A\\cdot\\hat{n}_A\\;\\sigma_B\\cdot\\hat{n}_B\\rangle = -\\cos(\\Delta\\varphi)$$</div>
+<h2>2. Guidance Equation</h2>
+<p>Each particle's velocity equals the local probability current divided by the density of the joint wave function:</p>
+<div class="eq">$$\\dot{\\mathbf{Q}}_k = \\frac{\\hbar}{m}\\,\\operatorname{Im}\\!\\left[\\frac{\\Psi^*(\\mathbf{Q}_A,\\mathbf{Q}_B)\\,\\nabla_{\\mathbf{r}_k}\\Psi(\\mathbf{Q}_A,\\mathbf{Q}_B)}{|\\Psi(\\mathbf{Q}_A,\\mathbf{Q}_B)|^2}\\right]_{\\mathbf{r}_k=\\mathbf{Q}_k}$$</div>
+<p><strong>B&rsquo;s velocity depends on $\\mathbf{Q}_A$ through the joint wave function.</strong> There is no reduced state for B &mdash; the full entangled $\\Psi$ couples both particles across any distance. This is explicit non-locality, and it is precisely what allows Bohmian mechanics to violate Bell&rsquo;s inequality.</p>
 
-<h2>3. Bell's Inequality</h2>
-<p>Any local hidden-variable theory must satisfy Bell's inequality (CHSH form):</p>
-<div class="eq">$$|E(a,b) - E(a,b') + E(a',b) + E(a',b')| \\leq 2$$</div>
-<p>Quantum mechanics predicts a maximum of $2\\sqrt{2} \\approx 2.828$ (the Tsirelson bound), violating the inequality. The canonical Bell angles are $a=0°, a'=45°, b=22.5°, b'=67.5°$, giving the quantum value $2\\sqrt{2}$.</p>
+<h2>3. How Outcomes Emerge (step by step)</h2>
+<div class="step"><span class="nb">Before flight</span> Both particles start at random transverse positions $Q_k^\\perp$ drawn from the Born distribution $|\\Psi(\\mathbf{Q}_A,\\mathbf{Q}_B)|^2$. <strong>Neither particle is pre-assigned to spin-up or spin-down.</strong> Both colored branches (green &#8593; and orange &#8595;) are active on both sides.</div>
+<div class="step"><span class="nb">Branches separate</span> Near the detector the Stern&ndash;Gerlach field pushes the two spin components apart transversely. The guidance equation pushes each particle toward whichever branch it is currently closest to. The outcome is entirely determined by $Q^\\perp$ and the dynamics &mdash; no random event occurs.</div>
+<div class="step"><span class="nb">A reaches its detector</span> $\\mathbf{Q}_A$ crosses the critical surface. A&rsquo;s outcome is read from its position: the branch it occupies determines $+$ or $-$. The joint wave function now has one branch dominant for B: the effective wave for B is solely $|{-}\\rangle_B$ (if $A=+$) or $|{+}\\rangle_B$ (if $A=-$).</div>
+<div class="step"><span class="nb">Non-local update to B</span> B&rsquo;s guiding field changes <em>instantly</em>: the empty branch of $\\Psi$ no longer contributes to B&rsquo;s velocity. Even though B is still in flight and nothing physically traveled to it, the velocity field it follows shifts. <strong>This is the visible kink in B&rsquo;s trajectory</strong> (the cyan trail shifts color at that moment in the simulation).</div>
+<div class="step"><span class="nb">B reaches its detector</span> Guided by the surviving branch, B lands in the strongly correlated position. The observer reads the outcome. The correlation with A is guaranteed by the guidance equation &mdash; no communication needed.</div>
 
-<h2>4. Two Interpretations</h2>
+<h2>4. Simulation Guidance (discretized)</h2>
+<p>At each step, the transverse velocity added to particle $k$ is proportional to the density difference at its current position:</p>
+<div class="eq">$$v_n = \\frac{\\rho_{\\uparrow}(Q_k^\\perp) - \\rho_{\\downarrow}(Q_k^\\perp)}{\\rho_{\\uparrow}(Q_k^\\perp) + \\rho_{\\downarrow}(Q_k^\\perp)}\\cdot\\frac{\\delta}{N_{\\text{steps}}}$$</div>
+<p>where $\\rho_{\\uparrow,\\downarrow}$ are Gaussian densities of the two branches at $Q_k^\\perp$ and $\\delta$ is the total branch separation at the detector. After the collapse step for B, only the surviving branch contributes: the velocity locks to $\\pm\\,\\delta/N_{\\text{steps}}$ &mdash; the trajectory kink.</p>
 
-<div class="box cph">
-<div class="lbl lbl-c">Copenhagen &mdash; Wavefunction Collapse</div>
-<p style="margin:0">Before measurement both spinor branches (green ↑ and orange ↓) are superimposed on each particle. When detector A fires, the wave function collapses <em>instantaneously</em>: one branch is eliminated on <em>both</em> sides simultaneously. The green branch might survive on A and simultaneously the orange branch might survive on B (anti-correlation for $\\Delta\\varphi=0$). No signal travels between detectors &mdash; but there is a genuine non-local correlation in the Born statistics.</p>
-</div>
-
-<div class="box bhm">
-<div class="lbl lbl-b">Bohmian &mdash; Pilot-Wave Mechanics</div>
-<p style="margin:0">Both branches always persist. Particle A has a definite position guided by the joint wave function $\\Psi(\\mathbf{r}_A,\\mathbf{r}_B,t)$. Its position selects which branch it "rides." Because the guidance equation depends on the <em>full joint</em> wave function, particle B's guiding field changes <em>non-locally and instantaneously</em> when particle A's position changes &mdash; even if A and B are light-years apart. No hidden signaling is possible because positions are not directly observable in equilibrium, but the non-local influence is real and ensures the correct correlations.</p>
-<p style="margin:8px 0 0">The guidance equation for particle B:</p>
-<div class="eq" style="margin:6px 0 0">$$\\dot{\\mathbf{Q}}_B = \\frac{\\hbar}{m}\\operatorname{Im}\\!\\left[\\frac{\\Psi^*(\\mathbf{Q}_A,\\mathbf{Q}_B)\\,\\nabla_{\\mathbf{r}_B}\\Psi(\\mathbf{Q}_A,\\mathbf{Q}_B)}{|\\Psi(\\mathbf{Q}_A,\\mathbf{Q}_B)|^2}\\right]$$</div>
-<p style="margin:6px 0 0">When $Q_A$ crosses the critical surface, the dominant branch in the denominator changes, abruptly changing B's velocity even though nothing physically travels to B.</p>
-</div>
-
-<h2>5. What the Colors Mean</h2>
-<p><b style="color:#22ee66">Green branch (↑)</b>: the spin-up component of each particle's spinor along the local detector axis.<br/>
-<b style="color:#ff5522">Orange branch (↓)</b>: the spin-down component.<br/>
-<b style="color:#55aaff">Blue superposition</b>: while both branches overlap during flight, the wave packets are shown in blue to indicate the entangled superposition.<br/>
-After measurement, only one branch remains (Copenhagen) or the particle is pushed into one branch (Bohmian).</p>
-
-<h2>6. No Faster-Than-Light Signaling</h2>
-<p>Although the correlations are non-local, they cannot be used to transmit information. Observer A cannot control which outcome she gets, so she cannot encode a message in her results. Observer B sees a perfectly random sequence of ↑/↓ outcomes regardless of what A does or what angle A chooses. The correlations only become visible when A and B <em>compare</em> their results classically (at light speed or slower).</p>
+<h2>5. Equilibrium and Bell Correlations</h2>
+<p>Because initial positions are Born-distributed, the simulated statistics reproduce quantum mechanics exactly:</p>
+<div class="eq">$$P({+},{-})=P({-},{+})=\\frac{1}{2}\\cos^2\\!\\frac{\\Delta\\varphi}{2}, \\quad P({+},{+})=P({-},{-})=\\frac{1}{2}\\sin^2\\!\\frac{\\Delta\\varphi}{2}$$</div>
+<div class="eq">$$C(\\varphi_A,\\varphi_B) = -\\cos(\\Delta\\varphi)$$</div>
+<p>This violates the CHSH inequality (classical bound $|S|\\leq 2$) up to $2\\sqrt{2}\\approx 2.83$. Bohmian mechanics achieves this through its explicit non-locality in the guidance equation &mdash; <em>not</em> through pre-assigned hidden variables, which is exactly why it is compatible with Bell&rsquo;s theorem.</p>
 
 <p style="font-size:12px;color:#445566;border-top:1px solid rgba(40,70,140,0.25);
-  padding-top:12px;margin-top:16px;">
+  padding-top:12px;margin-top:20px;">
   <strong style="color:#607090">References:</strong>
-  J.S. Bell, &ldquo;On the Einstein–Podolsky–Rosen paradox,&rdquo; <em>Physics</em> <strong>1</strong>, 195 (1964). &mdash;
+  D. Bohm, <em>Phys. Rev.</em> <strong>85</strong>, 166 &amp; 180 (1952). &mdash;
+  P.R. Holland, <em>The Quantum Theory of Motion</em> (Cambridge, 1993). &mdash;
+  D. D&uuml;rr &amp; S. Teufel, <em>Bohmian Mechanics</em> (Springer, 2009).
+</p>
+</body></html>`;
+
+// ── Collapse tab (Copenhagen) ──────────────────────────────────────────────
+const collapseHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"/>
+<style>
+  body{margin:0;padding:22px 26px;background:#040a1c;color:#cce0ff;
+    font-family:'Georgia',serif;font-size:14px;line-height:1.9;}
+  h1{font-size:19px;color:#ff9966;margin-bottom:2px;}
+  .sub{font-size:12px;color:#664433;margin-bottom:20px;}
+  h2{font-size:14px;color:#ffbb88;font-weight:700;margin:22px 0 8px;
+    border-bottom:1px solid rgba(255,120,60,0.2);padding-bottom:5px;}
+  p{margin:8px 0 12px;}
+  .eq{margin:12px 0;padding:10px 20px;text-align:center;
+    background:rgba(60,20,10,0.5);border:1px solid rgba(255,120,60,0.2);
+    border-radius:7px;font-size:15px;overflow-x:auto;}
+  .step{background:rgba(50,15,5,0.5);border-left:3px solid #ff9966;
+    border-radius:0 7px 7px 0;padding:10px 14px;margin:10px 0;}
+  .nb{font-size:11px;font-weight:700;color:#ff9966;text-transform:uppercase;
+    letter-spacing:.08em;margin-right:8px;}
+</style>
+<script>
+MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},
+  options:{skipHtmlTags:['script','noscript','style','textarea']}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head><body>
+<h1>Copenhagen &mdash; Wavefunction Collapse</h1>
+<div class="sub">Orthodox interpretation &nbsp;&middot;&nbsp; no definite spin value before measurement</div>
+
+<h2>1. Completeness</h2>
+<p>In the Copenhagen interpretation the wave function $|\\Psi\\rangle$ is the <em>complete</em> description of reality. Before measurement, spin has no definite value &mdash; &ldquo;particle A is spin-up&rdquo; is simply not true prior to a measurement. The two coloured branches (green &#8593; and orange &#8595;) you see superimposed on each flying packet are <em>both real</em>; the particle is genuinely in both spin components at once.</p>
+<div class="eq">$$|\\Psi^-\\rangle = \\frac{1}{\\sqrt{2}}\\bigl(|{+}\\rangle_A|{-}\\rangle_B - |{-}\\rangle_A|{+}\\rangle_B\\bigr)$$</div>
+
+<h2>2. Measurement Postulate</h2>
+<p>When detector A measures spin along $\\hat{n}_A(\\varphi_A)$, only one outcome can be registered. The probability of each outcome is given by Born&rsquo;s rule:</p>
+<div class="eq">$$P(A={+}) = \\langle\\Psi^-|\\,\\hat{P}^A_+\\otimes\\mathbf{1}_B\\,|\\Psi^-\\rangle = \\tfrac{1}{2}$$</div>
+<p>Once outcome $A=+$ is obtained, the state <em>collapses</em> instantaneously to the correlated product state:</p>
+<div class="eq">$$|\\Psi^-\\rangle\\;\\xrightarrow{A\\,\\text{measures }+}\\; |{+}\\rangle_A\\otimes|{-}\\rangle_B$$</div>
+
+<h2>3. Collapse Sequence in the Simulation</h2>
+<div class="step"><span class="nb">Before measurement</span> Both spin components are superimposed on each packet. No outcome exists yet. The simulation shows blue-tinted packets; once the branches separate near the detector, the two coloured components become visible.</div>
+<div class="step"><span class="nb">First detector fires</span> A Born-rule random outcome is drawn. Both wave functions collapse simultaneously: the surviving branch on A and the correlated branch on B are kept, the others vanish &mdash; even though B may be far away. This is the non-local collapse.</div>
+<div class="step"><span class="nb">Second detector fires (~25% later)</span> B is now in a spin eigenstate of its own detector axis. Its outcome is completely determined by the prior collapse; no second random draw is needed.</div>
+
+<h2>4. Quantum Correlations</h2>
+<p>Joint probabilities for measuring along $\\hat{n}_A(\\varphi_A)$ and $\\hat{n}_B(\\varphi_B)$:</p>
+<div class="eq">$$P({+},{-})=P({-},{+})=\\frac{1}{2}\\cos^2\\!\\tfrac{\\Delta\\varphi}{2}, \\quad P({+},{+})=P({-},{-})=\\frac{1}{2}\\sin^2\\!\\tfrac{\\Delta\\varphi}{2}$$</div>
+<div class="eq">$$C(\\varphi_A,\\varphi_B)=\\langle\\sigma_A\\cdot\\hat{n}_A\\;\\sigma_B\\cdot\\hat{n}_B\\rangle=-\\cos(\\Delta\\varphi)$$</div>
+
+<h2>5. Bell&rsquo;s Inequality and Its Violation</h2>
+<p>Bell (1964) proved that <em>any</em> local hidden-variable theory must satisfy:</p>
+<div class="eq">$$|E(a,b)-E(a,b')+E(a',b)+E(a',b')|\\leq 2 \\quad (\\text{CHSH})$$</div>
+<p>Quantum mechanics predicts a maximum of $2\\sqrt{2}\\approx 2.83$ &mdash; exceeding the classical bound. The canonical Bell angles $a=0°, a'=45°, b=22.5°, b'=67.5°$ saturate this bound. Loophole-free experiments (Hensen 2015, Giustina 2015) confirm the violation unambiguously.</p>
+<p>Copenhagen is agnostic about <em>why</em> the non-local correlations arise &mdash; it simply postulates that the joint state $|\\Psi^-\\rangle$ produces them via Born&rsquo;s rule. The collapse itself is an axiom, not a derived result.</p>
+
+<h2>6. No Faster-Than-Light Signaling</h2>
+<p>Despite the instantaneous collapse, no information travels faster than light. Observer B&rsquo;s marginal distribution is always $P(B=+)=\\tfrac{1}{2}$ regardless of A&rsquo;s angle choice or timing. Correlations only appear when A and B compare their records classically.</p>
+
+<p style="font-size:12px;color:#445566;border-top:1px solid rgba(120,60,20,0.25);
+  padding-top:12px;margin-top:20px;">
+  <strong style="color:#607090">References:</strong>
+  J.S. Bell, <em>Physics</em> <strong>1</strong>, 195 (1964). &mdash;
   J.F. Clauser et al., <em>Phys. Rev. Lett.</em> <strong>23</strong>, 880 (1969). &mdash;
   A. Aspect et al., <em>Phys. Rev. Lett.</em> <strong>49</strong>, 91 (1982). &mdash;
-  D. Bohm, <em>Phys. Rev.</em> <strong>85</strong>, 166 (1952).
+  B. Hensen et al., <em>Nature</em> <strong>526</strong>, 682 (2015).
 </p>
 </body></html>`;
 
@@ -445,11 +518,13 @@ export default function App() {
     camR: 20, camTheta: 0.3, camPhi: 0.18,
     target: new THREE.Vector3(0, 0, 0),
     drag: null,
+    detDistA: Z_DET,        // live, draggable
+    detDistB: Z_DET_FAR,    // live, draggable
     counts: { pp: 0, pm: 0, mp: 0, mm: 0 },
-    collapsed: false,      // whether collapse has happened this cycle
+    collapsed: false,      // whether first detector has fired this cycle
     outcomeA: null,        // +1 or -1
     outcomeB: null,
-    collapseAtFrac: 0.72,  // fraction into animation when measurement fires
+    hitFired: [false, false], // [firstDetector, secondDetector] hit dots placed
   });
 
   const [phiA,         setPhiAUI]      = useState(0);
@@ -463,12 +538,23 @@ export default function App() {
   const [counts,       setCountsUI]    = useState({ pp: 0, pm: 0, mp: 0, mm: 0 });
   const [activeTab,    setActiveTab]   = useState('sim');
   const [panelW,       setPanelW]      = useState(270);
+  const [detDists,     setDetDistsUI]  = useState({ A: Z_DET, B: Z_DET_FAR });
 
   const T = useRef(null); // Three.js objects
 
   // Setters sync both React state and mutable S ref
-  const setPhiA    = v => { S.current.phiA = v; S.current.dirty = true; setPhiAUI(v); if (phiARef.current) phiARef.current.value = v; };
-  const setPhiB    = v => { S.current.phiB = v; S.current.dirty = true; setPhiBUI(v); if (phiBRef.current) phiBRef.current.value = v; };
+  const setPhiA    = v => {
+    S.current.phiA = v; S.current.dirty = true; setPhiAUI(v); if (phiARef.current) phiARef.current.value = v;
+    S.current.counts = { pp: 0, pm: 0, mp: 0, mm: 0 };
+    setCountsUI({ pp: 0, pm: 0, mp: 0, mm: 0 });
+    if (T.current) { T.current.hitsA.clear(); T.current.hitsB.clear(); }
+  };
+  const setPhiB    = v => {
+    S.current.phiB = v; S.current.dirty = true; setPhiBUI(v); if (phiBRef.current) phiBRef.current.value = v;
+    S.current.counts = { pp: 0, pm: 0, mp: 0, mm: 0 };
+    setCountsUI({ pp: 0, pm: 0, mp: 0, mm: 0 });
+    if (T.current) { T.current.hitsA.clear(); T.current.hitsB.clear(); }
+  };
   const setSpeed   = v => { S.current.speed = v; setSpeedUI(v); if (speedRef.current) speedRef.current.value = v; };
   const setRunning = v => { S.current.running = v; setRunUI(v); };
   const setInterp  = v => { S.current.interp = v; setInterpUI(v); S.current.dirty = true; };
@@ -478,6 +564,7 @@ export default function App() {
   const resetCounts = () => {
     S.current.counts = { pp: 0, pm: 0, mp: 0, mm: 0 };
     setCountsUI({ pp: 0, pm: 0, mp: 0, mm: 0 });
+    if (T.current) { T.current.hitsA.clear(); T.current.hitsB.clear(); }
   };
 
   // Resize handle
@@ -594,10 +681,99 @@ export default function App() {
     const detA = makeDetector(-Z_DET, 0x44ddff); // left, cyan
     const detB = makeDetector( Z_DET, 0xff9966); // right, orange
 
-    // Detector axis arrows (show measurement direction n̂)
-    const arrA = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, -Z_DET + 0.3), 1.2, 0x44ddff, 0.26, 0.14);
-    const arrB = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0,  Z_DET - 0.3), 1.2, 0xff9966, 0.26, 0.14);
-    scene.add(arrA, arrB);
+    // ── Stern-Gerlach magnets ────────────────────────────────────────────────────
+    // Each magnet is placed 1.5 units in front of its detector screen and
+    // rotated so the green (spin-↑) pole points along n̂(φ). The axis arrow
+    // is a child of the magnet group so it always inherits the φ rotation.
+    const MAG_OFFSET = 3.0; // distance from detector screen toward source
+
+    // ── Angle-dependent measurement colors ────────────────────────────────────
+    // The color basis is determined only by the magnet's own angle.
+    // We preserve the established look at the two main reference points:
+    //   φ =   0°  -> cyan / violet
+    //   φ =  90°  -> lime / red-orange
+    // and interpolate smoothly in between (returning to the φ=0 palette at 180°).
+    const COLOR_A_UP = new THREE.Color(0x00ccff); // A ↑  cyan
+    const COLOR_A_DN = new THREE.Color(0xcc44ff); // A ↓  violet
+    const COLOR_B_UP = new THREE.Color(0x88ff44); // B ↑  lime
+    const COLOR_B_DN = new THREE.Color(0xff4422); // B ↓  red-orange
+
+    function axisColors(phi) {
+      const a = (phi % 180) * Math.PI / 180;
+      const mixP = Math.sin(a);
+      return {
+        up: COLOR_A_UP.clone().lerp(COLOR_B_UP, mixP),
+        dn: COLOR_A_DN.clone().lerp(COLOR_B_DN, mixP),
+      };
+    }
+
+    function makeMagnet(yokeColor, poleUpColor, poleDnColor) {
+      const grp = new THREE.Group();
+      const W = 1.60;  // pole width (perpendicular to measurement axis)
+      const H = 0.42;  // pole height (along measurement axis)
+      const D = 0.30;  // pole depth (along beam Z)
+      const GAP = 0.62; // gap between pole faces (beam travels through here)
+      const yOff = GAP / 2 + H / 2;
+
+      const addPole = (color, yPos) => {
+        const geo = new THREE.BoxGeometry(W, H, D);
+        const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.80 }));
+        mesh.position.y = yPos;
+        grp.add(mesh);
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geo),
+          new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.7 })
+        );
+        edges.position.y = yPos;
+        grp.add(edges);
+      };
+
+      const poleUp = addPole(poleUpColor,  yOff);  // spin-↑ pole
+      const poleDn = addPole(poleDnColor, -yOff);  // spin-↓ pole
+
+      // Yoke: two vertical bars on the sides, in the detector’s colour
+      const yokeGeo = new THREE.BoxGeometry(0.13, GAP + H * 2, D * 0.85);
+      const yokeMat = new THREE.MeshLambertMaterial({ color: yokeColor, transparent: true, opacity: 0.45 });
+      [-W / 2 - 0.065, W / 2 + 0.065].forEach(xPos => {
+        const yoke = new THREE.Mesh(yokeGeo, yokeMat);
+        yoke.position.x = xPos;
+        grp.add(yoke);
+      });
+
+      // Gap indicator ring
+      const gapRingPts = Array.from({ length: 33 }, (_, i) => {
+        const a = i / 32 * Math.PI * 2;
+        return new THREE.Vector3(Math.cos(a) * 0.22, Math.sin(a) * 0.22, 0);
+      });
+      grp.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(gapRingPts),
+        new THREE.LineBasicMaterial({ color: yokeColor, transparent: true, opacity: 0.5 })
+      ));
+
+      // Axis arrow — child of the group, always points local +Y (= n̂(φ) in world).
+      // Placed above the upper pole so it’s clearly visible.
+      const arrow = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 1, 0),  // direction in local space = n̂(φ) in world
+        new THREE.Vector3(0, yOff + H * 0.6, 0),
+        1.1, yokeColor, 0.26, 0.14
+      );
+      grp.add(arrow);
+
+      grp.userData.setPoleColors = (upColor, dnColor) => {
+        grp.children.forEach(child => {
+          if (child.geometry?.type === 'BoxGeometry' && child.position.y > 0) child.material.color.set(upColor);
+          if (child.geometry?.type === 'BoxGeometry' && child.position.y < 0) child.material.color.set(dnColor);
+          if (child.geometry?.type === 'EdgesGeometry' && child.position.y > 0) child.material.color.set(upColor);
+          if (child.geometry?.type === 'EdgesGeometry' && child.position.y < 0) child.material.color.set(dnColor);
+        });
+      };
+
+      scene.add(grp);
+      return grp;
+    }
+
+    const magA = makeMagnet(0x44ddff, COLOR_A_UP.getHex(), COLOR_A_DN.getHex());
+    const magB = makeMagnet(0xff9966, COLOR_B_UP.getHex(), COLOR_B_DN.getHex());
 
     // Hit pools on each detector
     function makeHitPool(detGrp, n) {
@@ -646,13 +822,19 @@ export default function App() {
       varying vec2 vUv; varying vec3 vPos;
       void main(){ vUv=uv; vPos=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }
     `;
-    // Fragment: renders two Gaussian branches (up=green, down=orange) + blend in superposition zone
+    // Fragment: renders a pre-split packet (white by default, or instantaneously
+    // recolored in collapse mode after the distant detector fires) and, after the
+    // magnet, the local up/down branch colors for this side.
     const slabFrag = `
       uniform float uSigXY, uSigZ;
       uniform float uCUpX, uCUpY, uCDnX, uCDnY;  // branch centres
       uniform float uWz, uSlabZ, uPhase;
       uniform float uIsPost;   // 0=superposition, 1=separated, 2=collapsed(+), 3=collapsed(-)
       uniform float uBright, uAlphaMax;
+      uniform float uAmpUp, uAmpDown;  // conditional Born-rule weights (0–1) for each branch
+      uniform vec3 uPreColor;          // pre-split packet color (white initially)
+      uniform vec3 uColorUp;           // ↑-branch color for this side
+      uniform vec3 uColorDn;           // ↓-branch color for this side
       varying vec2 vUv; varying vec3 vPos;
 
       float g2(float x,float y,float cx,float cy,float s){
@@ -672,29 +854,33 @@ export default function App() {
         float vig=1.0-smoothstep(0.38,0.50,length(uvC));
 
         if(uIsPost < 0.5){
-          // superposition — single blue-tinted merged packet
+          // pre-split packet — white initially; in collapse mode the distant
+          // packet changes color immediately after the first detector fires.
           float g=g2(x,y,0.0,0.0,uSigXY);
           dens=g*gzV;
-          col=vec3(mix(0.05,0.20,cp), mix(0.30,0.65,cp), mix(0.55,1.00,cp));
+          col=uPreColor*mix(0.68,1.0,cp);
         } else if(uIsPost < 1.5){
-          // separated: two colored branches
-          float gUp=g2(x,y,uCUpX,uCUpY,uSigXY);
-          float gDn=g2(x,y,uCDnX,uCDnY,uSigXY);
+          // separated: two colored branches, amplitude-weighted by Born probabilities.
+          // Before any measurement: uAmpUp=uAmpDown=1 (equal branches).
+          // After the other side fires (Copenhagen): branches become unequal;
+          //   the branch weights reflect P(this=± | other=outcome).
+          float gUp=g2(x,y,uCUpX,uCUpY,uSigXY)*uAmpUp;
+          float gDn=g2(x,y,uCDnX,uCDnY,uSigXY)*uAmpDown;
           dens=max(gUp,gDn)*gzV;
           float tp=gUp/(gUp+gDn+1e-6);
-          vec3 cUp=vec3(mix(0.02,0.13,cp), mix(0.55,1.00,cp), mix(0.10,0.40,cp)); // green
-          vec3 cDn=vec3(mix(0.50,1.00,cp), mix(0.10,0.35,cp), mix(0.02,0.08,cp)); // orange
+          vec3 cUp=mix(uColorUp*0.12, uColorUp, cp);
+          vec3 cDn=mix(uColorDn*0.12, uColorDn, cp);
           col=mix(cDn,cUp,tp);
         } else if(uIsPost < 2.5){
           // collapsed to spin-up branch
           float gUp=g2(x,y,uCUpX,uCUpY,uSigXY);
           dens=gUp*gzV;
-          col=vec3(mix(0.02,0.13,cp), mix(0.55,1.00,cp), mix(0.10,0.40,cp));
+          col=mix(uColorUp*0.12, uColorUp, cp);
         } else {
           // collapsed to spin-down branch
           float gDn=g2(x,y,uCDnX,uCDnY,uSigXY);
           dens=gDn*gzV;
-          col=vec3(mix(0.50,1.00,cp), mix(0.10,0.35,cp), mix(0.02,0.08,cp));
+          col=mix(uColorDn*0.12, uColorDn, cp);
         }
 
         if(dens<0.08) discard;
@@ -717,10 +903,15 @@ export default function App() {
       uIsPost:  { value: 0 },
       uBright:  { value: 0.55 },
       uAlphaMax:{ value: 0.32 },
+      uAmpUp:   { value: 1.0 },
+      uAmpDown: { value: 1.0 },
+      uPreColor:{ value: new THREE.Color(0xffffff) },
+      uColorUp: { value: new THREE.Color(0xffffff) },
+      uColorDn: { value: new THREE.Color(0xffffff) },
     };
     const slabGeo = new THREE.PlaneGeometry(SLAB_H * 2, SLAB_H * 2, 1, 1);
 
-    function makeSlabStack(zFrom, zTo) {
+    function makeSlabStack(zFrom, zTo, colorUp, colorDn) {
       return Array.from({ length: N_SLABS }, (_, i) => {
         const mat = new THREE.ShaderMaterial({
           vertexShader: slabVert,
@@ -729,6 +920,8 @@ export default function App() {
           transparent: true, depthWrite: false,
           blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
         });
+        mat.uniforms.uColorUp.value.copy(colorUp);
+        mat.uniforms.uColorDn.value.copy(colorDn);
         const mesh = new THREE.Mesh(slabGeo, mat);
         const fixedZ = zFrom + (i + 0.5) / N_SLABS * (zTo - zFrom);
         mesh.position.z = fixedZ;
@@ -738,13 +931,11 @@ export default function App() {
       });
     }
 
-    const slabsA = makeSlabStack(-Z_DET, Z_SRC - 0.3); // left particle
-    const slabsB = makeSlabStack( Z_SRC + 0.3, Z_DET);  // right particle
+    const slabsA = makeSlabStack(-Z_DET_FAR, Z_SRC - 0.3, COLOR_A_UP, COLOR_A_DN);
+    const slabsB = makeSlabStack( Z_SRC + 0.3, Z_DET_FAR,  COLOR_B_UP, COLOR_B_DN);
 
-    // ── Bohmian particles (dots + trajectory lines) ───────────────────────────
-    const N_BOHM = 6;
-    const TRAJ_COLOR_UP   = [0x22 / 255, 0xee / 255, 0x66 / 255];
-    const TRAJ_COLOR_DOWN = [1.0, 0x44 / 255, 0x22 / 255];
+    // ── Bohmian particles — ONE per side (that's the whole point!) ────────────
+    const N_BOHM = 1;
 
     function makeBohmParticles(n) {
       const dots  = Array.from({ length: n }, () => {
@@ -773,50 +964,179 @@ export default function App() {
 
     // Pre-compute Bohmian trajectories for a given set of params
     let trajsA = [], trajsB = [];
-    let hitRegistered = new Array(N_BOHM).fill(false);
+    let hitRegistered = [false, false]; // [bohmA reached det, bohmB reached det]
 
     function buildTrajectories() {
       const s = S.current;
-      const nnA = nHat(s.phiA);
-      const nnB = nHat(s.phiB);
+      const firstIsA = s.measuredSide === 'A';
+      const colorsA = axisColors(s.phiA);
+      const colorsB = axisColors(s.phiB);
+      const detDistA = s.detDistA;
+      const detDistB = s.detDistB;
+      const distFirst  = firstIsA ? detDistA : detDistB;
+      const distSecond = firstIsA ? detDistB : detDistA;
 
-      // N_BOHM particles: alternate up/down outcomes (Born-rule split ≈ 50/50 for singlet)
-      trajsA = []; trajsB = [];
-      for (let i = 0; i < N_BOHM; i++) {
-        const isUpA = i < N_BOHM / 2; // first half → A measures up
-        const isUpB = !isUpA;           // singlet: anti-correlated on same axis
+      // Step in the SECOND particle's trajectory at which the first detector fires.
+      const fracFirst = distFirst / distSecond;
+      const collapseStepSecond = Math.round(STEPS * clamp(fracFirst, 0.05, 0.95));
 
-        // Initial transverse offset along n̂: place inside Gaussian
-        const offset = (isUpA ? 1 : -1) * SIG * 0.55;
-        trajsA.push({ pts: integrateBohmian(offset, isUpA, s.phiA, -1), isUp: isUpA });
-        trajsB.push({ pts: integrateBohmian(-offset, isUpB, s.phiB,  1), isUp: isUpB });
+      // ── First particle ──────────────────────────────────────────────────────
+      // Initial position: random Gaussian sample, NO pre-assignment of outcome.
+      // The guidance equation determines the outcome from the dynamics alone.
+      const x0First = (Math.random() - 0.5) * SIG * 2.0;
+      const phiFirst = firstIsA ? s.phiA : s.phiB;
+      const sideFirst = firstIsA ? -1 : 1;
+      const resFirst = integrateBohmian(x0First, phiFirst, sideFirst, distFirst);
+      const isUpFirst = resFirst.isUp;  // outcome emerges from dynamics
+
+      // ── Second particle ─────────────────────────────────────────────────────
+      // Also starts at a random Gaussian position — guided by BOTH branches
+      // until step collapseStepSecond, when the first detector fires.
+      // At that moment the joint wave function changes non-locally: the empty
+      // branch disappears and the surviving branch is the one correlated with
+      // the first particle's outcome (from singlet Born-rule correlations).
+      const x0Second = (Math.random() - 0.5) * SIG * 2.0;
+      const phiSecond = firstIsA ? s.phiB : s.phiA;
+      const sideSecond = firstIsA ? 1 : -1;
+
+      // Conditional probability: given first outcome, what does QM predict for second?
+      // P(second=+ | first=+) = 2*pp = sin²(Δφ/2)
+      // P(second=+ | first=-) = 2*pm = cos²(Δφ/2)
+      const { pp, pm } = singletProbs(s.phiA, s.phiB);
+      const probSecondUp = isUpFirst ? (2 * pp) : (2 * pm);
+      const isUpSecond = Math.random() < probSecondUp;
+
+      const resSecond = integrateBohmian(
+        x0Second, phiSecond, sideSecond, distSecond,
+        collapseStepSecond, isUpSecond   // collapse + forced branch
+      );
+
+      if (firstIsA) {
+        trajsA = [{ pts: resFirst.pts,  isUp: isUpFirst  }];
+        trajsB = [{ pts: resSecond.pts, isUp: isUpSecond }];
+      } else {
+        trajsB = [{ pts: resFirst.pts,  isUp: isUpFirst  }];
+        trajsA = [{ pts: resSecond.pts, isUp: isUpSecond }];
       }
 
-      // Upload trajectory geometry
-      [{ trajs: trajsA, bohm: bohmA, nn: nnA }, { trajs: trajsB, bohm: bohmB, nn: nnB }]
-        .forEach(({ trajs, bohm }) => {
-          trajs.forEach(({ pts, isUp }, i) => {
-            const fl = bohm.lines[i];
-            const [cr, cg, cb] = isUp ? TRAJ_COLOR_UP : TRAJ_COLOR_DOWN;
-            pts.forEach((p, j) => {
-              fl.pos[j * 3] = p.x; fl.pos[j * 3 + 1] = p.y; fl.pos[j * 3 + 2] = p.z;
-              fl.col[j * 3] = cr; fl.col[j * 3 + 1] = cg; fl.col[j * 3 + 2] = cb;
-            });
-            fl.geo.attributes.position.needsUpdate = true;
-            fl.geo.attributes.color.needsUpdate = true;
-            fl.geo.setDrawRange(0, pts.length);
-            fl.line.visible = false;
-          });
+      // Upload trajectory geometry with per-vertex color.
+      // The second particle's trail transitions from white-ish pre-split to its
+      // outcome color after the non-local change becomes relevant.
+      [
+        {
+          trajs: trajsA,
+          bohm: bohmA,
+          isSecond: !firstIsA,
+          colorUp: [colorsA.up.r, colorsA.up.g, colorsA.up.b],
+          colorDn: [colorsA.dn.r, colorsA.dn.g, colorsA.dn.b],
+        },
+        {
+          trajs: trajsB,
+          bohm: bohmB,
+          isSecond: firstIsA,
+          colorUp: [colorsB.up.r, colorsB.up.g, colorsB.up.b],
+          colorDn: [colorsB.dn.r, colorsB.dn.g, colorsB.dn.b],
+        },
+      ].forEach(({ trajs, bohm, isSecond, colorUp, colorDn }) => {
+        const { pts, isUp } = trajs[0];
+        const fl = bohm.lines[0];
+        const [finalR, finalG, finalB] = isUp ? colorUp : colorDn;
+        pts.forEach((p, j) => {
+          fl.pos[j * 3] = p.x; fl.pos[j * 3 + 1] = p.y; fl.pos[j * 3 + 2] = p.z;
+          // Pre-separation: white-ish; post-separation: outcome color.
+          // For the second particle the color kinks at collapseStepSecond.
+          const splitStep = isSecond ? collapseStepSecond : Math.round(STEPS * 0.5);
+          const t = clamp((j - splitStep) / 20, 0, 1);
+          fl.col[j * 3]     = lerp(1.0, finalR, t);
+          fl.col[j * 3 + 1] = lerp(1.0, finalG, t);
+          fl.col[j * 3 + 2] = lerp(1.0, finalB, t);
         });
+        fl.geo.attributes.position.needsUpdate = true;
+        fl.geo.attributes.color.needsUpdate = true;
+        fl.geo.setDrawRange(0, pts.length);
+        fl.line.visible = false;
+      });
 
-      hitRegistered.fill(false);
+      hitRegistered[0] = hitRegistered[1] = false;
     }
     buildTrajectories();
 
     // ── Input ────────────────────────────────────────────────────────────────
-    function onDown(e) { S.current.drag = { btn: e.button ?? 0, x: e.clientX, y: e.clientY }; el.setPointerCapture(e.pointerId); }
+    // Raycaster for detector hit-testing
+    const raycaster = new THREE.Raycaster();
+    const ndcMouse  = new THREE.Vector2();
+    let draggingDet = null; // null | 'A' | 'B'
+    let dragStartX  = 0;
+    let dragStartDist = 0;
+
+    // Project screen-X movement onto world-Z axis: Δz = ΔscreenX * dz/dx
+    function screenDxToWorldDz(screenDx) {
+      // Approximate: move a point at the detector's world Z along the camera
+      // right vector, then read how much world-Z changes per pixel.
+      const right = new THREE.Vector3();
+      right.crossVectors(
+        new THREE.Vector3().subVectors(S.current.target, camera.position).normalize(),
+        new THREE.Vector3(0, 1, 0),
+      ).normalize();
+      const { clientWidth: W } = el;
+      // FOV-based scale: world units per pixel at the camera distance
+      const dist = S.current.camR;
+      const fovRad = camera.fov * Math.PI / 180;
+      const unitsPerPx = 2 * dist * Math.tan(fovRad / 2) / W;
+      return right.z * screenDx * unitsPerPx * 3.5;
+    }
+
+    function hitTestDetectors(e) {
+      const rect = el.getBoundingClientRect();
+      ndcMouse.set(
+        ((e.clientX - rect.left) / rect.width)  * 2 - 1,
+        -((e.clientY - rect.top)  / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(ndcMouse, camera);
+      const children = [
+        ...(detA.children), ...(detB.children)
+      ];
+      const hits = raycaster.intersectObjects(children, false);
+      if (!hits.length) return null;
+      // Determine which detector was hit by checking the Z sign of the hit object.
+      // Guard against Three.js objects whose parent was cleared (e.g. during HMR).
+      const parent = hits[0].object.parent;
+      if (!parent) return null;
+      const hitZ = parent.position.z;
+      return hitZ < 0 ? 'A' : 'B';
+    }
+
+    function onDown(e) {
+      // Try detector drag first (left button only)
+      if ((e.button ?? 0) === 0) {
+        const which = hitTestDetectors(e);
+        if (which) {
+          draggingDet = which;
+          dragStartX = e.clientX;
+          dragStartDist = which === 'A' ? S.current.detDistA : S.current.detDistB;
+          el.setPointerCapture(e.pointerId);
+          el.style.cursor = 'ew-resize';
+          return;
+        }
+      }
+      S.current.drag = { btn: e.button ?? 0, x: e.clientX, y: e.clientY };
+      el.setPointerCapture(e.pointerId);
+    }
     function onMove(e) {
       const s = S.current;
+      if (draggingDet) {
+        const dz = screenDxToWorldDz(e.clientX - dragStartX);
+        // A is on -Z side: dragging right = moving away from source = larger dist
+        const sign = draggingDet === 'A' ? -1 : 1;
+        const newDist = clamp(dragStartDist + sign * dz, 2.0, 20.0);
+        if (draggingDet === 'A') s.detDistA = newDist;
+        else                     s.detDistB = newDist;
+        // Update measuredSide to track whichever detector is now closer
+        s.measuredSide = s.detDistA <= s.detDistB ? 'A' : 'B';
+        s.dirty = true;
+        Tr.setDetDistsUI({ A: s.detDistA, B: s.detDistB });
+        return;
+      }
       if (!s.drag) return;
       const dx = e.clientX - s.drag.x, dy = e.clientY - s.drag.y;
       s.drag.x = e.clientX; s.drag.y = e.clientY;
@@ -834,8 +1154,20 @@ export default function App() {
       updateCam();
     }
     function onUp(e) {
+      if (draggingDet) {
+        draggingDet = null;
+        el.style.cursor = 'grab';
+        if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+        return;
+      }
       S.current.drag = null;
       if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+      el.style.cursor = 'grab';
+    }
+    function onHover(e) {
+      if (draggingDet || S.current.drag) return;
+      const which = hitTestDetectors(e);
+      el.style.cursor = which ? 'ew-resize' : 'grab';
     }
     function onWheel(e) {
       e.preventDefault();
@@ -844,19 +1176,22 @@ export default function App() {
     }
     el.addEventListener('pointerdown', onDown);
     el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointermove', onHover);
     el.addEventListener('pointerup',   onUp);
     el.addEventListener('wheel', onWheel, { passive: false });
     el.addEventListener('contextmenu', e => e.preventDefault());
 
     T.current = {
       scene, camera, renderer,
-      detA, detB, arrA, arrB,
+      detA, detB,
+      magA, magB,
       slabsA, slabsB,
       bohmA, bohmB,
       hitsA, hitsB,
       buildTrajectories,
       updateCam,
       setCountsUI: c => setCountsUI({ ...c }),
+      setDetDistsUI: d => setDetDistsUI({ ...d }),
     };
 
     // ── Render loop ──────────────────────────────────────────────────────────
@@ -873,158 +1208,230 @@ export default function App() {
       updateCam();
 
       const frac = (s.tick % PERIOD) / PERIOD; // 0→1 each cycle
-      const tIdx = clamp(Math.round(frac * STEPS), 0, STEPS);
+      // Both particles travel at the same speed. In one full cycle the
+      // farther particle covers Z_DET_FAR; the closer one covers Z_DET
+      // and arrives at frac = FRAC_FIRST ≈ 0.80.
+      const travelDist = Math.max(s.detDistA, s.detDistB) * frac;
+      const detDistA = s.detDistA;
+      const detDistB = s.detDistB;
+      // Per-particle trajectory index (0→STEPS over each particle's own journey)
+      const tIdxA = clamp(Math.round(Math.min(travelDist, detDistA) / detDistA * STEPS), 0, STEPS);
+      const tIdxB = clamp(Math.round(Math.min(travelDist, detDistB) / detDistB * STEPS), 0, STEPS);
 
-      // Reset collapse state at start of new cycle
-      if (tIdx <= 1 && s.collapsed) {
+      // Reset at the start of each new cycle
+      if (frac < 0.02 && s.collapsed) {
         s.collapsed = false;
         s.outcomeA = null;
         s.outcomeB = null;
-        hitRegistered.fill(false);
+        hitRegistered[0] = hitRegistered[1] = false;
+        s.hitFired[0] = s.hitFired[1] = false;
         s.dirty = true;
       }
 
-      // ── Determine collapse/outcome ────────────────────────────────────────
-      const collFrac = s.collapseAtFrac;
-      const hasFired = frac >= collFrac;
+      // ── First detector fires when first particle arrives ──────────────────
+      const firstFired  = travelDist >= Math.min(s.detDistA, s.detDistB);
+      const secondFired = travelDist >= Math.max(s.detDistA, s.detDistB) * 0.99;
 
-      if (hasFired && !s.collapsed) {
+      if (firstFired && !s.collapsed) {
         s.collapsed = true;
-        // Single outcome drawn from Born rule using singlet correlations
-        const { pp } = singletProbs(s.phiA, s.phiB);
-        const rand = Math.random();
-        // outcomes: pp=P(+,+), pm=P(+,-), mp=P(-,+), mm=P(-,-)
-        const { pm } = singletProbs(s.phiA, s.phiB);
-        if (rand < pp) {
-          s.outcomeA = 1; s.outcomeB = 1;
-          s.counts.pp++;
-        } else if (rand < pp + pm) {
-          s.outcomeA = 1; s.outcomeB = -1;
-          s.counts.pm++;
-        } else if (rand < pp + pm + pm) {
-          s.outcomeA = -1; s.outcomeB = 1;
-          s.counts.mp++;
-        } else {
-          s.outcomeA = -1; s.outcomeB = -1;
-          s.counts.mm++;
-        }
+        // Read outcomes from pre-assigned Bohmian trajectories
+        s.outcomeA = trajsA[0]?.isUp ? 1 : -1;
+        s.outcomeB = trajsB[0]?.isUp ? 1 : -1;
+        const key = (s.outcomeA === 1 ? 'p' : 'm') + (s.outcomeB === 1 ? 'p' : 'm');
+        s.counts[key]++;
         Tr.setCountsUI(s.counts);
       }
 
-      const collapsed   = s.collapsed;
-      const outcomeA    = s.outcomeA; // +1 or -1
-      const outcomeB    = s.outcomeB;
+      const collapsed = s.collapsed;
+      const outcomeA  = s.outcomeA;
+      const outcomeB  = s.outcomeB;
 
-      // ── Detector axis arrows ─────────────────────────────────────────────
+      // ── Move detectors + orient magnets (fixed offset from screen) ────────
+      Tr.detA.position.z = -detDistA;
+      Tr.detB.position.z =  detDistB;
       const nnA = nHat(s.phiA);
       const nnB = nHat(s.phiB);
-      const safeDir = v => { if (Math.abs(v.x) < 0.001 && Math.abs(v.z) < 0.001) v.x = 0.001; return v.normalize(); };
-      Tr.arrA.setDirection(safeDir(nnA.clone()));
-      Tr.arrB.setDirection(safeDir(nnB.clone()));
+      const colorsA = axisColors(s.phiA);
+      const colorsB = axisColors(s.phiB);
+      // Magnets are 1.5 units in front of (toward source from) each detector.
+      // R_z(-φ) maps local +Y → n̂(φ); the child arrow inherits this rotation.
+      Tr.magA.position.z = -(detDistA - MAG_OFFSET);
+      Tr.magA.rotation.z = -s.phiA * Math.PI / 180;
+      Tr.magB.position.z =  (detDistB - MAG_OFFSET);
+      Tr.magB.rotation.z = -s.phiB * Math.PI / 180;
+      Tr.magA.userData.setPoleColors?.(colorsA.up, colorsA.dn);
+      Tr.magB.userData.setPoleColors?.(colorsB.up, colorsB.dn);
 
       // ── Wave-packet slab update ───────────────────────────────────────────
       const sw = s.showWave;
-      // Compute transverse branch separation at this frac
-      const postFrac = frac > 0.5 ? (frac - 0.5) / 0.5 : 0;
-      const sep = postFrac * KICK;
-      const sigXY = SIG * (1 + postFrac * 0.4);
-      const sigZ  = SIG * 1.5;
+      // Per-particle travel fractions (0→1 over each particle's own journey)
+      const fracA = Math.min(travelDist, detDistA) / detDistA;
+      const fracB = Math.min(travelDist, detDistB) / detDistB;
+      // Wave packet centres — stop advancing once particle reaches its detector
+      const wZA = -Math.min(travelDist, detDistA);
+      const wZB =  Math.min(travelDist, detDistB);
 
-      // For each side (A=particle moving to -Z, B=moving to +Z)
-      // wZ = current packet centre Z position
-      const wZa = lerp(-Z_DET, 0, frac > 1 ? 1 : frac * 2); // A starts at 0, moves to -Z_DET
-      const wZb = lerp( 0, Z_DET, frac > 1 ? 1 : frac * 2); // B starts at 0, moves to +Z_DET
-      // More natural: packets fly apart continuously
-      const wZA = lerp(0, -Z_DET, frac);
-      const wZB = lerp(0,  Z_DET, frac);
-
-      const isPost = frac >= 0.5;
-
-      function updateSlabs(slabs, wZ, phiVal, outcome, isParticleA) {
-        const nn = nHat(phiVal);
-        const upCx =  nn.x * sep, upCy =  nn.y * sep;
-        const dnCx = -nn.x * sep, dnCy = -nn.y * sep;
-
-        // isPost value for shader:
-        // 0 = superposition (pre-split)
-        // 1 = separated (both branches visible)
-        // 2 = collapsed to up
-        // 3 = collapsed to down
+      // updateSlabs: each side gets its own travel fraction → correct separation.
+      // Copenhagen:
+      //   • The measured side (reached its own detector) collapses to one branch.
+      //   • The UNMEASURED side still has two branches whose relative amplitudes
+      //     reflect P(this=± | other=outcome) from Born rule.
+      //     Only equal (1:1) before any measurement; unequal after first fires.
+      //     Collapses to one branch only when THIS side’s detector fires.
+      // Bohmian: both branches always persist, never collapse.
+      // detDist: total distance from source to this side's detector.
+      // Splitting begins when the wave reaches the magnet (MAG_OFFSET in front
+      // of the screen), so splitFrac = (detDist - MAG_OFFSET) / detDist.
+      function updateSlabs(slabs, wZ, phiVal, outcome, particleFrac, thisMeasured, ampUp, ampDown, detDist, colors) {
+        const splitFrac = (detDist - MAG_OFFSET) / detDist;
+        const postFracP = particleFrac > splitFrac ? (particleFrac - splitFrac) / (1 - splitFrac) : 0;
+        const sepP   = postFracP * KICK;
+        const sigXYP = SIG * (1 + postFracP * 0.4);
+        const nn     = nHat(phiVal);
+        const upCx   =  nn.x * sepP, upCy  =  nn.y * sepP;
+        const dnCx   = -nn.x * sepP, dnCy  = -nn.y * sepP;
+        // 0=superposition  1=two branches  2=collapsed↑  3=collapsed↓
         let isPostVal = 0;
-        if (isPost) {
-          if (s.interp === 'collapse' && collapsed && outcome !== null) {
+        let aUp = 1, aDn = 1;
+        if (particleFrac >= splitFrac) {
+          if (thisMeasured && outcome !== null && s.interp === 'collapse') {
+            // This side has been measured: collapse to the actual outcome branch.
             isPostVal = outcome === 1 ? 2 : 3;
           } else {
+            // Still in superposition (either Bohmian, or Copenhagen before this
+            // side's detector fires). Use conditional Born-rule amplitude weights.
             isPostVal = 1;
+            aUp = ampUp;
+            aDn = ampDown;
           }
         }
-
         slabs.forEach(mesh => {
           if (!sw) { mesh.visible = false; return; }
           const u = mesh.material.uniforms;
-          u.uSigXY.value   = sigXY;
-          u.uSigZ.value    = sigZ;
-          u.uCUpX.value    = upCx; u.uCUpY.value = upCy;
-          u.uCDnX.value    = dnCx; u.uCDnY.value = dnCy;
-          u.uWz.value      = wZ;
-          u.uIsPost.value  = isPostVal;
-          u.uBright.value  = 0.55;
-          u.uAlphaMax.value= 0.32;
-          mesh.visible     = true;
+          u.uColorUp.value.copy(colors.up);
+          u.uColorDn.value.copy(colors.dn);
+          if (s.interp === 'collapse' && collapsed && !thisMeasured) {
+            // Remote packet recolor follows the effective local state on THIS side.
+            // Use the conditional Born weights in the local basis. This gives:
+            //   same axis    -> exact branch color (weight 1/0)
+            //   rotated axis -> intermediate color encoding the new spin state
+            const norm = Math.max(ampUp + ampDown, 1e-6);
+            u.uPreColor.value.setRGB(
+              (colors.up.r * ampUp + colors.dn.r * ampDown) / norm,
+              (colors.up.g * ampUp + colors.dn.g * ampDown) / norm,
+              (colors.up.b * ampUp + colors.dn.b * ampDown) / norm,
+            );
+          } else {
+            u.uPreColor.value.setRGB(1, 1, 1);
+          }
+          u.uSigXY.value    = sigXYP;
+          u.uSigZ.value     = SIG * 1.5;
+          u.uCUpX.value     = upCx; u.uCUpY.value = upCy;
+          u.uCDnX.value     = dnCx; u.uCDnY.value = dnCy;
+          u.uWz.value       = wZ;
+          u.uIsPost.value   = isPostVal;
+          u.uBright.value   = 0.55;
+          u.uAlphaMax.value = 0.32;
+          u.uAmpUp.value    = aUp;
+          u.uAmpDown.value  = aDn;
+          mesh.visible      = true;
         });
       }
 
-      updateSlabs(slabsA, wZA, s.phiA, outcomeA, true);
-      updateSlabs(slabsB, wZB, s.phiB, outcomeB, false);
+      // ── Per-side measurement state and conditional amplitudes ─────────────
+      // In Copenhagen:
+      //   measuredA = this side’s detector has fired (A’s wave collapses).
+      //   measuredB = this side’s detector has fired (B’s wave collapses).
+      // After the FIRST detector fires but before the SECOND fires, the unmeasured
+      // wave still has two branches with Born-rule conditional amplitude weighting:
+      //   P(second=± | first=outcome) = sin²(Δφ/2) or cos²(Δφ/2)
+      const firstIsA = s.measuredSide === 'A';
+      const measuredA = firstIsA ? collapsed : secondFired;
+      const measuredB = firstIsA ? secondFired : collapsed;
+
+      // Compute conditional amplitude weights for the UNMEASURED wave.
+      // When both or neither detector has fired, each branch has equal weight = 1.
+      let ampUpA = 1, ampDownA = 1;
+      let ampUpB = 1, ampDownB = 1;
+      if (collapsed && s.interp === 'collapse') {
+        const firstOutcome = firstIsA ? outcomeA : outcomeB; // +1 or -1
+        const df = (s.phiA - s.phiB) * Math.PI / 180;
+        // P(second=+ | first=±) for singlet state
+        const pUp = firstOutcome === 1 ? Math.sin(df / 2) ** 2 : Math.cos(df / 2) ** 2;
+        const pDn = 1 - pUp;
+        // Apply to whichever side is the SECOND (unmeasured) side.
+        // After second fires, that side collapses via thisMeasured — amps irrelevant.
+        if (firstIsA) { ampUpB = pUp; ampDownB = pDn; }
+        else          { ampUpA = pUp; ampDownA = pDn; }
+      }
+
+      updateSlabs(slabsA, wZA, s.phiA, outcomeA, fracA, measuredA, ampUpA, ampDownA, detDistA, colorsA);
+      updateSlabs(slabsB, wZB, s.phiB, outcomeB, fracB, measuredB, ampUpB, ampDownB, detDistB, colorsB);
 
       // ── Bohmian particles ─────────────────────────────────────────────────
       const showP = s.showParticles && s.interp === 'bohmian';
 
       [
-        { trajs: trajsA, bohm: bohmA, hitPool: hitsA, outcome: outcomeA },
-        { trajs: trajsB, bohm: bohmB, hitPool: hitsB, outcome: outcomeB },
-      ].forEach(({ trajs, bohm, hitPool, outcome }, side) => {
-        trajs.forEach(({ pts, isUp }, i) => {
-          const col = isUp ? 0x22ee66 : 0xff5522;
-          if (!showP) {
-            bohm.dots[i].visible  = false;
-            bohm.glows[i].visible = false;
-            bohm.lines[i].line.visible = false;
-            return;
-          }
-          const pt = pts[tIdx];
-          bohm.dots[i].position.copy(pt);
-          bohm.glows[i].position.copy(pt);
-          bohm.dots[i].visible  = true;
-          bohm.glows[i].visible = true;
-          bohm.dots[i].material.color.set(col);
-          bohm.glows[i].material.color.set(col);
-          bohm.dots[i].material.opacity  = 0.95;
-          bohm.glows[i].material.opacity = 0.15;
-          bohm.lines[i].line.visible = true;
-          bohm.lines[i].geo.setDrawRange(0, tIdx + 1);
+        { trajs: trajsA, bohm: bohmA, hitPool: hitsA, tIdx: tIdxA, hitKey: 0, upHex: colorsA.up.getHex(), dnHex: colorsA.dn.getHex() },
+        { trajs: trajsB, bohm: bohmB, hitPool: hitsB, tIdx: tIdxB, hitKey: 1, upHex: colorsB.up.getHex(), dnHex: colorsB.dn.getHex() },
+      ].forEach(({ trajs, bohm, hitPool, tIdx: myTIdx, hitKey, upHex, dnHex }) => {
+        const { pts, isUp } = trajs[0];
+        const measured = myTIdx >= STEPS - 1;
+        const col = measured ? (isUp ? upHex : dnHex) : 0x4499ff;
+        if (!showP) {
+          bohm.dots[0].visible       = false;
+          bohm.glows[0].visible      = false;
+          bohm.lines[0].line.visible = false;
+          return;
+        }
+        const pt = pts[Math.min(myTIdx, pts.length - 1)];
+        if (!pt) return;
+        bohm.dots[0].position.copy(pt);
+        bohm.glows[0].position.copy(pt);
+        bohm.dots[0].visible  = true;
+        bohm.glows[0].visible = true;
+        bohm.dots[0].material.color.set(col);
+        bohm.glows[0].material.color.set(col);
+        bohm.dots[0].material.opacity  = 0.95;
+        bohm.glows[0].material.opacity = 0.18;
+        bohm.lines[0].line.visible = true;
+        bohm.lines[0].geo.setDrawRange(0, myTIdx + 1);
 
-          // Hit registration
-          if (tIdx >= STEPS - 2 && !hitRegistered[i + side * N_BOHM]) {
-            hitRegistered[i + side * N_BOHM] = true;
-            const endPt = pts[STEPS];
-            hitPool.add(endPt.x, endPt.y, col);
-          }
-        });
+        // Hit dot when this particle reaches its own detector
+        if (myTIdx >= STEPS - 1 && !hitRegistered[hitKey]) {
+          hitRegistered[hitKey] = true;
+          const endPt = pts[STEPS];
+          hitPool.add(endPt.x, endPt.y, col);
+        }
       });
 
-      // In collapse mode, add hits when collapse fires
-      if (s.interp === 'collapse' && collapsed && !hitRegistered[N_BOHM * 2]) {
-        hitRegistered[N_BOHM * 2] = true;
-        const colA = outcomeA === 1 ? 0x22ee66 : 0xff5522;
-        const colB = outcomeB === 1 ? 0x22ee66 : 0xff5522;
-        // Random position on detector (Gaussian, within branch)
-        const nnAv = nHat(s.phiA), nnBv = nHat(s.phiB);
-        const r = () => (Math.random() - 0.5) * SIG * 1.0;
-        const signA = outcomeA === 1 ? 1 : -1;
-        const signB = outcomeB === 1 ? 1 : -1;
-        hitsA.add(nnAv.x * KICK * signA + r(), nnAv.y * KICK * signA + r(), colA);
-        hitsB.add(nnBv.x * KICK * signB + r(), nnBv.y * KICK * signB + r(), colB);
+      // Copenhagen: first detector fires when first particle arrives,
+      //             second detector fires when second particle arrives.
+      if (s.interp === 'collapse') {
+        const rr = () => (Math.random() - 0.5) * SIG * 0.9;
+        const firstIsA = s.measuredSide === 'A';
+        if (collapsed && !s.hitFired[0]) {
+          s.hitFired[0] = true;
+          const oc1  = firstIsA ? outcomeA : outcomeB;
+          const nn1  = nHat(firstIsA ? s.phiA : s.phiB);
+          const s1   = oc1 === 1 ? 1 : -1;
+          // First hit: use the color of whichever side fired first
+          const col1 = firstIsA ? (oc1 === 1 ? colorsA.up.getHex() : colorsA.dn.getHex())
+                                 : (oc1 === 1 ? colorsB.up.getHex() : colorsB.dn.getHex());
+          if (firstIsA) hitsA.add(nn1.x * KICK * s1 + rr(), nn1.y * KICK * s1 + rr(), col1);
+          else          hitsB.add(nn1.x * KICK * s1 + rr(), nn1.y * KICK * s1 + rr(), col1);
+        }
+        if (secondFired && !s.hitFired[1]) {
+          s.hitFired[1] = true;
+          const oc2  = firstIsA ? outcomeB : outcomeA;
+          const nn2  = nHat(firstIsA ? s.phiB : s.phiA);
+          const s2   = oc2 === 1 ? 1 : -1;
+          // Second hit: use the color of the *other* side
+          const col2 = firstIsA ? (oc2 === 1 ? colorsB.up.getHex() : colorsB.dn.getHex())
+                                 : (oc2 === 1 ? colorsA.up.getHex() : colorsA.dn.getHex());
+          if (firstIsA) hitsB.add(nn2.x * KICK * s2 + rr(), nn2.y * KICK * s2 + rr(), col2);
+          else          hitsA.add(nn2.x * KICK * s2 + rr(), nn2.y * KICK * s2 + rr(), col2);
+        }
       }
 
       Tr.renderer.render(Tr.scene, Tr.camera);
@@ -1036,6 +1443,7 @@ export default function App() {
       ro.disconnect();
       el.removeEventListener('pointerdown', onDown);
       el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointermove', onHover);
       el.removeEventListener('pointerup', onUp);
       el.removeEventListener('wheel', onWheel);
       renderer.dispose();
@@ -1067,7 +1475,8 @@ export default function App() {
           BELL EXPERIMENT
         </span>
         <button className={'tbb' + (activeTab === 'sim' ? ' tba' : '')} onClick={() => setActiveTab('sim')}>Simulation</button>
-        <button className={'tbb' + (activeTab === 'theory' ? ' tba' : '')} onClick={() => setActiveTab('theory')}>Theory</button>
+        <button className={'tbb' + (activeTab === 'trajectories' ? ' tba' : '')} onClick={() => setActiveTab('trajectories')}>Trajectories</button>
+        <button className={'tbb' + (activeTab === 'collapse' ? ' tba' : '')} onClick={() => setActiveTab('collapse')}>Collapse</button>
       </div>
 
       {/* Main area */}
@@ -1105,14 +1514,20 @@ export default function App() {
               <div style={{ position: 'absolute', top: 10, left: 12, zIndex: 10,
                 fontFamily: 'monospace', fontSize: 12, color: '#44ddff',
                 background: 'rgba(4,10,30,0.75)', borderRadius: 5, padding: '4px 8px',
-                border: '1px solid rgba(68,221,255,0.3)' }}>
-                ← Particle A  φ_A={phiA}°
+                border: '1px solid ' + (measuredSide === 'A' ? 'rgba(68,221,255,0.8)' : 'rgba(68,221,255,0.3)') }}>
+              ← A  φ_A={phiA}°  z={detDists.A.toFixed(1)}
+                {measuredSide === 'A'
+                  ? <span style={{ marginLeft: 6, color: '#ffee44', fontSize: 10 }}>★ FIRST</span>
+                  : <span style={{ marginLeft: 6, color: '#7090b8', fontSize: 10 }}>SECOND</span>}
               </div>
               <div style={{ position: 'absolute', top: 10, right: 12, zIndex: 10,
                 fontFamily: 'monospace', fontSize: 12, color: '#ff9966',
                 background: 'rgba(4,10,30,0.75)', borderRadius: 5, padding: '4px 8px',
-                border: '1px solid rgba(255,153,102,0.3)' }}>
-                Particle B  φ_B={phiB}°  →
+                border: '1px solid ' + (measuredSide === 'B' ? 'rgba(255,153,102,0.8)' : 'rgba(255,153,102,0.3)') }}>
+                {measuredSide === 'B'
+                  ? <span style={{ marginRight: 6, color: '#ffee44', fontSize: 10 }}>★ FIRST</span>
+                  : <span style={{ marginRight: 6, color: '#7090b8', fontSize: 10 }}>SECOND</span>}
+                B  φ_B={phiB}°  z={detDists.B.toFixed(1)}  →
               </div>
               {/* Legend */}
               <div style={{ position: 'absolute', bottom: 12, left: 12, zIndex: 10,
@@ -1126,9 +1541,14 @@ export default function App() {
             </>
           )}
 
-          {activeTab === 'theory' && (
+          {(activeTab === 'trajectories' || activeTab === 'collapse') && (
             <div style={{ position: 'absolute', inset: 0, overflowY: 'auto' }}>
-              <iframe srcDoc={theoryHtml} style={{ width: '100%', height: '100%', border: 'none' }} title="Theory" />
+              <iframe
+                key={activeTab}
+                srcDoc={activeTab === 'trajectories' ? trajectoryHtml : collapseHtml}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title={activeTab === 'trajectories' ? 'Trajectories' : 'Collapse'}
+              />
             </div>
           )}
         </div>

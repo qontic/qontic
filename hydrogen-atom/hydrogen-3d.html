@@ -176,6 +176,8 @@
           <div style="display:flex;gap:4px">
             <button class="vtab" id="verifyBtn" onclick="runAnalyticalChecks()"
               title="Run analytical spot-checks of the velocity field against known exact formulas">Verify</button>
+            <button class="vtab" id="sweepBtn" onclick="runSweep()"
+              title="Comprehensive sweep: tests all 40+ orbitals (exact velocity formula) + continuity equation ∂ρ/∂t+∇·(ρv)=0 for eigenstates and superpositions">Sweep</button>
             <button class="vtab" id="expertBtn" onclick="toggleExpert()"
               title="Show/hide numerical verification stats (⟨r⟩, normalization, match %)">Expert</button>
           </div>

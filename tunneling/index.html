@@ -276,7 +276,8 @@
         <div class="ctrl-title">Simulation</div>
         <div class="ctrl-row">
           <button class="ctrl-btn active" id="btn-play" onclick="togglePlay()">⏸ Pause</button>
-          <button class="ctrl-btn" onclick="resetNum(true)">↺ Reset</button>
+          <button class="ctrl-btn" onclick="resetNum(false)">↺ Reset</button>
+          <button class="ctrl-btn" onclick="resetNum(true)" title="Restart and clear accumulated stats">✕ Clear</button>
         </div>
         <div class="ctrl-row">
           <span class="ctrl-label">Speed</span>
@@ -640,7 +641,7 @@ const NUM = {
   T_frac: 0, R_frac: 0,
   T_absorbed: 0, R_absorbed: 0,  // cumulative flux absorbed by CAP each side
   // particle T/R tracking
-  bDecided: null, finalPtT: -1, finalPtR: -1, finalPtN: 0,
+  bDecided: null, finalPtT: -1, finalPtR: -1, finalPtN: -1,  // -1 = not yet finalized
   accumPtT: 0, accumPtR: 0, accumPtN: 0, countLocked: false, barrierPeak: 0,
   T_wave: 0,  // frozen wave-T snapshot taken when packets separate
   initialMaxAmp: 1,  // max |ψ| at t=0, used for auto-stop condition
@@ -809,21 +810,30 @@ function bohmVelocityAt(x) {
 
 function stepBohmian(nSteps) {
   const np = NUM.np, dt = NUM.dt;
-  const xEdgeR = NUM.renderXmax;  // classify when leaving visible window
+  // Decide T/R once particle clears the barrier (small gap past each edge).
+  // Keep the particle visible and moving until it exits the render window,
+  // then park it off-screen.
+  const barrierEdgeR =  NUM.bw / 2 + 0.3;
+  const barrierEdgeL = -(NUM.bw / 2 + 0.3);
+  const xEdgeR = NUM.renderXmax;
   const xEdgeL = NUM.renderXmin;
   for (let p = 0; p < np; p++) {
-    if (NUM.bDecided[p] !== -1) continue; // already classified
+    if (NUM.bx[p] > xEdgeR + 100 || NUM.bx[p] < xEdgeL - 100) continue; // parked
     for (let s = 0; s < nSteps; s++) {
       const v = bohmVelocityAt(NUM.bx[p]);
       NUM.bx[p] += v * dt;
     }
-    // classify when particle exits the visible window
+    // record T/R decision as soon as particle leaves the barrier region
+    if (NUM.bDecided[p] === -1) {
+      if      (NUM.bx[p] > barrierEdgeR) NUM.bDecided[p] = 1; // transmitted
+      else if (NUM.bx[p] < barrierEdgeL) NUM.bDecided[p] = 0; // reflected
+    }
+    // park (stop showing) once particle exits the visible window
     if (NUM.bx[p] > xEdgeR) {
-      NUM.bDecided[p] = 1; NUM.bx[p] = xEdgeR + 999;  // transmitted
+      NUM.bx[p] = xEdgeR + 999;
     } else if (NUM.bx[p] < xEdgeL) {
-      NUM.bDecided[p] = 0; NUM.bx[p] = xEdgeL - 999;  // reflected
+      NUM.bx[p] = xEdgeL - 999;
     } else {
-      // record trail only while inside visible window
       const trail = NUM.bTrails[p];
       trail.push(NUM.bx[p]);
       if (trail.length > 80) trail.shift();
@@ -988,7 +998,8 @@ function renderNum2D() {
   // --- Bohmian particles ---
   if (NUM.bohmOn) {
     for (let p = 0; p < NUM.np; p++) {
-      if (NUM.bDecided[p] !== -1) continue; // classified/parked — off-screen
+      // skip if parked off-screen
+      if (NUM.bx[p] > NUM.renderXmax + 100 || NUM.bx[p] < NUM.renderXmin - 100) continue;
       // trail
       const trail = NUM.bTrails[p];
       if (NUM.showTrails && trail.length > 1) {
@@ -1039,10 +1050,21 @@ function renderNum2D() {
   const T_live = normRight / (NUM.initialNorm || 1);
   const T_display = NUM.T_wave > 0 ? NUM.T_wave : T_live;
 
-  // Only show particle counts after simulation ends
+  // Live particle counts by position — always matches what's visible on screen.
+  // bx > bw/2 = right of barrier (transmitted side); parked-right also > bw/2.
+  // bx < -bw/2 = left of barrier (reflected side); parked-left also < -bw/2.
   let ptT = 0, ptNdisp = 0;
-  if (NUM.done && NUM.finalPtN > 0) {
-    ptT = NUM.finalPtT; ptNdisp = NUM.finalPtN;
+  if (NUM.bohmOn && NUM.bx) {
+    const barrierR = NUM.bw / 2;
+    ptNdisp = NUM.np;
+    if (NUM.finalPtN >= 0) {
+      // sim has stopped — use finalized counts (bDecided + position fallback)
+      ptT = NUM.finalPtT;
+    } else {
+      for (let p = 0; p < NUM.np; p++) {
+        if (NUM.bx[p] > barrierR) ptT++;
+      }
+    }
   }
   drawTRInset(ctx, W, H, T_display, ptT, ptNdisp, NUM.bohmOn,
               NUM.accumPtT, NUM.accumPtN);
@@ -1149,7 +1171,9 @@ let numAnimId = null;
 
 function lockNumCounts() {
   // Snapshot wave T = ∫_{x > barrier edge} |ψ|² / n0 at the moment packets separate.
-  // From this point on the display is frozen — the value won't fall when the CAP absorbs it.
+  // Called early (barrierPeak drop) — particles may not have decided yet, so we
+  // do NOT count particles here.  Particle finalization happens at sim-stop.
+  if (NUM.countLocked) return;
   const barrierR = NUM.bw / 2;
   let normRight = 0;
   for (let i = 0; i < NUM.N; i++) {
@@ -1157,24 +1181,28 @@ function lockNumCounts() {
       normRight += (NUM.psi_re[i]*NUM.psi_re[i] + NUM.psi_im[i]*NUM.psi_im[i]) * NUM.dx;
   }
   NUM.T_wave = normRight / (NUM.initialNorm || 1);
+  NUM.countLocked = true;
+  console.log('[lockNumCounts] T_wave%=' + (NUM.T_wave*100).toFixed(1));
+}
 
-  let finalT = 0, finalR = 0;
-  for (let p = 0; p < NUM.np; p++) {
-    if (NUM.bDecided[p] === 1 || NUM.bx[p] > NUM.xmax + 100) finalT++;
-    else if (NUM.bDecided[p] === 0 || NUM.bx[p] < NUM.xmin - 100) finalR++;
-    else if (NUM.bx[p] > 0) finalT++;  // still in domain but past barrier midpoint
-    else finalR++;
+function finalizeParticles() {
+  // Called once at sim-stop. Count by position (same as live display) so the
+  // number doesn't jump when switching from live to frozen.
+  if (NUM.finalPtN >= 0) return;  // already finalized
+  let finalT = 0;
+  if (NUM.bohmOn && NUM.bx) {
+    const barrierR = NUM.bw / 2;
+    for (let p = 0; p < NUM.np; p++) {
+      if (NUM.bx[p] > barrierR) finalT++;
+    }
+    NUM.accumPtT += finalT;
+    NUM.accumPtN += NUM.np;
   }
   NUM.finalPtT = finalT;
-  NUM.finalPtR = finalR;
-  NUM.finalPtN = NUM.np;
-  NUM.accumPtT += finalT;
-  NUM.accumPtR += finalR;
-  NUM.accumPtN += NUM.np;
-  NUM.countLocked = true;
-  console.log('[num countLocked] T=' + finalT + ' R=' + finalR +
-    ' T%=' + (finalT/NUM.np*100).toFixed(1) +
-    ' T_wave%=' + (NUM.T_frac*100).toFixed(1));
+  NUM.finalPtR = NUM.np - finalT;
+  NUM.finalPtN = NUM.bohmOn ? NUM.np : 0;
+  console.log('[finalizeParticles] T=' + finalT + '/' + NUM.np +
+    ' T%=' + (NUM.np > 0 ? (finalT/NUM.np*100).toFixed(1) : 'n/a'));
 }
 
 function numLoop() {
@@ -1186,8 +1214,8 @@ function numLoop() {
   if (NUM.show3d) update3D();
   if (NUM.show2d) render2DNum();
   if (!NUM.restartPending && NUM.capOn) {
-    // Lock particle T/R when barrier density has peaked then fallen
-    if (!NUM.countLocked && NUM.bohmOn && NUM.bDecided) {
+    // Lock T_wave (and particle counts) when barrier density has peaked then fallen
+    if (!NUM.countLocked) {
       const hw = NUM.bw / 2 + 1;
       let bNorm = 0;
       for (let i = 0; i < NUM.N; i++) {
@@ -1201,30 +1229,44 @@ function numLoop() {
         lockNumCounts();
       }
     }
-    // Stop when max amplitude in visible window drops to 10% of initial max amplitude
-    const dxStp = numDx(), iMinStp = Math.max(0, Math.floor((NUM.renderXmin - NUM.xmin) / dxStp));
-    const iMaxStp = Math.min(NUM.N - 1, Math.ceil((NUM.renderXmax - NUM.xmin) / dxStp));
-    let maxAmp2 = 0;
-    for (let i = iMinStp; i <= iMaxStp; i++) {
-      const a2 = NUM.psi_re[i]*NUM.psi_re[i] + NUM.psi_im[i]*NUM.psi_im[i];
-      if (a2 > maxAmp2) maxAmp2 = a2;
-    }
-    if (Math.sqrt(maxAmp2) < 0.10 * NUM.initialMaxAmp) {
-      if (!NUM.countLocked && NUM.bohmOn && NUM.bDecided) lockNumCounts();
-      NUM.done = true;
-      NUM.playing = false;
-      const pb = document.getElementById('btn-play');
-      if (pb) { pb.textContent = '▶ Play'; pb.classList.remove('active'); }
-      if (!NUM.restartPending) {
-        NUM.restartPending = true;
-        const delay = NUM.loopDelay > 0 ? NUM.loopDelay * 1000 : 1500;
-        setTimeout(() => {
-          NUM.restartPending = false;
-          resetNum();
-          NUM.playing = true;
-          const pb2 = document.getElementById('btn-play');
-          if (pb2) { pb2.textContent = '⏸ Pause'; pb2.classList.add('active'); }
-        }, delay);
+    // Stop when the peak of the transmitted OR reflected packet reaches the visible edge,
+    // whichever arrives first.  Guard: only start checking once the packet has hit the
+    // barrier (barrierPeak established) so the initial in-flight wave never triggers this.
+    if (NUM.barrierPeak > 0.05 * NUM.initialNorm) {
+      const dxStp = numDx();
+      const edgeW  = 2.0;   // strip width near each edge (physics units)
+      const iMinStp = Math.max(0,       Math.floor((NUM.renderXmin - NUM.xmin) / dxStp));
+      const iMaxStp = Math.min(NUM.N-1, Math.ceil ((NUM.renderXmax - NUM.xmin) / dxStp));
+      const iEdgeR  = Math.max(iMinStp, Math.round((NUM.renderXmax - edgeW - NUM.xmin) / dxStp));
+      const iEdgeL  = Math.min(iMaxStp, Math.round((NUM.renderXmin + edgeW - NUM.xmin) / dxStp));
+      let maxEdge2 = 0;
+      for (let i = iEdgeR; i <= iMaxStp; i++) {
+        const a2 = NUM.psi_re[i]*NUM.psi_re[i] + NUM.psi_im[i]*NUM.psi_im[i];
+        if (a2 > maxEdge2) maxEdge2 = a2;
+      }
+      for (let i = iMinStp; i <= iEdgeL; i++) {
+        const a2 = NUM.psi_re[i]*NUM.psi_re[i] + NUM.psi_im[i]*NUM.psi_im[i];
+        if (a2 > maxEdge2) maxEdge2 = a2;
+      }
+      if (Math.sqrt(maxEdge2) > 0.08 * NUM.initialMaxAmp) {
+        if (!NUM.countLocked) lockNumCounts();  // ensure T_wave is snapped
+        finalizeParticles();                     // finalize particle counts
+        NUM.done = true;
+        NUM.playing = false;
+        const pb = document.getElementById('btn-play');
+        if (pb) { pb.textContent = '▶ Play'; pb.classList.remove('active'); }
+        if (!NUM.restartPending && NUM.loopDelay > 0) {
+          NUM.restartPending = true;
+          const delay = NUM.loopDelay * 1000;
+          setTimeout(() => {
+            if (!NUM.restartPending) return;
+            NUM.restartPending = false;
+            resetNum();
+            NUM.playing = true;
+            const pb2 = document.getElementById('btn-play');
+            if (pb2) { pb2.textContent = '⏸ Pause'; pb2.classList.add('active'); }
+          }, delay);
+        }
       }
     }
   }
@@ -1232,7 +1274,7 @@ function numLoop() {
 }
 
 function resetNum(clearAccum) {
-  NUM.finalPtT = -1; NUM.finalPtR = -1; NUM.finalPtN = 0;
+  NUM.finalPtT = -1; NUM.finalPtR = -1; NUM.finalPtN = -1;  // -1 = not yet finalized
   NUM.countLocked = false; NUM.barrierPeak = 0; NUM.T_wave = 0;
   NUM.T_absorbed = 0; NUM.R_absorbed = 0;
   NUM.T_frac = 0; NUM.R_frac = 0;
@@ -1260,11 +1302,20 @@ function resetNum(clearAccum) {
   NUM.initialNorm = n0 * NUM.dx || 1;
   NUM.initialMaxAmp = Math.sqrt(maxAmp2) || 1;
   NUM.restartPending = false;
+  // Update Play button to reflect paused state after a manual reset
+  const pb = document.getElementById('btn-play');
+  if (pb) { pb.textContent = '\u25b6 Play'; pb.classList.remove('active'); }
   if (!numAnimId) numLoop();
 }
 
 function togglePlay() {
-  NUM.playing = !NUM.playing;
+  if (NUM.done) {
+    // Sim finished — pressing Play starts a fresh cycle (keeps accumulated stats)
+    resetNum(false);
+    NUM.playing = true;
+  } else {
+    NUM.playing = !NUM.playing;
+  }
   document.getElementById('btn-play').textContent = NUM.playing ? '⏸ Pause' : '▶ Play';
   document.getElementById('btn-play').classList.toggle('active', NUM.playing);
 }
@@ -1471,8 +1522,10 @@ function initAnaBohmian(sc) {
   const np = ANA.np;
   ANA.bx = new Float64Array(np);
   ANA.bTrails = Array.from({length: np}, () => []);
-  const xmin = -10, xmax = ANA.L + 10;
-  // distribute proportional to |ψ|²
+  // For repeated scattering trials, sample only from an incoming launch region
+  // on the left of the barrier. Sampling from the whole stationary box biases
+  // particle counts because the standing-wave density is larger on the left.
+  const xmin = -10, xmax = -2;
   const M = 400, dxs = (xmax-xmin)/M;
   const prob = new Float64Array(M);
   let tot = 0;
@@ -1485,10 +1538,10 @@ function initAnaBohmian(sc) {
   const cum = new Float64Array(M+1);
   for (let i = 0; i < M; i++) cum[i+1] = cum[i] + prob[i]/tot;
   for (let p = 0; p < np; p++) {
-    const u = (p + 0.5) / np;
+    const u = Math.random();
     let lo = 0, hi = M;
     while (hi-lo > 1) { const m=(lo+hi)>>1; if(cum[m]<u) lo=m; else hi=m; }
-    ANA.bx[p] = xmin + (lo+0.5)*dxs;
+    ANA.bx[p] = xmin + dxs * (lo + (u - cum[lo]) / (cum[lo+1] - cum[lo] + 1e-30));
   }
 }
 

@@ -820,51 +820,10 @@ export class GPUSim {
   }
 
   // ── Async double-buffered PBO readback (every step) ──────
-  // Kick off a non-blocking DMA copy into curPBO, then retrieve
-  // the *previous* frame's data from prevPBO — only after its fence signals.
+  // Replaced with a simple synchronous readback to avoid PBO write-before-read
+  // warnings on AMD/ANGLE drivers and to ensure rho is always up to date.
   _readback() {
-    const gl = this.gl;
-    const { Nx, Ny } = this;
-
-    const curSlot  =  this._pboIdx;
-    const prevSlot =  this._pboIdx ^ 1;
-    const curPBO   = this._pbo[curSlot];
-    const prevPBO  = this._pbo[prevSlot];
-
-    // Retrieve previous frame's pixels — only once the GPU fence signals
-    if (this._pboReady) {
-      const fence = this._pboFence[prevSlot];
-      let ready = !fence; // no fence means synchronous init path already consumed it
-      if (fence) {
-        const status = gl.clientWaitSync(fence, 0, 0); // non-blocking poll
-        if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
-          gl.deleteSync(fence);
-          this._pboFence[prevSlot] = null;
-          ready = true;
-        }
-      }
-      if (ready) {
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, prevPBO);
-        gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, this._pixBuf);
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-        this._processBuf();
-      }
-    }
-
-    // Enqueue non-blocking copy of current frame into curPBO
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this._curFBO());
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, curPBO);
-    gl.readPixels(0, 0, Nx, Ny, gl.RGBA, gl.FLOAT, 0); // 0 = offset into PBO
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    // Place a fence so we only read back once the DMA transfer is complete
-    if (this._pboFence[curSlot]) gl.deleteSync(this._pboFence[curSlot]);
-    this._pboFence[curSlot] = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-    gl.flush(); // ensure the fence is submitted to the GPU command queue
-
-    this._pboIdx  ^= 1;
-    this._pboReady = true;
+    this._readbackSync();
   }
 
   // ── Unpack pixBuf → rho + psi ─────────────────────────────
