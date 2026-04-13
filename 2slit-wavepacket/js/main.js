@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GPUSim } from './gpu-sim.js?v=7';
+import { GPUSim } from './gpu-sim.js?v=9';
 
 // ─────────────────────────────────────────────────────────────
 //  Wave colormaps  (dynamic LUT, 512 entries)
@@ -504,14 +504,14 @@ function updateSpacetime(rho, Nx, Ny, time) {
 // ─────────────────────────────────────────────────────────────
 let barrierMesh;
 
-function buildBarrier(slitX, slitCenterY1, slitCenterY2, slitHalfWidth) {
+function buildBarrier(slitX, slitCenterY1, slitCenterY2, slitHalfWidth, barrierThickNm = 5) {
   if (barrierMesh) {
     scene.remove(barrierMesh);
     barrierMesh.traverse(c => { if (c.geometry) c.geometry.dispose(); });
   }
 
-  // SS_X=4.0 maps to Lx=200nm, so scene-units per nm = 4/200 = 0.02; 6px = 4.7nm ≈ 0.06 scene-units
-  const wallThick = 0.06;
+  // SS_X=4.0 maps to Lx=200nm → 0.02 scene-units per nm
+  const wallThick = Math.max(0.02, (barrierThickNm / 200) * SS_X);
   const slit1Lo = slitCenterY1 - slitHalfWidth;
   const slit1Hi = slitCenterY1 + slitHalfWidth;
   const slit2Lo = slitCenterY2 - slitHalfWidth;
@@ -937,6 +937,8 @@ function getConfig() {
     stepsPerFrame : parseInt(document.getElementById('speed').value),
     absThick      : g('absthick'),
     absStrength   : parseFloat(document.getElementById('absstrength').value),
+    barrierVeV    : g('barrierV'),
+    barrierThickNm: g('barrierThick'),
     fdMode        : solverMode === 'fd',
     rkMode        : solverMode === 'rk4',
   };
@@ -981,7 +983,7 @@ function resetSim(keepPaused = false) {
     buildBohmianMesh();
   }
 
-buildBarrier(0.5, cfg.slitCenterY1, cfg.slitCenterY2, cfg.slitHalfWidth);
+buildBarrier(0.5, cfg.slitCenterY1, cfg.slitCenterY2, cfg.slitHalfWidth, cfg.barrierThickNm);
 
   if (useGPU) {
     gpuSim.init(cfg);
@@ -1170,12 +1172,14 @@ function buildWallUI() {
 //  UI wiring
 // ─────────────────────────────────────────────────────────────
 function initUI() {
-  const sliders = ['slitWidth','momentum','sigmax','sigmay','trailen','np','speed','dt','absthick','absstrength','x0'];
+  const sliders = ['slitWidth','barrierV','barrierThick','momentum','sigmax','sigmay','trailen','np','speed','dt','absthick','absstrength','x0'];
   sliders.forEach(id => {
     const el  = document.getElementById(id);
     const lbl = document.getElementById(`${id}-val`);
     const update = () => {
-      if      (id === 'slitWidth') lbl.textContent = `${parseFloat(el.value).toFixed(1)} nm`;
+      if      (id === 'slitWidth')    lbl.textContent = `${parseFloat(el.value).toFixed(1)} nm`;
+      else if (id === 'barrierV')     lbl.textContent = `${parseFloat(el.value).toFixed(2)} eV`;
+      else if (id === 'barrierThick') lbl.textContent = `${parseInt(el.value)} nm`;
       else if (id === 'momentum') lbl.textContent = `${parseFloat(el.value).toFixed(2)} × 10⁵ m/s`;
       else if (id === 'sigmax')   lbl.textContent = `${parseFloat(el.value).toFixed(1)} nm`;
       else if (id === 'sigmay')   lbl.textContent = `${parseFloat(el.value).toFixed(1)} nm`;
@@ -1208,7 +1212,8 @@ function initUI() {
     const Ly = 100e-9;
     const v1 = parseInt(s1.value), v2 = parseInt(s2.value);
     const hw = parseFloat(slitWidthEl.value) * 1e-9 / Ly;
-    buildBarrier(0.5, 0.5 + v1 * 1e-9 / Ly, 0.5 + v2 * 1e-9 / Ly, hw);
+    const thickNm = parseFloat(document.getElementById('barrierThick').value);
+    buildBarrier(0.5, 0.5 + v1 * 1e-9 / Ly, 0.5 + v2 * 1e-9 / Ly, hw, thickNm);
   }
 
   function updateDualSlit() {
@@ -1251,7 +1256,7 @@ function initUI() {
   });
 
   // All remaining physics sliders: pause while dragging, live-preview on input, resume on release
-  const liveReset = ['momentum','sigmax','sigmay','np','absthick','absstrength','dt','x0'];
+  const liveReset = ['momentum','sigmax','sigmay','np','absthick','absstrength','dt','x0','barrierV','barrierThick'];
   liveReset.forEach(id => {
     const el = document.getElementById(id);
     el.addEventListener('pointerdown', () => { paused = true; });

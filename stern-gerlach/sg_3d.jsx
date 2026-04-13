@@ -21,10 +21,8 @@ import * as THREE from "three";
 const Z_SRC   = -4.5;   // 25% closer to magnet
 const Z_MAG   =  0;
 const Z_DET   =  6;
-const POLE_GAP = 2.4;   // wider gap
-const POLE_H   = 1.75;  // half original height
-const POLE_W   = 0.55;  // pole width (perpendicular to n̂ in XY)
-const POLE_D   = 0.15;  // pole depth (along Z — thin for delta function)
+const POLE_GAP = 2.4;   // half-gap: beam runs at y=0, poles at y=±POLE_GAP
+const POLE_D   = 1.2;   // pole depth along Z (visible extent of magnet)
 
 const SIG    = 0.38;
 const KICK   = 2.0;
@@ -151,34 +149,29 @@ function findCritNInitial(theta, phi, integrateFn) {
 
 // Random Gaussian initial positions with Born-rule outcome pre-assignment.
 // Each particle's isUp is drawn with P(isUp) = pP (exact Born rule).
-// The position is then reflected in n̂ to guarantee it lies on the correct
-// side of critN — the true Bohmian critical plane found by findCritNInitial.
-// Because dynamics is 1-D along n̂, this guarantees getOutcome() == isUp.
+// Position is sampled by rejection: keep drawing from the 2D Gaussian until
+// the n̂-component lands on the correct side of critN.
+// Because integrate() moves velocity strictly along n̂ (transverse component
+// is invariant), the critical plane is an exact hyperplane at nComp = critN
+// for ALL transverse values — so rejection guarantees getOutcome() == isUp.
 function makeInitXY(n, phi, pP, critN) {
   const p = phi * Math.PI / 180;
   const nx = Math.sin(p), ny = Math.cos(p);
   const pts = [];
   for (let i = 0; i < n; i++) {
     const isUp = Math.random() < pP;
-    let x, y, attempts = 0;
+    let x, y;
     do {
-      // Box-Muller
+      // Box-Muller: 2D Gaussian with std = SIG*0.7
       const u1 = Math.random(), u2 = Math.random();
       const r = SIG * 0.7 * Math.sqrt(-2 * Math.log(Math.max(u1, 1e-10)));
       const a = 2 * Math.PI * u2;
       x = r * Math.cos(a);
       y = r * Math.sin(a);
-      let nComp = x * nx + y * ny;
-      // Reflect n̂-component to the correct side of critN
-      if ((isUp && nComp < critN) || (!isUp && nComp > critN)) {
-        const shift = 2 * (critN - nComp);
-        x += shift * nx; y += shift * ny;
-        nComp = 2 * critN - nComp;
-      }
-      attempts++;
-      // Reject if too close to critical plane (ambiguous zone)
-      if (Math.abs(nComp - critN) > 0.04) break;
-    } while (attempts < 20);
+      // Accept only if on the correct side of the Bohmian critical plane,
+      // with a small margin to avoid the ambiguous region near critN.
+    } while (isUp ? (x * nx + y * ny) < critN + 0.04
+                  : (x * nx + y * ny) > critN - 0.04);
     pts.push({ x, y, isUp });
   }
   return pts;
@@ -254,9 +247,9 @@ function Histogram({ up, down, pP, pM }) {
   const sigStr = n > 0 ? ' ±' + (sigma < 0.5 ? sigma.toFixed(1) : Math.round(sigma)) + '%' : '';
   return (
     <div style={{ fontFamily:"'Courier New',monospace", fontSize:11, color:'#b8d4ff', minWidth:158 }}>
-      <div style={{ fontSize:10, color:'#7a9ece', textTransform:'uppercase',
+      <div style={{ fontSize:10, color:'#4a6a9a', textTransform:'uppercase',
         letterSpacing:'0.12em', marginBottom:8 }}>
-        Detector <span style={{color:'#8aaedd'}}>n={n}</span>
+        Detector <span style={{color:'#506080'}}>n={n}</span>
       </div>
       {[{label:'▲ +n̂', color:'#44ee66', grad:'#22aa44,#44ee66', pct:upPct,   expPct:expUpPct,   count:up},
         {label:'▼ −n̂', color:'#ff5533', grad:'#aa2211,#ff5533', pct:downPct, expPct:expDownPct, count:down}
@@ -286,8 +279,8 @@ function Histogram({ up, down, pP, pM }) {
           </div>
         </div>
       ))}
-      <div style={{ borderTop:'1px solid rgba(60,100,200,0.30)', paddingTop:4,
-        fontSize:9, color:'#7a9ece' }}>│ Born rule  ±σ bracket</div>
+      <div style={{ borderTop:'1px solid rgba(60,100,200,0.20)', paddingTop:4,
+        fontSize:9, color:'#334e7a' }}>│ Born rule  ±σ bracket</div>
     </div>
   );
 }
@@ -386,11 +379,11 @@ const SimPanel = React.memo(({
       </SL>
 
       {interp === 'manyworlds' && (
-        <div style={{background:'rgba(100,60,220,0.15)', border:'1px solid rgba(160,120,255,0.5)',
+        <div style={{background:'rgba(100,60,220,0.12)', border:'1px solid rgba(140,100,255,0.4)',
           borderRadius:7, padding:'8px 10px'}}>
-          <div style={{fontSize:12, color:'#c8b8ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4}}>Parallel worlds</div>
-          <div style={{fontSize:22, fontWeight:700, color:'#ffffff'}}>{fmtWorlds(worlds)}</div>
-          <div style={{fontSize:11, color:'#d0c4f8', marginTop:3}}>{Math.round(worlds / Math.max(nPart, 1))} cycles × {nPart} particles</div>
+          <div style={{fontSize:12, color:'#d0b8ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4}}>Parallel worlds</div>
+          <div style={{fontSize:22, fontWeight:700, color:'#e0c8ff'}}>{fmtWorlds(worlds)}</div>
+          <div style={{fontSize:11, color:'#c0a8ee', marginTop:3}}>{Math.round(worlds / Math.max(nPart, 1))} cycles × {nPart} particles</div>
         </div>
       )}
 
@@ -748,13 +741,6 @@ export default function App() {
       new THREE.LineBasicMaterial({ color: 0x1a3a6e, transparent: true, opacity: 0.4 })
     ));
 
-    // ── Source ────────────────────────────────────────────────────────────────
-    const src = new THREE.Mesh(
-      new THREE.SphereGeometry(0.13, 16, 16),
-      new THREE.MeshBasicMaterial({ color: 0x88ccff })
-    );
-    src.position.z = Z_SRC; scene.add(src);
-
     // Spin direction arrow at source — shows initial spin state in XY plane
     // For state cos(θ/2)|+z⟩ + sin(θ/2)|−z⟩, the Bloch vector in our XY view
     // points at angle θ from +Y: direction = (sin θ, cos θ, 0)
@@ -835,25 +821,63 @@ export default function App() {
     }
 
     // ── Magnet group ──────────────────────────────────────────────────────────
-    // magGrp rotates around Z axis to align poles with n̂(phi).
-    // In local space: poles are always at (0, ±POLE_GAP, 0).
-    // Pole geometry: tall along local-Y, thin along local-Z (beam), medium along local-X.
+    // ── Stern-Gerlach magnet ─────────────────────────────────────────────────
+    // Real SG geometry: one flat pole (S, bottom) + one wedge/knife-edge pole
+    // (N, top) whose pointed tip faces the beam. This asymmetry creates ∂B/∂y ≠ 0.
+    // Both poles are connected by a U-shaped yoke on the +X side.
+    // Everything lives in local-Y coordinates; magGrp.rotation.z = -phiRad rotates
+    // the whole assembly so the gradient axis tracks n̂(φ).
     const magGrp = new THREE.Group(); scene.add(magGrp);
 
-    const poleGeo = new THREE.BoxGeometry(POLE_W, POLE_H, POLE_D);
-    const matN = new THREE.MeshPhongMaterial({ color: 0x1133cc, transparent: true, opacity: 0.88 });
-    const matS = new THREE.MeshPhongMaterial({ color: 0xcc1122, transparent: true, opacity: 0.88 });
-    const poleN = new THREE.Mesh(poleGeo, matN);
-    const poleS = new THREE.Mesh(poleGeo, matS);
-    poleN.position.y =  POLE_GAP;
-    poleS.position.y = -POLE_GAP;
-    [poleN, poleS].forEach(p => {
-      p.add(new THREE.LineSegments(
-        new THREE.EdgesGeometry(poleGeo),
-        new THREE.LineBasicMaterial({ color: 0x4466dd, transparent: true, opacity: 0.4 })
-      ));
-      magGrp.add(p);
-    });
+    const matN = new THREE.MeshPhongMaterial({ color: 0x1133cc, transparent: true, opacity: 0.92 });
+    const matS = new THREE.MeshPhongMaterial({ color: 0xcc1122, transparent: true, opacity: 0.92 });
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0x7799cc, transparent: true, opacity: 0.35 });
+
+    // Dimensions (all in local/simulation units)
+    const pW = 2.2;   // pole full width along X (perpendicular to beam and gradient)
+    const pD = POLE_D; // depth along Z
+    // ── FLAT pole (S, at -y) ────────────────────────────────────────────────
+    const flatH = 1.1;  // height of flat pole along Y
+    const flatGeo = new THREE.BoxGeometry(pW, flatH, pD);
+    const poleS = new THREE.Mesh(flatGeo, matS);
+    poleS.position.set(0, -(POLE_GAP + flatH / 2), 0);
+    poleS.add(new THREE.LineSegments(new THREE.EdgesGeometry(flatGeo), edgeMat));
+    magGrp.add(poleS);
+
+    // ── WEDGE pole (N, at +y) — knife-edge pointing down toward beam ─────────
+    // Built as a custom BufferGeometry: a prism whose bottom face is a point
+    // (the knife edge, at y = +POLE_GAP) and top face is a rectangle.
+    const wedgeTopH = 1.6;  // height of the wedge body
+    const halfW = pW / 2;
+    const halfD = pD / 2;
+    const yTip  =  POLE_GAP;               // knife-edge y
+    const yTop  =  POLE_GAP + wedgeTopH;   // top of wedge
+    // 6 vertices: 2 knife-edge points (front/back), 4 top rectangle corners
+    //   0: tip front, 1: tip back,
+    //   2: top-left-front, 3: top-left-back, 4: top-right-front, 5: top-right-back
+    const wVerts = new Float32Array([
+       0,    yTip,  halfD,   // 0 tip front
+       0,    yTip, -halfD,   // 1 tip back
+      -halfW, yTop,  halfD,  // 2 top-left-front
+      -halfW, yTop, -halfD,  // 3 top-left-back
+       halfW, yTop,  halfD,  // 4 top-right-front
+       halfW, yTop, -halfD,  // 5 top-right-back
+    ]);
+    // Triangles: bottom-front, bottom-back, left side, right side, top, front face, back face
+    const wIdx = [
+      0,2,4,  // front triangle (tip→top-left→top-right)
+      1,5,3,  // back triangle
+      0,1,3,  0,3,2,  // left face
+      0,4,5,  0,5,1,  // right face
+      2,3,5,  2,5,4,  // top face
+    ];
+    const wedgeGeo = new THREE.BufferGeometry();
+    wedgeGeo.setAttribute('position', new THREE.BufferAttribute(wVerts, 3));
+    wedgeGeo.setIndex(wIdx);
+    wedgeGeo.computeVertexNormals();
+    const poleN = new THREE.Mesh(wedgeGeo, matN);
+    poleN.add(new THREE.LineSegments(new THREE.EdgesGeometry(wedgeGeo), edgeMat));
+    magGrp.add(poleN);
 
     // n̂ arrow — placed outside magnet so it doesn't rotate with it
     const arrow = new THREE.ArrowHelper(
@@ -932,15 +956,20 @@ export default function App() {
                      mix(0.20, 0.85, cp),
                      mix(0.50, 1.00, cp));
         } else {
-          // Post-split: two arms, each normalised by its own probability weight
-          float gp = gauss2(x, y, uCx,  uCy,  uSigXY);
-          float gm = gauss2(x, y, uCx2, uCy2, uSigXY);
-          // Weight each arm equally in density so both appear at same brightness
-          dens = max(gp, gm) * gz;
-          float tp = (gp * uPp) / (gp * uPp + gm * uPm + 1e-6);
+          // Post-split: two arms, each weighted by its Born-rule probability.
+          // Arm brightness ∝ pP or pM so a near-zero arm is nearly invisible.
+          // Colours are pure (no mixing): green for +n̂, red for -n̂.
+          float gp = gauss2(x, y, uCx,  uCy,  uSigXY) * gz;
+          float gm = gauss2(x, y, uCx2, uCy2, uSigXY) * gz;
+          float densP = gp * uPp;   // arm + weighted by P(+n̂)
+          float densM = gm * uPm;   // arm − weighted by P(-n̂)
+          // Colour: assign pure arm colour at each pixel based on which arm dominates
           vec3 colP = vec3(mix(0.0,0.25,cp), mix(0.4,1.0,cp), mix(0.0,0.35,cp));
           vec3 colM = vec3(mix(0.4,1.0,cp), mix(0.0,0.2,cp), mix(0.0,0.08,cp));
-          col = mix(colM, colP, tp);
+          // Blend colour only enough to smooth the boundary, keep arms visually pure
+          float tBlend = densP / (densP + densM + 1e-6);
+          col = mix(colM, colP, smoothstep(0.4, 0.6, tBlend));
+          dens = (densP + densM);
         }
 
         vec2 uvC = vUv - 0.5;
@@ -1075,6 +1104,7 @@ export default function App() {
 
     // Track whether each featured particle has registered a hit this cycle
     const hitRegistered = new Array(MAX_P).fill(false);
+    let lastCycle = -1;
 
     let trajs = [];
     function rebuild() {
@@ -1367,7 +1397,8 @@ export default function App() {
       const td   = Tr.trajs();
 
       // Detect wrap-around (new cycle) — reset hit flags
-      if (tIdx <= 1) { hitRegistered.fill(false); s.dirty = true; }
+      const cycle = Math.floor(s.tick / PERIOD);
+      if (cycle !== lastCycle) { lastCycle = cycle; hitRegistered.fill(false); s.dirty = true; }
 
       const showP = s.showParticles && s.interp === 'pilot';
       td.forEach(({ pts, isUp }, i) => {
@@ -1500,28 +1531,7 @@ MathJax = {
 
 <h2>1. The Quantum State</h2>
 <p>A spin-&frac12; particle entering the magnet is prepared in a superposition of spin
-eigenstates along the measurement axis $\\hat{n}(\\varphi) = (\\sin\\varphi, \\cos\\varphi, 0)$.</p>
-<div style="background:rgba(20,50,90,0.5);border:1px solid rgba(80,140,255,0.3);border-radius:7px;padding:10px 14px;margin:10px 0 14px;font-size:13px;line-height:1.7">
-  <b style="color:#7ab8ff">What particle is this?</b><br/>
-  The simulation is <em>species-agnostic</em>: it models any spin-&frac12; particle in dimensionless units.
-  <ul style="margin:6px 0 0 16px;padding:0">
-    <li><b style="color:#f0c060">Silver atoms</b> — the original 1922 Stern&ndash;Gerlach experiment. The unpaired
-      4<em>d</em> electron gives the atom spin-&frac12;. The heavy nuclear mass makes
-      deflections small and the trajectory nearly classical, which is why the experiment
-      was interpretable without quantum mechanics being fully developed.</li>
-    <li style="margin-top:6px"><b style="color:#88ddff">Neutrons</b> — the cleanest modern realisation.
-      Being electrically neutral, neutrons feel <em>only</em> the magnetic dipole force
-      ($\\boldsymbol{\\mu}_n\\cdot\\nabla\\mathbf{B}$) with no Lorentz deflection or
-      stray-electric-field contamination. Slow (cold) neutrons have a de&nbsp;Broglie
-      wavelength of nanometres, making wave-packet effects and Bohmian trajectory
-      experiments directly observable. They are the standard probe in
-      fundamental spin-measurement tests today.</li>
-    <li style="margin-top:6px"><b style="color:#aaffaa">Electrons</b> — spin-&frac12; but charged, so a
-      longitudinal magnetic field also bends the beam via the Lorentz force, masking
-      the pure spin deflection. Impractical for a clean Stern&ndash;Gerlach measurement
-      in free space.</li>
-  </ul>
-</div>
+eigenstates along the measurement axis $\\hat{n}(\\varphi) = (\\sin\\varphi, \\cos\\varphi, 0)$:</p>
 <div class="eq">$$|\\Psi\\rangle = \\cos\\tfrac{\\theta}{2}\\,|{+}\\hat{n}\\rangle + \\sin\\tfrac{\\theta}{2}\\,|{-}\\hat{n}\\rangle$$</div>
 
 <h3>Initial wave packet</h3>

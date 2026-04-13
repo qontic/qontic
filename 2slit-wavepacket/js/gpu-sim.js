@@ -119,14 +119,16 @@ void main() {
 }`;
 
 // ─── FD leapfrog pass 1: update R using current I ────────────
-// Schrödinger: ∂R/∂t = +(ℏ/2m)∇²I
-// R_half = R + uAX*(I_xp+I_xm-2I) + uAY*(I_yp+I_ym-2I)
+// Schrödinger: ∂R/∂t = -(ℏ/2m)∇²I + (V/ℏ)·I
+// R_half = R - uAX*(I_xp+I_xm-2I) + vpot*dt*I
 const FS_FD_R = `#version 300 es
 precision highp float;
 uniform sampler2D uPsi;   // (R, I)
-uniform sampler2D uMask;  // 1=free, 0=barrier/boundary
+uniform sampler2D uMask;  // 1=free, 0=boundary-only
+uniform sampler2D uVpot; // V(x,y)/ℏ per pixel
 uniform float uAX;
 uniform float uAY;
+uniform float uDt;
 out vec4 oC;
 void main() {
   ivec2 c  = ivec2(gl_FragCoord.xy);
@@ -141,20 +143,23 @@ void main() {
   float Iyp = texelFetch(uPsi, c+ivec2(0,1), 0).g;
   float Iym = texelFetch(uPsi, c-ivec2(0,1), 0).g;
   float laplI = uAX*(Ixp+Ixm-2.0*I) + uAY*(Iyp+Iym-2.0*I);
-  oC = vec4(C.r - laplI, I, 0.0, 1.0);  // R_half = R - (hbar/2m)*lapl(I)
+  float vpot  = texelFetch(uVpot, c, 0).r;
+  oC = vec4(C.r - laplI + vpot*uDt*I, I, 0.0, 1.0);
 }`;
 
 // ─── FD leapfrog pass 2: update I using R_half, apply CAP ────────────
-// Schrödinger:  ∂I/∂t = -(ℏ/2m)∇²R
-//   I_new = I - uAX*(R_xp+R_xm-2R) - uAY*(R_yp+R_ym-2R)
+// Schrödinger:  ∂I/∂t = +(ℏ/2m)∇²R - (V/ℏ)·R
+//   I_new = I + uAX*(R_xp+R_xm-2R) - vpot*dt*R_half
 // Then multiply both (R_half, I_new) by per-pixel CAP decay
 const FS_FD_I = `#version 300 es
 precision highp float;
 uniform sampler2D uHalf;     // (R_half, I_orig) from pass 1
 uniform sampler2D uCapDecay; // per-pixel exp(-Γ·dt)
-uniform sampler2D uMask;     // 1=free, 0=barrier/boundary
+uniform sampler2D uMask;     // 1=free, 0=boundary-only
+uniform sampler2D uVpot;    // V(x,y)/ℏ per pixel
 uniform float uAX;
 uniform float uAY;
+uniform float uDt;
 out vec4 oC;
 void main() {
   ivec2 c  = ivec2(gl_FragCoord.xy);
@@ -169,23 +174,22 @@ void main() {
   float Ryp = texelFetch(uHalf, c+ivec2(0,1), 0).r;
   float Rym = texelFetch(uHalf, c-ivec2(0,1), 0).r;
   float laplR = uAX*(Rxp+Rxm-2.0*R) + uAY*(Ryp+Rym-2.0*R);
-  float I_new = H.g + laplR;  // I_new = I + (hbar/2m)*lapl(R_half)
+  float vpot  = texelFetch(uVpot, c, 0).r;
+  float I_new = H.g + laplR - vpot*uDt*R;
   float decay = texelFetch(uCapDecay, c, 0).r;
   oC = vec4(R*decay, I_new*decay, 0.0, 1.0);
 }`;
 
-// ─── RK4: dψ/dt = (iℏ/2m)∇²ψ in split real/imag form ───────
-// Computes (dR/dt, dI/dt) = (-cY·∇²I, +cX·∇²R) using the 5-point stencil.
-// Dirichlet BC enforced via uMask: ψ=0 at boundary and barrier pixels.
-// Only 5 texelFetch calls (reads rg pair per neighbour).
-// dψ/dt = (iℏ/2m)∇²ψ  (free Schrödinger, no CAP here)
-// CAP is applied as an unconditionally-stable operator-split exp(-Γ·dt)
-// in FS_RK_FINAL. Embedding Γ here would require Γ·dt ≤ 2.785 (RK4 stability
-// limit) but our Γ·dt can reach absStrength ≫ 1, causing blow-up.
+// ─── RK4: dψ/dt = (iℏ/2m)∇²ψ - (i/ℏ)Vψ in split real/imag form ─────
+// dR/dt = -(ℏ/2m)∇²I + (V/ℏ)·I
+// dI/dt = +(ℏ/2m)∇²R - (V/ℏ)·R
+// Dirichlet BC at domain edges enforced inline (mask only zero at boundary).
+// CAP applied as operator-split exp(-Γ·dt) in FS_RK_FINAL.
 const FS_RK_DERIV = `#version 300 es
 precision highp float;
 uniform sampler2D uPsi;
 uniform sampler2D uMask;
+uniform sampler2D uVpot;  // V(x,y)/ℏ per pixel
 uniform float uCX;   // hbar / (2m * dx^2)
 uniform float uCY;   // hbar / (2m * dy^2)
 out vec4 oC;
@@ -201,7 +205,8 @@ void main() {
   vec2 Yp = texelFetch(uPsi, c+ivec2( 0, 1), 0).rg;
   vec2 Ym = texelFetch(uPsi, c+ivec2( 0,-1), 0).rg;
   vec2 lapl = uCX*(Xp+Xm-2.0*C) + uCY*(Yp+Ym-2.0*C);
-  oC = vec4(-lapl.g, lapl.r, 0.0, 1.0);
+  float vpot = texelFetch(uVpot, c, 0).r;
+  oC = vec4(-lapl.g + vpot*C.g, lapl.r - vpot*C.r, 0.0, 1.0);
 }`;
 
 // ─── RK4: dst = base + scale * delta (staging & accumulation) ─
@@ -426,6 +431,8 @@ export class GPUSim {
       sigmax = 6e-9, sigmay = 10e-9, xfrac = 0.20,
       slitX = 0.5, slitCenterY1 = 0.422, slitCenterY2 = 0.578,
       slitHalfWidth = 0.039,
+      barrierVeV = 1.0,
+      barrierThickNm = 5,
       absThick = 0.25, absStrength = 120,
       fdMode = false,
       rkMode = false,
@@ -501,8 +508,8 @@ export class GPUSim {
     // ── V propagator (half-step: exp(-i V Δt / 2ℏ)) ────────
     const vpropData = new Float32Array(simNx * Ny * 4);
     const QE_local = 1.602176634e-19;
-    const barrierV = 10 * QE_local;
-    const barrierThick = 6;
+    const barrierV     = barrierVeV * QE_local;                              // eV → J
+    const barrierThick = Math.max(1, Math.round(barrierThickNm * 1e-9 / Dx)); // nm → pixels
     const biX0 = Math.floor(simSlitX * (simNx - 1));
     const j1c  = Math.floor(slitCenterY1 * (Ny - 1));
     const j2c  = Math.floor(slitCenterY2 * (Ny - 1));
@@ -568,21 +575,31 @@ export class GPUSim {
       }
     }
 
-    // ── FD: barrier mask (0 at barrier pixels, 1 elsewhere) ─
-    // Also used in FD leapfrog to enforce ψ=0 inside walls.
-    const fdmaskData = new Float32Array(simNx * Ny * 4);
+    // ── FD/RK4: V(x,y)/ℏ potential texture for finite barrier ─
+    // Finite V₀ at wall pixels lets the wave tunnel through rather than
+    // being hard-zeroed. The fdmask is all-1 (domain-edge Dirichlet BC
+    // is enforced inline in the shaders via the outermost-pixel check).
+    const vpotData = new Float32Array(simNx * Ny * 4);
+    const invHB = 1.0 / HB;
     for (let ix = 0; ix < simNx; ix++) {
       for (let iy = 0; iy < Ny; iy++) {
         const i4 = (iy * simNx + ix) * 4;
-        let isWall = 0;
+        let vpot = 0;
         if (ix >= biX0 && ix < biX0 + barrierThick) {
           const inSlit1 = Math.abs(iy - j1c) <= hw;
           const inSlit2 = Math.abs(iy - j2c) <= hw;
-          if (!inSlit1 && !inSlit2) isWall = 1;
+          if (!inSlit1 && !inSlit2) vpot = barrierV * invHB;
         }
-        fdmaskData[i4    ] = isWall ? 0.0 : 1.0;
-        fdmaskData[i4 + 3] = 1.0;
+        vpotData[i4    ] = vpot;
+        vpotData[i4 + 3] = 1.0;
       }
+    }
+
+    // ── FD: mask — all-1, domain boundary is handled inline in shaders ─
+    const fdmaskData = new Float32Array(simNx * Ny * 4);
+    for (let i = 0; i < simNx * Ny * 4; i += 4) {
+      fdmaskData[i    ] = 1.0;
+      fdmaskData[i + 3] = 1.0;
     }
 
     // ── FD: per-pixel CAP decay = exp(-absStrength * d²) ──────
@@ -625,6 +642,7 @@ export class GPUSim {
       tprop    : this._mkTex(simNx, Ny, tpropData),
       bmask    : this._mkTex(simNx, Ny, bmaskData),
       fdmask   : this._mkTex(simNx, Ny, fdmaskData),
+      vpot     : this._mkTex(simNx, Ny, vpotData),
       capdecay : this._mkTex(simNx, Ny, capdecayData),
       // RK4 scratch: rkz = permanent zero texture (read-only),
       //              rkk = current ki,  rka/rkb = accumulator ping-pong.
@@ -746,15 +764,16 @@ export class GPUSim {
   _stepFDOnce() {
     const { Nx, Ny, Dt } = this;
     const p = this._progs, T = this._tex, F = this._fbo;
-    // Pass 1: R_half = R + AX·∇²I
+    // Pass 1: R_half = R - AX·∇²I + vpot·dt·I
     this._pass(p.fdR, F.ping, Nx, Ny, {
       uPsi : this._curTex(), uMask: T.fdmask,
+      uVpot: T.vpot, uDt: Dt,
       uAX  : this._AX, uAY: this._AY,
     });
-    // Pass 2: I_new = I + AX·∇²R_half; apply CAP decay to both channels
+    // Pass 2: I_new = I + AX·∇²R_half - vpot·dt·R; apply CAP decay
     this._pass(p.fdI, this._nxtFBO(), Nx, Ny, {
       uHalf    : T.ping, uCapDecay: T.capdecay,
-      uMask    : T.fdmask,
+      uMask    : T.fdmask, uVpot: T.vpot, uDt: Dt,
       uAX      : this._AX, uAY: this._AY,
     });
     this._cur ^= 1;
@@ -770,7 +789,7 @@ export class GPUSim {
     const p = this._progs, T = this._tex, F = this._fbo;
     const cX = this._CX, cY = this._CY;
     const psi_n = this._curTex();
-    const rkd = { uMask: T.fdmask, uCX: cX, uCY: cY };
+    const rkd = { uMask: T.fdmask, uVpot: T.vpot, uCX: cX, uCY: cY };
 
     // k1 = f(psi_n)
     this._pass(p.rkDeriv, F.rkk,  Nx, Ny, { uPsi: psi_n,  ...rkd });

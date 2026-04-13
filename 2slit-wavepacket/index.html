@@ -62,7 +62,6 @@
         </div>
 
 
-
       </div>
 
       <!-- Wave packet -->
@@ -172,6 +171,27 @@
             <span class="slider-val" id="x0-val">55 nm</span>
           </div>
           <input type="range" id="x0" min="20" max="80" step="5" value="55" />
+        </div>
+      </div>
+
+      <!-- Expert: Barrier -->
+      <div class="panel-section" data-tab="expert">
+        <div class="section-label">Barrier</div>
+
+        <div class="slider-row" title="Barrier potential height V₀ in eV. Particle kinetic energy KE ≈ ½mv² — at default speed (1×10⁵ m/s), KE ≈ 0.028 eV. Set V₀ just above KE and use a thin barrier to observe quantum tunneling.">
+          <div class="slider-header">
+            <span class="slider-name">Barrier V₀</span>
+            <span class="slider-val" id="barrierV-val">1.00 eV</span>
+          </div>
+          <input type="range" id="barrierV" min="0.01" max="2.00" step="0.01" value="1.00" />
+        </div>
+
+        <div class="slider-row" title="Physical thickness of the barrier wall in nm. Thinner barriers increase the tunneling probability exponentially. Try 1–2 nm with V₀ near the particle KE.">
+          <div class="slider-header">
+            <span class="slider-name">Barrier width</span>
+            <span class="slider-val" id="barrierThick-val">5 nm</span>
+          </div>
+          <input type="range" id="barrierThick" min="1" max="20" step="1" value="5" />
         </div>
       </div>
 
@@ -314,6 +334,6 @@
   <!-- Wall colour popup -->
   <div id="wall-popup" class="particle-popup"></div>
 
-  <script type="module" src="js/main.js?v=12"></script>
+  <script type="module" src="js/main.js?v=14"></script>
 </body>
 </html>
