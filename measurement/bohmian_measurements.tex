@@ -1,0 +1,314 @@
+
+\section{Minimal Tunneling Measurement Model}
+
+We consider a minimal model of a tunneling particle coupled to a measuring device, represented by a single pointer degree of freedom. The total system is described in a two-dimensional configuration space with coordinates $(x,y)$, where $x$ denotes the particle position and $y$ the pointer position.
+
+\subsection{Hamiltonian}
+
+The total Hamiltonian is
+\begin{equation}
+\hat H =
+-\frac{\hbar^2}{2m}\frac{\partial^2}{\partial x^2}
++ V(x)
+-\frac{\hbar^2}{2M}\frac{\partial^2}{\partial y^2}
++ g(t)\,\hat A\,\hat P_y,
+\end{equation}
+where $\hat P_y = -i\hbar \frac{\partial}{\partial y}$ is the momentum conjugate to the pointer coordinate, and $g(t)$ is a time-dependent coupling.
+
+\subsection{Barrier Potential}
+
+We take a rectangular barrier
+\begin{equation}
+V(x) =
+\begin{cases}
+V_0, & 0 < x < a, \\
+0, & \text{otherwise}.
+\end{cases}
+\end{equation}
+
+\subsection{M\section{Minimal Tunneling Measurement Model}
+
+We consider a minimal model of a tunneling particle coupled to a measuring device, represented by a single pointer degree of freedom. The total system is described in a two-dimensional configuration space with coordinates $(x,y)$, where $x$ denotes the particle position and $y$ the pointer position.
+
+\subsection{Hamiltonian}
+
+The total Hamiltonian is
+\begin{equation}
+\hat H =
+-\frac{\hbar^2}{2m}\frac{\partial^2}{\partial x^2}
++ V(x)
+-\frac{\hbar^2}{2M}\frac{\partial^2}{\partial y^2}
++ g(t)\,\hat A\,\hat P_y,
+\end{equation}
+where $\hat P_y = -i\hbar \frac{\partial}{\partial y}$ is the momentum conjugate to the pointer coordinate, and $g(t)$ is a time-dependent coupling.
+
+\subsection{Barrier Potential}
+
+We take a rectangular barrier
+\begin{equation}
+V(x) =
+\begin{cases}
+V_0, & 0 < x < a, \\
+0, & \text{otherwise}.
+\end{cases}
+\end{equation}
+
+\subsection{Measurement Coupling}
+
+To distinguish transmitted and reflected channels, we introduce projectors $\hat \Pi_T$ and $\hat \Pi_R$ satisfying
+\begin{equation}
+\hat \Pi_T + \hat \Pi_R = I, \qquad \hat \Pi_T \hat \Pi_R = 0.
+\end{equation}
+
+The measured observable is defined as
+\begin{equation}
+\hat A = \hat \Pi_T - \hat \Pi_R,
+\end{equation}
+so that the interaction Hamiltonian becomes
+\begin{equation}
+\hat H_{\text{int}} = g(t)(\hat \Pi_T - \hat \Pi_R)\hat P_y.
+\end{equation}
+
+\subsection{Initial State}
+
+We take a factorized initial state
+\begin{equation}
+\Psi(x,y,0) = \psi_{\text{in}}(x)\,\chi_0(y),
+\end{equation}
+where $\psi_{\text{in}}(x)$ is an incoming Gaussian wave packet
+\begin{equation}
+\psi_{\text{in}}(x) =
+\frac{1}{(2\pi \sigma_x^2)^{1/4}}
+\exp\left[-\frac{(x-x_0)^2}{4\sigma_x^2} + i k_0 x\right],
+\end{equation}
+and $\chi_0(y)$ is a narrow pointer wave packet
+\begin{equation}
+\chi_0(y) =
+\frac{1}{(2\pi \sigma_y^2)^{1/4}}
+\exp\left[-\frac{y^2}{4\sigma_y^2}\right].
+\end{equation}
+
+\subsection{Scattering Structure}
+
+Under the barrier potential, the particle wave function evolves into transmitted and reflected components
+\begin{equation}
+\psi(x,t) = \psi_T(x,t) + \psi_R(x,t),
+\end{equation}
+with
+\begin{equation}
+\psi_T(x,t) = \int dk\, f(k)\,T(k)\,e^{ikx - iE_k t/\hbar},
+\end{equation}
+\begin{equation}
+\psi_R(x,t) = \int dk\, f(k)\,R(k)\,e^{-ikx - iE_k t/\hbar},
+\end{equation}
+where $E_k = \hbar^2 k^2 / (2m)$.
+
+\subsection{Pointer Shift}
+
+The interaction translates the pointer depending on the scattering channel. Defining
+\begin{equation}
+\kappa = \int g(t)\,dt,
+\end{equation}
+one obtains, to leading order,
+\begin{equation}
+\chi_T(y) \approx \chi_0(y - \kappa), \qquad
+\chi_R(y) \approx \chi_0(y + \kappa).
+\end{equation}
+
+\subsection{Branch Structure}
+
+After the interaction, the total wave function takes the form
+\begin{equation}
+\Psi(x,y,t) =
+\psi_T(x,t)\chi_T(y,t)
++
+\psi_R(x,t)\chi_R(y,t).
+\end{equation}
+
+Defining
+\begin{equation}
+\Psi_T = \psi_T(x,t)\chi_T(y,t), \qquad
+\Psi_R = \psi_R(x,t)\chi_R(y,t),
+\end{equation}
+we have
+\begin{equation}
+\Psi = \Psi_T + \Psi_R.
+\end{equation}
+
+When the pointer packets are well separated,
+\begin{equation}
+\chi_T(y)\chi_R(y) \approx 0,
+\end{equation}
+and the two branches are effectively non-overlapping in configuration space.
+
+\subsection{Conditional Wave Function}
+
+The conditional wave function of the particle is defined as
+\begin{equation}
+\psi_{\text{cond}}(x,t) = \Psi(x, Y(t), t),
+\end{equation}
+where $Y(t)$ is the actual pointer position.
+
+If $Y(t)$ lies in the support of $\chi_T$, then
+\begin{equation}
+\psi_{\text{cond}}(x,t) \propto \psi_T(x,t),
+\end{equation}
+while if $Y(t)$ lies in the support of $\chi_R$, one obtains
+\begin{equation}
+\psi_{\text{cond}}(x,t) \propto \psi_R(x,t).
+\end{equation}
+
+\subsection{Guidance Equations}
+
+The Bohmian trajectories are given by
+\begin{equation}
+\dot X(t) = \frac{\hbar}{m}\,\mathrm{Im}\left[\frac{\partial_x \Psi}{\Psi}\right],
+\end{equation}
+\begin{equation}
+\dot Y(t) = \frac{\hbar}{M}\,\mathrm{Im}\left[\frac{\partial_y \Psi}{\Psi}\right],
+\end{equation}
+evaluated at $(x,y) = (X(t),Y(t))$.
+
+\subsection{Interpretation}
+
+The total wave function remains a superposition of transmitted and reflected branches, but the actual configuration $(X(t),Y(t))$ lies in one branch. The conditional wave function therefore reduces to the corresponding component, yielding an effective collapse without modifying the unitary dynamics.
+
+\subsection{Structural Summary}
+
+This model illustrates the key features of measurement in Bohmian mechanics:
+
+\begin{itemize}
+\item The full dynamics is governed by a two-dimensional Schrödinger equation.
+\item The wave function develops a branch structure correlated with the pointer.
+\item Particle motion is determined by the conditional (3D) wave function.
+\item The evolution of this wave function depends on the full configuration-space structure.
+\end{itemize}easurement Coupling}
+
+To distinguish transmitted and reflected channels, we introduce projectors $\hat \Pi_T$ and $\hat \Pi_R$ satisfying
+\begin{equation}
+\hat \Pi_T + \hat \Pi_R = I, \qquad \hat \Pi_T \hat \Pi_R = 0.
+\end{equation}
+
+The measured observable is defined as
+\begin{equation}
+\hat A = \hat \Pi_T - \hat \Pi_R,
+\end{equation}
+so that the interaction Hamiltonian becomes
+\begin{equation}
+\hat H_{\text{int}} = g(t)(\hat \Pi_T - \hat \Pi_R)\hat P_y.
+\end{equation}
+
+\subsection{Initial State}
+
+We take a factorized initial state
+\begin{equation}
+\Psi(x,y,0) = \psi_{\text{in}}(x)\,\chi_0(y),
+\end{equation}
+where $\psi_{\text{in}}(x)$ is an incoming Gaussian wave packet
+\begin{equation}
+\psi_{\text{in}}(x) =
+\frac{1}{(2\pi \sigma_x^2)^{1/4}}
+\exp\left[-\frac{(x-x_0)^2}{4\sigma_x^2} + i k_0 x\right],
+\end{equation}
+and $\chi_0(y)$ is a narrow pointer wave packet
+\begin{equation}
+\chi_0(y) =
+\frac{1}{(2\pi \sigma_y^2)^{1/4}}
+\exp\left[-\frac{y^2}{4\sigma_y^2}\right].
+\end{equation}
+
+\subsection{Scattering Structure}
+
+Under the barrier potential, the particle wave function evolves into transmitted and reflected components
+\begin{equation}
+\psi(x,t) = \psi_T(x,t) + \psi_R(x,t),
+\end{equation}
+with
+\begin{equation}
+\psi_T(x,t) = \int dk\, f(k)\,T(k)\,e^{ikx - iE_k t/\hbar},
+\end{equation}
+\begin{equation}
+\psi_R(x,t) = \int dk\, f(k)\,R(k)\,e^{-ikx - iE_k t/\hbar},
+\end{equation}
+where $E_k = \hbar^2 k^2 / (2m)$.
+
+\subsection{Pointer Shift}
+
+The interaction translates the pointer depending on the scattering channel. Defining
+\begin{equation}
+\kappa = \int g(t)\,dt,
+\end{equation}
+one obtains, to leading order,
+\begin{equation}
+\chi_T(y) \approx \chi_0(y - \kappa), \qquad
+\chi_R(y) \approx \chi_0(y + \kappa).
+\end{equation}
+
+\subsection{Branch Structure}
+
+After the interaction, the total wave function takes the form
+\begin{equation}
+\Psi(x,y,t) =
+\psi_T(x,t)\chi_T(y,t)
++
+\psi_R(x,t)\chi_R(y,t).
+\end{equation}
+
+Defining
+\begin{equation}
+\Psi_T = \psi_T(x,t)\chi_T(y,t), \qquad
+\Psi_R = \psi_R(x,t)\chi_R(y,t),
+\end{equation}
+we have
+\begin{equation}
+\Psi = \Psi_T + \Psi_R.
+\end{equation}
+
+When the pointer packets are well separated,
+\begin{equation}
+\chi_T(y)\chi_R(y) \approx 0,
+\end{equation}
+and the two branches are effectively non-overlapping in configuration space.
+
+\subsection{Conditional Wave Function}
+
+The conditional wave function of the particle is defined as
+\begin{equation}
+\psi_{\text{cond}}(x,t) = \Psi(x, Y(t), t),
+\end{equation}
+where $Y(t)$ is the actual pointer position.
+
+If $Y(t)$ lies in the support of $\chi_T$, then
+\begin{equation}
+\psi_{\text{cond}}(x,t) \propto \psi_T(x,t),
+\end{equation}
+while if $Y(t)$ lies in the support of $\chi_R$, one obtains
+\begin{equation}
+\psi_{\text{cond}}(x,t) \propto \psi_R(x,t).
+\end{equation}
+
+\subsection{Guidance Equations}
+
+The Bohmian trajectories are given by
+\begin{equation}
+\dot X(t) = \frac{\hbar}{m}\,\mathrm{Im}\left[\frac{\partial_x \Psi}{\Psi}\right],
+\end{equation}
+\begin{equation}
+\dot Y(t) = \frac{\hbar}{M}\,\mathrm{Im}\left[\frac{\partial_y \Psi}{\Psi}\right],
+\end{equation}
+evaluated at $(x,y) = (X(t),Y(t))$.
+
+\subsection{Interpretation}
+
+The total wave function remains a superposition of transmitted and reflected branches, but the actual configuration $(X(t),Y(t))$ lies in one branch. The conditional wave function therefore reduces to the corresponding component, yielding an effective collapse without modifying the unitary dynamics.
+
+\subsection{Structural Summary}
+
+This model illustrates the key features of measurement in Bohmian mechanics:
+
+\begin{itemize}
+\item The full dynamics is governed by a two-dimensional Schrödinger equation.
+\item The wave function develops a branch structure correlated with the pointer.
+\item Particle motion is determined by the conditional (3D) wave function.
+\item The evolution of this wave function depends on the full configuration-space structure.
+\end{itemize}

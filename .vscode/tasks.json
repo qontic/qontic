@@ -18,6 +18,24 @@
       "presentation": { "reveal": "always", "panel": "shared", "clear": true }
     },
     {
+      "label": "Deploy: measurement → bonner-gpu",
+      "type": "shell",
+      "command": "cd measurement && npm run build && cd .. && rsync -az --info=progress2 measurement/dist/ bonner-gpu.rice.edu:/var/www/html/bonner-gpu/bm/measurement/ && rsync -az measurement/measurement-expanation.mp3 bonner-gpu.rice.edu:/var/www/html/bonner-gpu/bm/measurement/ && echo '✓ measurement deployed'",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "Deploy all: commit, push & deploy measurement",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Git: commit & push",
+        "Deploy: measurement → bonner-gpu"
+      ],
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
       "label": "Deploy: landing page → bonner-gpu",
       "type": "shell",
       "command": "rsync -az --info=progress2 /tmp/bm_index.html bonner-gpu.rice.edu:/var/www/html/bonner-gpu/bm/index.html && rsync -az /tmp/bm_style.css bonner-gpu.rice.edu:/var/www/html/bonner-gpu/bm/css/main-style.css && echo '✓ landing page deployed'",

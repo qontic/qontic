@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bohmian Measurement — Qontic Lab</title>
+    <meta name="description" content="Interactive 2D configuration-space visualisation of a tunnelling measurement in Bohmian mechanics. A particle scatters off a rectangular barrier while coupled to a pointer degree of freedom. The full wavefunction Ψ(x,y,t) always splits into transmitted and reflected branches; the Bohmian particle follows one definite trajectory." />
+    <meta property="og:title" content="Bohmian Measurement — 2D Config Space" />
+    <meta property="og:url" content="http://qonticlab.rice.edu/measurement/" />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛</text></svg>" />
+    <link rel="stylesheet" href="./theme.css">
+    <style>
+      /* Override theme.css overflow:hidden so mobile can scroll vertically */
+      *, *::before, *::after { box-sizing: border-box; }
+      html {
+        width: 100%; height: 100%;
+        overflow-x: hidden !important;
+      }
+      body {
+        width: 100%; height: 100%;
+        overflow-x: hidden !important;
+        overflow-y: hidden;
+      }
+      #root {
+        width: 100%; height: 100%;
+        display: flex; flex-direction: column;
+        overflow: hidden;
+      }
+      @supports (height: 100dvh) {
+        html, body, #root { height: 100dvh; }
+      }
+      @media (max-width: 700px) {
+        html, body, #root {
+          height: auto !important;
+          min-height: 100svh;
+          overflow-y: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/bm.jsx"></script>
+  </body>
+</html>
