@@ -571,6 +571,23 @@ const SimPanel = React.memo(({
               fontWeight:700, textAlign:"center",
             }}>{">"} {VIEW_LABEL[interp]}</button>
           <div style={{ fontSize:11, color:"#99b8e8", lineHeight:1.6 }}>{VIEW_DESC[interp]}</div>
+          {interp === "cpn" && (
+          <div style={{ display:"flex", gap:4, marginTop:6 }}>
+            {["2d","1d"].map(v => {
+              const active = cpnMode === v;
+              return (
+                <button key={v} onClick={() => setCpnMode(v)} style={{
+                  flex:1, padding:"4px 0", borderRadius:4, cursor:"pointer",
+                  fontFamily:"'JetBrains Mono','Courier New',monospace", fontSize:11,
+                  fontWeight: active ? 700 : 400,
+                  background: active ? "rgba(200,80,40,0.25)" : "rgba(200,80,40,0.07)",
+                  color: active ? "#ff9966" : "rgba(180,140,120,0.6)",
+                  border:`1px solid ${active ? "#ff9966" : "rgba(150,80,40,0.3)"}`,
+                }}>{v === "2d" ? "2D — config. space" : "1D — textbook"}</button>
+              );
+            })}
+          </div>
+          )}
         </SL>
 
         <SL label={`Transmission  ${Math.round(tTarget*100)}%`}
@@ -803,7 +820,7 @@ function _WF1DPanel_removed({ Tp, Rp, xT, xR, yT, yR, sigX, sigY, bX, bY, bl, sh
 
 
 // ── X-marginal panel: ∫|Ψ(x,y)|²dy  vs  x  (horizontal strip below 2D) ──────
-function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, sepFrac, showProj, xLo, xHi, rho, rhoXs }) {
+function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, cpnMode, sepFrac, showProj, xLo, xHi, rho, rhoXs }) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
@@ -812,14 +829,16 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
 
-  const isMW = interp === "mw";
+  const isMW  = interp === "mw";
+  const is1D  = interp === "cpn" && cpnMode === "1d";
   const XLO = xLo, XHI = xHi;
   const wx = x => (x - XLO) / (XHI - XLO) * W;
 
   const fadeT = colBranch === -1 ? colFade : 0;
   const fadeR = colBranch ===  1 ? colFade : 0;
-  const ampT = Tp * (1 - fadeT);
-  const ampR = Rp * (1 - fadeR);
+  // In 1D mode collapse is instantaneous — as soon as colBranch is set, kill the branch
+  const ampT = is1D ? (colBranch === -1 ? 0 : Tp) : Tp * (1 - fadeT);
+  const ampR = is1D ? (colBranch ===  1 ? 0 : Rp) : Rp * (1 - fadeR);
 
   const N = 350;
   const SCALE = (H - 10) * 0.66; // wave fills ~66% of panel height
@@ -899,6 +918,36 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.font = `bold ${fs}px 'JetBrains Mono',monospace`;
     ctx.fillStyle = `rgba(34,238,136,${0.85 * sf})`; ctx.fillText("World 1  (transmitted)", 6, lbY);
     ctx.fillStyle = `rgba(255,119,68,${0.85 * sf})`; ctx.fillText("World 2  (reflected)",   6, mid + lbY);
+  } else if (is1D) {
+    // ── Copenhagen 1D / Textbook operator picture ──────────────────────────
+    ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(60,100,200,0.25)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, H - 2); ctx.lineTo(W, H - 2); ctx.stroke();
+    ctx.strokeStyle = "rgba(0,200,255,0.2)"; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(wx(0),0); ctx.lineTo(wx(0),H); ctx.stroke();
+    ctx.setLineDash([]);
+    const collapsed = colBranch !== 0;
+    if (!collapsed) {
+      // Before measurement: show both branches colored, normalized together
+      const pkBoth = Math.max(peakDensity(rhoTotal), 1e-10);
+      const scBoth = (H - 6) * 0.88 / pkBoth;
+      if (ampT > 0.001) drawDensity(rhoT, "#22ee88", scBoth);
+      if (ampR > 0.001) drawDensity(rhoR, "#ff7744", scBoth);
+    } else {
+      // After measurement: only surviving branch, rescaled to full height
+      const survivorFn = colBranch === 1 ? rhoT : rhoR;
+      const survivorCol = colBranch === 1 ? "#22ee88" : "#ff7744";
+      const pkS = Math.max(peakDensity(survivorFn), 1e-10);
+      drawDensity(survivorFn, survivorCol, (H - 6) * 0.88 / pkS);
+      // Operator annotation
+      const isT = colBranch === 1;
+      const projLabel = isT ? `P_T |ψ⟩  (prob = ${(Tp*100).toFixed(0)}%)` : `P_R |ψ⟩  (prob = ${(Rp*100).toFixed(0)}%)`;
+      const col = isT ? "#22ee88" : "#ff7744";
+      const fs = Math.max(7, Math.round(H * 0.22));
+      ctx.font = `bold ${fs}px 'JetBrains Mono',monospace`;
+      ctx.fillStyle = `${col}cc`;
+      ctx.fillText(projLabel, 6, Math.round(H * 0.30));
+    }
   } else {
     // ── Standard (CPn / PW) background + axes ─────────────────────────────
     ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
@@ -1209,7 +1258,7 @@ export default function App() {
   const sidebarW     = isLandscape ? 200 : (isMobile ? "100%" : 240);
 
   const S = useRef({
-    interp:"cpn",
+    interp:"cpn", cpnMode:"2d",
     k0:4.0, V0:invertT(0.5,4.0), tTarget:0.5, lam:1.5, sigX:0.5, sigY:0.3,
     speed:0.5,
     showWave:true, showTraj:true, showProj:false, running:true,
@@ -1239,10 +1288,14 @@ export default function App() {
   const [flashBranch, setFlashBranch] = useState(0);
   const [flashAlpha,  setFlashAlpha]  = useState(0);
   const flashRaf = useRef(null);
+  // Copenhagen sub-mode: "2d" = full configuration space (default), "1d" = textbook operator picture
+  const [cpnMode, setCpnModeUI] = useState("2d");
+  const setCpnMode = v => { S.current.cpnMode = v; setCpnModeUI(v); };
 
   const setInterp = v => {
     S.current.interp = v; setInterpUI(v);
     S.current.colBranch = 0; S.current.colFade = 0; S.current.colTriggered = false;
+    if (v !== "cpn") { S.current.cpnMode = "2d"; setCpnModeUI("2d"); }
     S.current.dirty = true;
   };
   const setTTarget = v => {
@@ -1714,6 +1767,7 @@ export default function App() {
         bX, bY,
         isPW: s.interp === "pw",
         interp: s.interp,
+        cpnMode: s.cpnMode,
         sepFrac,
         showProj: s.showProj,
         // x-panel: use camera's actual visible range so particle position matches 2D canvas exactly
@@ -1790,7 +1844,7 @@ export default function App() {
           flex:1, flexDirection:"column", overflow:"hidden" }}>
 
         {/* Top row: 2D heatmap + y-marginal side by side — flex:4 so x-marg gets flex:1 (1/4 of canvas) */}
-        <div style={{ flex:4, minHeight:0, display:"flex", flexDirection:"row", overflow:"hidden" }}>
+        <div style={{ flex:4, minHeight:0, display: cpnMode === "1d" ? "none" : "flex", flexDirection:"row", overflow:"hidden" }}>
           {/* 2D Three.js canvas */}
           <div ref={mountRef} style={{ flex:1, position:"relative", overflow:"hidden", touchAction:"pan-y" }}>
             {/* Collapse flash overlay — CPN only */}
@@ -1836,6 +1890,7 @@ export default function App() {
               border:`1px solid ${VIEW_COLOR[interp]}55` }}>
               {VIEW_LABEL[interp]}
             </div>
+
           </div>
 
           {/* Y-marginal: vertical strip — hidden on mobile */}
@@ -1848,15 +1903,26 @@ export default function App() {
           )}
         </div>
 
-        {/* X-marginal: horizontal strip — flex:1 so it is 1/4 the height of the canvas row above */}
-        <div ref={xMargRowRef} style={{ flex:1, minHeight:0, display:"flex", flexDirection:"row",
-          borderTop:"1px solid rgba(40,80,180,0.3)" }}>
+        {/* X-marginal: horizontal strip — flex:1 so it is 1/4 the height of the canvas row above
+            In 1D mode it fills the whole canvas area (top row hidden) so flex:5 */}
+        <div ref={xMargRowRef} style={{ flex: cpnMode === "1d" ? 5 : 1, minHeight:0, display:"flex", flexDirection:"row",
+          borderTop:"1px solid rgba(40,80,180,0.3)", position:"relative" }}>
           <div style={{ flex:1, background:"#020812", overflow:"hidden" }}>
             <XMarginalPanel ref={xCanvasRef} />
           </div>
           {/* spacer matching Y-panel width so X axis aligns with 2D canvas — desktop only */}
-          {showYPanel && <div style={{ width:yPanelW, flexShrink:0, background:"#020812",
+          {showYPanel && cpnMode !== "1d" && <div style={{ width:yPanelW, flexShrink:0, background:"#020812",
             borderLeft:"1px solid rgba(40,80,180,0.3)" }} />}
+          {/* In 1D mode: show badge + toggle in top-right of the X-panel */}
+          {cpnMode === "1d" && (
+          <div style={{ position:"absolute", top:8, right:12, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+            <div style={{ color:"#ff9966", fontSize:12, fontWeight:700,
+              fontFamily:"'JetBrains Mono','Courier New',monospace",
+              background:"rgba(4,10,30,0.7)", padding:"3px 8px", borderRadius:4,
+              border:"1px solid #ff996655" }}>Copenhagen</div>
+
+          </div>
+          )}
         </div>
 
 
