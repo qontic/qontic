@@ -929,15 +929,24 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.setLineDash([]);
     const collapsed = colBranch !== 0;
     if (!collapsed) {
-      // Before measurement: show both branches colored, normalized together
+      // Before/during measurement: incoming packet + two branches
       const pkBoth = Math.max(peakDensity(rhoTotal), 1e-10);
       const scBoth = (H - 6) * 0.88 / pkBoth;
-      if (ampT > 0.001) drawDensity(rhoT, "#22ee88", scBoth);
-      if (ampR > 0.001) drawDensity(rhoR, "#ff7744", scBoth);
+      // Incoming packet (pre-scatter) fades out as bl→1
+      if (bl < 0.99) {
+        const gInFn = x => (1 - bl) * gIn(x);
+        drawDensity(gInFn, "#88aaff", scBoth);
+      }
+      // T and R branches fade in as bl→1
+      if (bl > 0.01 && ampT > 0.001) drawDensity(rhoT, "#22ee88", scBoth);
+      if (bl > 0.01 && ampR > 0.001) drawDensity(rhoR, "#ff7744", scBoth);
       // Fixed-size legend
       ctx.font = "12px 'JetBrains Mono',monospace";
-      ctx.fillStyle = "#22ee8899"; ctx.fillText("ρ_T(x)", 6, 14);
-      ctx.fillStyle = "#ff774499"; ctx.fillText("ρ_R(x)", 60, 14);
+      if (bl < 0.99) { ctx.fillStyle = "#88aaffaa"; ctx.fillText("ψ_in(x)", 6, 14); }
+      if (bl > 0.01) {
+        ctx.fillStyle = "#22ee8899"; ctx.fillText("ρ_T(x)", bl < 0.99 ? 74 : 6,  14);
+        ctx.fillStyle = "#ff774499"; ctx.fillText("ρ_R(x)", bl < 0.99 ? 134 : 64, 14);
+      }
     } else {
       // After measurement: only surviving branch, rescaled to full height
       const survivorFn = colBranch === 1 ? rhoT : rhoR;
@@ -1627,7 +1636,8 @@ export default function App() {
           s.colFade   = 0;
           s._flashPending = true;
           // Freeze here — lobe centre is still inside canvas
-          s.pauseUntil = performance.now() + 1800;
+          // In 1D textbook mode, hold longer so the post-collapse state is readable
+          s.pauseUntil = performance.now() + (s.cpnMode === "1d" ? 4000 : 1800);
         }
         if (s.colTriggered) {
           s.colFade = Math.min(s.colFade + 0.08, 1);
