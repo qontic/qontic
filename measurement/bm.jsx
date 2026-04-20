@@ -491,8 +491,8 @@ const VIEW_LABEL = { cpn:"Copenhagen", pw:"Pilot-Wave", mw:"Many Worlds" };
 const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff",   mw:"#cc88ff" };
 const VIEW_DESC  = {
   cpn: "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Global |Ψ(x,y)|² always has two branches; at a random moment one is selected and the other collapses.",
-  pw:  "Same global |Ψ(x,y)|² plus the Bohmian particle (X,Y) that rides one branch. Below: conditional wavefunction ψ_cond(x,Y(t)) and the two marginals.",
-  mw:  "Both branches persist — the universe splits. World 1: particle transmitted, pointer deflected. World 2: particle reflected, pointer at rest. Neither world 'knows about' the other.",
+  pw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Same global |Ψ(x,y)|² plus the Bohmian particle (X,Y) that rides one branch. Below: conditional wavefunction ψ_cond(x,Y(t)) and the two marginals.",
+  mw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Both branches persist — the universe splits. World 1: particle transmitted. World 2: particle reflected. Neither world 'knows about' the other.",
 };
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
