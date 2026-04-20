@@ -587,7 +587,7 @@ const SimPanel = React.memo(({
                   background: active ? "rgba(200,80,40,0.25)" : "rgba(200,80,40,0.07)",
                   color: active ? "#ff9966" : "rgba(180,140,120,0.6)",
                   border:`1px solid ${active ? "#ff9966" : "rgba(150,80,40,0.3)"}`,
-                }}>{v === "2d" ? "+ Apparatus" : "Operator view"}</button>
+                }}>{v === "2d" ? "+ Apparatus" : "Operator"}</button>
               );
             })}
           </div>
