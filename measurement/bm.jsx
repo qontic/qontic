@@ -1033,24 +1033,28 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
 
     drawDensityY(y => (1 - bl) * 0.5 * gauss(y, yRFixed, sigY), "#88aaff");
     if (isMW && bl > 0.05) {
-      // ── Many-Worlds: split Y-panel — above yRFixed = World T (green), below = World R (orange)
-      const sf  = Math.min(sepFrac * 1.5, 1);
-      const pyDiv = wy(yRFixed);
+      // ── Many-Worlds: split Y-panel at H/2 — top = World T (green), bottom = World R (orange)
+      const sf     = Math.min(sepFrac * 1.5, 1);
+      const pyMid  = H / 2;
       // Tinted backgrounds
-      ctx.fillStyle = `rgba(34,238,136,${0.07 * sf})`; ctx.fillRect(0, 0,     W, pyDiv);
-      ctx.fillStyle = `rgba(255,119,68,${0.07 * sf})`; ctx.fillRect(0, pyDiv, W, H - pyDiv);
-      // Separator line (horizontal, at yRFixed)
+      ctx.fillStyle = `rgba(34,238,136,${0.07 * sf})`; ctx.fillRect(0, 0,      W, pyMid);
+      ctx.fillStyle = `rgba(255,119,68,${0.07 * sf})`;  ctx.fillRect(0, pyMid,  W, H - pyMid);
+      // Separator line at midpoint
       ctx.strokeStyle = `rgba(200,170,255,${0.5 * sf})`;
       ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-      ctx.beginPath(); ctx.moveTo(0, pyDiv); ctx.lineTo(W, pyDiv); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, pyMid); ctx.lineTo(W, pyMid); ctx.stroke();
       ctx.setLineDash([]);
-      // World T density (full, unclipped — centered above yRFixed)
+      // World T density clipped to top half
       if (ampT > 0.001) {
+        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, pyMid); ctx.clip();
         drawDensityY(y => bl * ampT * gauss(y, yT, sigY), "#22ee88");
+        ctx.restore();
       }
-      // World R density (full, unclipped — centered at yRFixed)
+      // World R density clipped to bottom half
       if (ampR > 0.001) {
+        ctx.save(); ctx.beginPath(); ctx.rect(0, pyMid, W, H - pyMid); ctx.clip();
         drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744");
+        ctx.restore();
       }
     } else if (isPW && bl > 0.05) {
       // Conditional wavefunction: ψ_cond(y) ∝ Ψ(X(t), y)
