@@ -890,9 +890,9 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.beginPath(); ctx.moveTo(wx(0),0); ctx.lineTo(wx(0),H); ctx.stroke();
     ctx.setLineDash([]);
     // World T (top half): ρ_T in green
-    if (ampT > 0.001) drawDensityInRegion(rhoT, "#22ee88", (mid-6)/Math.max(peakDensity(rhoT),1e-10), 0, mid);
+    if (ampT > 0.001) drawDensityInRegion(rhoT, "#22ee88", 0.75*(mid-6)/Math.max(peakDensity(rhoT),1e-10), 0, mid);
     // World R (bottom half): ρ_R in orange
-    if (ampR > 0.001) drawDensityInRegion(rhoR, "#ff7744", (H-mid-6)/Math.max(peakDensity(rhoR),1e-10), mid, H-mid);
+    if (ampR > 0.001) drawDensityInRegion(rhoR, "#ff7744", 0.75*(H-mid-6)/Math.max(peakDensity(rhoR),1e-10), mid, H-mid);
     // Labels
     const fs = Math.max(7, Math.round(H * 0.12));
     const lbY = Math.round(H * 0.09);
