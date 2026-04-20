@@ -1044,19 +1044,13 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
       ctx.beginPath(); ctx.moveTo(0, pyDiv); ctx.lineTo(W, pyDiv); ctx.stroke();
       ctx.setLineDash([]);
-      // World T density (above yRFixed = y > yRFixed, pyDiv is top boundary of R)
+      // World T density (full, unclipped — centered above yRFixed)
       if (ampT > 0.001) {
-        const pkT = (() => { let pk=1e-10; for(let i=0;i<=N;i++){const y=YLO+(YHI-YLO)*i/N; const v=bl*ampT*gauss(y,yT,sigY); if(v>pk)pk=v;} return pk; })();
-        const scaleT = (W - 6) * 0.80 / pkT;
-        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, pyDiv); ctx.clip();
         drawDensityY(y => bl * ampT * gauss(y, yT, sigY), "#22ee88");
-        ctx.restore();
       }
-      // World R density (below yRFixed)
+      // World R density (full, unclipped — centered at yRFixed)
       if (ampR > 0.001) {
-        ctx.save(); ctx.beginPath(); ctx.rect(0, pyDiv, W, H - pyDiv); ctx.clip();
         drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744");
-        ctx.restore();
       }
     } else if (isPW && bl > 0.05) {
       // Conditional wavefunction: ψ_cond(y) ∝ Ψ(X(t), y)
