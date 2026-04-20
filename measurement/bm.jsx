@@ -784,6 +784,9 @@ function _WF1DPanel_removed({ Tp, Rp, xT, xR, yT, yR, sigX, sigY, bX, bY, bl, sh
 function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, showProj, xLo, xHi, rho, rhoXs }) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
+  // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
+  if (canvas.clientWidth > 0)  canvas.width  = canvas.clientWidth;
+  if (canvas.clientHeight > 0) canvas.height = canvas.clientHeight;
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = "#020812";
@@ -886,16 +889,18 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.beginPath(); ctx.arc(cx, H - 4 - 3, 3, 0, 2 * Math.PI); ctx.fill();
   }
 
-  ctx.font = "10px 'JetBrains Mono', monospace";
+  const fs = Math.max(9, Math.round(H * 0.16));
+  const labelY = Math.round(H * 0.22);
+  ctx.font = `${fs}px 'JetBrains Mono', monospace`;
   if (isPW) {
-    ctx.fillStyle = "#66ccff"; ctx.fillText("Ψ(x,Y(t)) conditional", 6, 12);
+    ctx.fillStyle = "#66ccff"; ctx.fillText("Ψ(x,Y(t)) conditional", 6, labelY);
     if (showProj) {
-      ctx.fillStyle = "#22ee88"; ctx.fillText("ρ_T(x)", 200, 12);
-      ctx.fillStyle = "#ff7744"; ctx.fillText("ρ_R(x)", 260, 12);
+      ctx.fillStyle = "#22ee88"; ctx.fillText("ρ_T(x)", Math.round(W * 0.22), labelY);
+      ctx.fillStyle = "#ff7744"; ctx.fillText("ρ_R(x)", Math.round(W * 0.29), labelY);
     }
   } else {
     ctx.fillStyle = "rgba(100,160,255,0.5)";
-    ctx.fillText("particle projection  ρ(x) = ∫|Ψ|²dy", 6, 12);
+    ctx.fillText("particle projection  ρ(x) = ∫|Ψ|²dy", 6, labelY);
   }
 }
 
@@ -915,6 +920,9 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
   // yR itself (-lam*dtA) is only used for chi-weighting in x-panel (not drawing here).
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
+  // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
+  if (canvas.clientWidth > 0)  canvas.width  = canvas.clientWidth;
+  if (canvas.clientHeight > 0) canvas.height = canvas.clientHeight;
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#020812";
@@ -1009,7 +1017,8 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
     ctx.save();
     ctx.translate(W - 4, H / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.font = "10px 'JetBrains Mono', monospace";
+    const fsY = Math.max(9, Math.round(W * 0.16));
+    ctx.font = `${fsY}px 'JetBrains Mono', monospace`;
     ctx.fillStyle = "rgba(100,160,255,0.5)";
     ctx.textAlign = "center";
     ctx.fillText(isPW ? "ψ_cond(y|X(t))" : "pointer projection  ρ(y) = ∫|Ψ|²dx", 0, 0);
@@ -1254,14 +1263,14 @@ export default function App() {
     // ── Branch label sprites ──────────────────────────────────────────────────
     function makeSprite(text, color) {
       const cv = document.createElement("canvas");
-      cv.width=320; cv.height=48;
+      cv.width=300; cv.height=52;
       const ctx = cv.getContext("2d");
-      ctx.font = "bold 17px 'JetBrains Mono',monospace";
+      ctx.font = "bold 16px 'JetBrains Mono',monospace";
       ctx.fillStyle = color; ctx.textAlign="center"; ctx.textBaseline="middle";
-      ctx.fillText(text, 160, 24);
+      ctx.fillText(text, 150, 26);
       const tex = new THREE.CanvasTexture(cv);
       const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, opacity:0.85 }));
-      spr.scale.set(5, 0.75, 1);
+      spr.scale.set(5.2, 0.9, 1); // aspect matches 300/52 * 0.9 ≈ 5.2
       return spr;
     }
     const lblT = makeSprite("T-branch  (x>0,  y>0)", "#44ee88");
@@ -1517,11 +1526,12 @@ export default function App() {
       Tr.lblT.visible = sepFrac > 0.3;
       Tr.lblR.visible = sepFrac > 0.3;
       const lblX = Math.min(6.5, halfW - 2.2);
-      const lblScale = Math.min(5, halfW * 0.65);
+      const lblSX = Math.min(5.2, halfW * 0.68);
+      const lblSY = lblSX * (52 / 300); // maintain canvas aspect ratio
       Tr.lblT.position.set( lblX,  5.5, 0.2);
       Tr.lblR.position.set(-lblX, -5.5, 0.2);
-      Tr.lblT.scale.set(lblScale, 0.75, 1);
-      Tr.lblR.scale.set(lblScale, 0.75, 1);
+      Tr.lblT.scale.set(lblSX, lblSY, 1);
+      Tr.lblR.scale.set(lblSX, lblSY, 1);
 
       // ── Throttled React state updates (~10 Hz) ────────────────────────────
       const now = performance.now();
