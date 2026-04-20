@@ -1095,6 +1095,7 @@ export default function App() {
   const T = useRef(null);
   const xCanvasRef = useRef(null);
   const yCanvasRef = useRef(null);
+  const xMargRowRef = useRef(null);
 
   // Responsive layout
   const [winW, setWinW] = useState(() => window.innerWidth);
@@ -1106,10 +1107,17 @@ export default function App() {
   }, []);
   const isMobile   = winW <= 700;
   const isLandscape = isMobile && winW > winH;
-  // On mobile: hide y-panel (too narrow to be useful), shrink x-panel
+  // On mobile: hide y-panel (too narrow to be useful)
   const showYPanel = !isMobile;
-  const yPanelW    = 144;
-  const margH      = isMobile ? 70 : 144;
+  // yPanelW tracks the actual rendered height of the x-marg row so the Y-panel matches
+  const [yPanelW, setYPanelW] = useState(() => Math.round((window.innerHeight - 28) / 5));
+  useEffect(() => {
+    const el = xMargRowRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => { const h = el.offsetHeight; if (h > 0) setYPanelW(h); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // Sidebar: on mobile-portrait stacks below; on mobile-landscape stays right (compact)
   const sidebarBelow = isMobile && !isLandscape;
   const sidebarW     = isLandscape ? 200 : (isMobile ? "100%" : 240);
@@ -1603,7 +1611,8 @@ export default function App() {
       <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column",
         position:"relative", overflow:"hidden",
         height: sidebarBelow ? undefined : "100%",
-        minHeight: sidebarBelow ? Math.min(winW, 500) + margH + 28 : 0 }}>
+        // portrait: canvas ≈ min(winW,500) square, x-marg = 1/4 of that, + tab strip
+        minHeight: sidebarBelow ? Math.min(winW, 500) * 1.25 + 28 : 0 }}>
 
         {/* Tab strip */}
         <div style={{ display:"flex", flexShrink:0, background:"rgba(4,10,30,0.9)",
@@ -1624,8 +1633,8 @@ export default function App() {
         <div style={{ display: canvasTab==="sim" ? "flex" : "none",
           flex:1, flexDirection:"column", overflow:"hidden" }}>
 
-        {/* Top row: 2D heatmap + y-marginal side by side */}
-        <div style={{ flex:1, display:"flex", flexDirection:"row", overflow:"hidden" }}>
+        {/* Top row: 2D heatmap + y-marginal side by side — flex:4 so x-marg gets flex:1 (1/4 of canvas) */}
+        <div style={{ flex:4, minHeight:0, display:"flex", flexDirection:"row", overflow:"hidden" }}>
           {/* 2D Three.js canvas */}
           <div ref={mountRef} style={{ flex:1, position:"relative", overflow:"hidden", touchAction:"pan-y" }}>
             {/* Collapse flash overlay — CPN only */}
@@ -1683,8 +1692,8 @@ export default function App() {
           )}
         </div>
 
-        {/* X-marginal: horizontal strip (∫|Ψ|²dy vs x = particle) */}
-        <div style={{ display:"flex", flexDirection:"row", flexShrink:0, height:margH,
+        {/* X-marginal: horizontal strip — flex:1 so it is 1/4 the height of the canvas row above */}
+        <div ref={xMargRowRef} style={{ flex:1, minHeight:0, display:"flex", flexDirection:"row",
           borderTop:"1px solid rgba(40,80,180,0.3)" }}>
           <div style={{ flex:1, background:"#020812", overflow:"hidden" }}>
             <XMarginalPanel ref={xCanvasRef} />
