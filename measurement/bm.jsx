@@ -1570,9 +1570,9 @@ export default function App() {
         bX, bY,
         isPW: s.interp === "pw",
         showProj: s.showProj,
-        // x-panel: fixed range tracking blob positions so T and R peaks are always visible
-        xLo: Math.min(xR - 4*s.sigX, -10),
-        xHi: Math.max(xT + 4*s.sigX, 10),
+        // x-panel: use camera's actual visible range so particle position matches 2D canvas exactly
+        xLo: s.camX - halfW,
+        xHi: s.camX + halfW,
         yLo: s.camY - halfH, yHi: s.camY + halfH,
         rho: WP.rhoBuf, rhoXs: WP.xs,
       };
