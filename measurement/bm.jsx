@@ -490,7 +490,10 @@ const VIEWS      = ["cpn","pw","mw"];
 const VIEW_LABEL = { cpn:"Copenhagen", pw:"Pilot-Wave", mw:"Many Worlds" };
 const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff",   mw:"#cc88ff" };
 const VIEW_DESC  = {
-  cpn: "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Global |Ψ(x,y)|² always has two branches; at a random moment one is selected and the other collapses.",
+  cpn: {
+    "2d": "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). The 2D canvas shows the full configuration space: x = particle, y = measuring apparatus pointer. Global |Ψ(x,y)|² splits into two branches; at a random moment one is selected and the other collapses.",
+    "1d": "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). The textbook operator view: only the particle coordinate x is shown. Measurement is modelled by a projection operator P̂_T or P̂_R acting on |ψ(x)⟩ — no apparatus visible.",
+  },
   pw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Same global |Ψ(x,y)|² plus the Bohmian particle (X,Y) that rides one branch. Below: conditional wavefunction ψ_cond(x,Y(t)) and the two marginals.",
   mw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Both branches persist — the universe splits. World 1: particle transmitted. World 2: particle reflected. Neither world 'knows about' the other.",
 };
@@ -571,7 +574,7 @@ const SimPanel = React.memo(({
               fontFamily:"'JetBrains Mono','Courier New',monospace",
               fontWeight:700, textAlign:"center",
             }}>{">"} {VIEW_LABEL[interp]}</button>
-          <div style={{ fontSize:11, color:"#99b8e8", lineHeight:1.6 }}>{VIEW_DESC[interp]}</div>
+          <div style={{ fontSize:11, color:"#99b8e8", lineHeight:1.6 }}>{interp === "cpn" ? VIEW_DESC.cpn[cpnMode] : VIEW_DESC[interp]}</div>
           {interp === "cpn" && (
           <div style={{ display:"flex", gap:4, marginTop:6 }}>
             {["2d","1d"].map(v => {
@@ -584,7 +587,7 @@ const SimPanel = React.memo(({
                   background: active ? "rgba(200,80,40,0.25)" : "rgba(200,80,40,0.07)",
                   color: active ? "#ff9966" : "rgba(180,140,120,0.6)",
                   border:`1px solid ${active ? "#ff9966" : "rgba(150,80,40,0.3)"}`,
-                }}>{v === "2d" ? "2D — config. space" : "1D — textbook"}</button>
+                }}>{v === "2d" ? "+ Apparatus" : "Operator view"}</button>
               );
             })}
           </div>
