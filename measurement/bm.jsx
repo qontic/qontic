@@ -427,6 +427,27 @@ const COL_T   = new THREE.Color(0x22ee88);
 const COL_R   = new THREE.Color(0xff6633);
 const COL_CND = new THREE.Color(0x66ccff);
 
+// ── Many-Worlds overlay shader (diagonal split of config space) ─────────────
+const VERT_MW = /* glsl */`
+  varying vec2 vPos;
+  void main() { vPos = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
+`;
+const FRAG_MW = /* glsl */`
+  varying vec2 vPos;
+  uniform float uSep;       // sepFrac 0→1
+  uniform float uSepA;      // y-intercept of branch separator (= yRFixed + lam*dtA)
+  uniform float uSepSlope;  // slope (perpendicular bisector of T–R direction)
+  void main() {
+    float sep = uSepA + uSepSlope * vPos.x;
+    float isT = step(sep, vPos.y);  // 1 if in T-branch half
+    vec3 tCol = vec3(0.13, 0.93, 0.53);  // green — World T
+    vec3 rCol = vec3(1.0,  0.47, 0.27);  // orange — World R
+    vec3 color = mix(rCol, tCol, isT);
+    float alpha = uSep * 0.13;
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
 // ── Small React helpers ───────────────────────────────────────────────────────
 const Tip = ({ text, children }) => {
   const [show, setShow] = React.useState(false);
@@ -465,12 +486,13 @@ const SL = ({ label, tip, children, fullWidth }) => (
   </div>
 );
 
-const VIEWS      = ["cpn","pw"];
-const VIEW_LABEL = { cpn:"Copenhagen", pw:"Pilot-Wave" };
-const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff" };
+const VIEWS      = ["cpn","pw","mw"];
+const VIEW_LABEL = { cpn:"Copenhagen", pw:"Pilot-Wave", mw:"Many Worlds" };
+const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff",   mw:"#cc88ff" };
 const VIEW_DESC  = {
   cpn: "Global |Ψ(x,y)|² — always two branches. At a random moment one branch is selected and the other collapses.",
   pw:  "Same global |Ψ(x,y)|² plus the Bohmian particle (X,Y) that rides one branch. Below: conditional wavefunction ψ_cond(x,Y(t)) and the two marginals.",
+  mw:  "Both branches persist — the universe splits. World 1: particle transmitted, pointer deflected. World 2: particle reflected, pointer at rest. Neither world 'knows about' the other.",
 };
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -781,7 +803,7 @@ function _WF1DPanel_removed({ Tp, Rp, xT, xR, yT, yR, sigX, sigY, bX, bY, bl, sh
 
 
 // ── X-marginal panel: ∫|Ψ(x,y)|²dy  vs  x  (horizontal strip below 2D) ──────
-function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, showProj, xLo, xHi, rho, rhoXs }) {
+function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, sepFrac, showProj, xLo, xHi, rho, rhoXs }) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
@@ -789,19 +811,10 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
   if (canvas.clientHeight > 0) canvas.height = canvas.clientHeight;
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#020812";
-  ctx.fillRect(0, 0, W, H);
 
+  const isMW = interp === "mw";
   const XLO = xLo, XHI = xHi;
   const wx = x => (x - XLO) / (XHI - XLO) * W;
-
-  ctx.strokeStyle = "rgba(60,100,200,0.25)";
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, H - 2); ctx.lineTo(W, H - 2); ctx.stroke();
-  ctx.strokeStyle = "rgba(0,200,255,0.2)";
-  ctx.setLineDash([3, 3]);
-  ctx.beginPath(); ctx.moveTo(wx(0), 0); ctx.lineTo(wx(0), H); ctx.stroke();
-  ctx.setLineDash([]);
 
   const fadeT = colBranch === -1 ? colFade : 0;
   const fadeR = colBranch ===  1 ? colFade : 0;
@@ -809,76 +822,109 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
   const ampR = Rp * (1 - fadeR);
 
   const N = 350;
-  const SCALE = (H - 10) * 0.66; // 0.88 × 0.75 — wave fills ~66% of panel height
+  const SCALE = (H - 10) * 0.66; // wave fills ~66% of panel height
 
-  // Auto-scale: find peak density over visible range to fill the panel
   const peakDensity = (fn) => {
     let pk = 1e-10;
-    for (let i = 0; i <= N; i++) {
-      const v = fn(XLO + (XHI - XLO) * i / N);
-      if (v > pk) pk = v;
-    }
+    for (let i = 0; i <= N; i++) { const v = fn(XLO + (XHI - XLO) * i / N); if (v > pk) pk = v; }
     return pk;
   };
 
-  const drawDensity = (getDensity, color, scale = SCALE) => {
+  // Draw density curve into a clipped sub-region [y0..y0+h] (baseline = y0+h)
+  const drawDensityInRegion = (getDensity, color, scale, y0, h) => {
+    const baseline = y0 + h - 3;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, y0, W, h); ctx.clip();
     ctx.beginPath();
     ctx.strokeStyle = color;
     ctx.fillStyle = color + "28";
     ctx.lineWidth = 2;
     let first = true;
     for (let i = 0; i <= N; i++) {
-      const x  = XLO + (XHI - XLO) * i / N;
+      const x = XLO + (XHI - XLO) * i / N;
       const cx = wx(x);
-      const d  = getDensity(x);
-      const cy = H - 4 - d * scale;
-      if (first) { ctx.moveTo(cx, H - 4); ctx.lineTo(cx, cy); first = false; }
+      const cy = baseline - getDensity(x) * scale;
+      if (first) { ctx.moveTo(cx, baseline); ctx.lineTo(cx, cy); first = false; }
       else ctx.lineTo(cx, cy);
     }
-    ctx.lineTo(wx(XHI), H - 4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    first = true;
+    ctx.lineTo(wx(XHI), baseline); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); first = true;
     for (let i = 0; i <= N; i++) {
-      const x  = XLO + (XHI - XLO) * i / N;
+      const x = XLO + (XHI - XLO) * i / N;
       const cx = wx(x);
-      const d  = getDensity(x);
-      const cy = H - 4 - d * scale;
-      if (first) { ctx.moveTo(cx, cy); first = false; }
-      else ctx.lineTo(cx, cy);
+      const cy = baseline - getDensity(x) * scale;
+      if (first) { ctx.moveTo(cx, cy); first = false; } else ctx.lineTo(cx, cy);
     }
     ctx.stroke();
+    ctx.restore();
   };
+
+  const drawDensity = (getDensity, color, scale = SCALE) =>
+    drawDensityInRegion(getDensity, color, scale, 0, H);
 
   const gIn = x => gauss(x, xIn, sigX);
   const gT  = x => gauss(x, xT,  sigX);
   const gR  = x => gauss(x, xR,  sigX);
-
-  // Unified density: single curve that blends from one incoming peak to T+R split.
-  // Matches the analytical Gaussians used in the 2D heatmap — no dispersion mismatch.
   const rhoTotal = x => (1 - bl) * gIn(x) + bl * (ampT * gT(x) + ampR * gR(x));
-
   const rhoT = x => bl * ampT * gT(x);
   const rhoR = x => bl * ampR * gR(x);
 
-  if (isPW) {
-    const chiT = gauss(bY, yT, sigY), chiR = gauss(bY, yR, sigY);
-    const maxChi = Math.max(chiT, chiR, 1e-8);
-    const mainFn = x => (1 - bl) * gIn(x) + bl * (
-      Tp*(1-fadeT) * gT(x) * (chiT/maxChi) +
-      Rp*(1-fadeR) * gR(x) * (chiR/maxChi)
-    );
-    drawDensity(mainFn, "#66ccff", SCALE / peakDensity(mainFn));
-    if (showProj) {
-      if (ampT > 0.001) drawDensity(rhoT, "#22ee88", SCALE / peakDensity(rhoT));
-      if (ampR > 0.001) drawDensity(rhoR, "#ff7744", SCALE / peakDensity(rhoR));
-    }
+  if (isMW && bl > 0.05) {
+    // ── Many-Worlds: split panel into two worlds, one per half ───────────────
+    const mid = Math.round(H / 2);
+    const sf  = Math.min(sepFrac * 1.5, 1);
+
+    // Background tints — fade in with sepFrac
+    ctx.fillStyle = `rgba(34,238,136,${0.07 * sf})`;  ctx.fillRect(0,   0,   W, mid);
+    ctx.fillStyle = `rgba(255,119,68,${0.07 * sf})`;  ctx.fillRect(0,   mid, W, H - mid);
+    // Separator line
+    ctx.strokeStyle = `rgba(200,170,255,${0.5 * sf})`;
+    ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+    ctx.setLineDash([]);
+    // Axis & barrier lines
+    ctx.strokeStyle = "rgba(60,100,200,0.25)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, mid - 1); ctx.lineTo(W, mid - 1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, H    - 2); ctx.lineTo(W, H    - 2); ctx.stroke();
+    ctx.strokeStyle = "rgba(0,200,255,0.2)"; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(wx(0),0); ctx.lineTo(wx(0),H); ctx.stroke();
+    ctx.setLineDash([]);
+    // World T (top half): ρ_T in green
+    if (ampT > 0.001) drawDensityInRegion(rhoT, "#22ee88", (mid-6)/Math.max(peakDensity(rhoT),1e-10), 0, mid);
+    // World R (bottom half): ρ_R in orange
+    if (ampR > 0.001) drawDensityInRegion(rhoR, "#ff7744", (H-mid-6)/Math.max(peakDensity(rhoR),1e-10), mid, H-mid);
+    // Labels
+    const fs = Math.max(9, Math.round(H * 0.16));
+    const lbY = Math.round(H * 0.12);
+    ctx.font = `bold ${fs}px 'JetBrains Mono',monospace`;
+    ctx.fillStyle = `rgba(34,238,136,${0.85 * sf})`; ctx.fillText("World 1  (transmitted)", 6, lbY);
+    ctx.fillStyle = `rgba(255,119,68,${0.85 * sf})`; ctx.fillText("World 2  (reflected)",   6, mid + lbY);
   } else {
-    drawDensity(rhoTotal, "#88aaff", SCALE / peakDensity(rhoTotal));
+    // ── Standard (CPn / PW) background + axes ─────────────────────────────
+    ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(60,100,200,0.25)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, H - 2); ctx.lineTo(W, H - 2); ctx.stroke();
+    ctx.strokeStyle = "rgba(0,200,255,0.2)"; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(wx(0),0); ctx.lineTo(wx(0),H); ctx.stroke();
+    ctx.setLineDash([]);
+    if (isPW) {
+      const chiT = gauss(bY, yT, sigY), chiR = gauss(bY, yR, sigY);
+      const maxChi = Math.max(chiT, chiR, 1e-8);
+      const mainFn = x => (1 - bl) * gIn(x) + bl * (
+        Tp*(1-fadeT) * gT(x) * (chiT/maxChi) +
+        Rp*(1-fadeR) * gR(x) * (chiR/maxChi)
+      );
+      drawDensity(mainFn, "#66ccff", SCALE / peakDensity(mainFn));
+      if (showProj) {
+        if (ampT > 0.001) drawDensity(rhoT, "#22ee88", SCALE / peakDensity(rhoT));
+        if (ampR > 0.001) drawDensity(rhoR, "#ff7744", SCALE / peakDensity(rhoR));
+      }
+    } else {
+      drawDensity(rhoTotal, "#88aaff", SCALE / peakDensity(rhoTotal));
+    }
   }
 
-  if (isPW && bX !== undefined) {
+  if (!isMW && isPW && bX !== undefined) {
     const cx = wx(bX);
     ctx.strokeStyle = "rgba(255,255,255,0.65)";
     ctx.lineWidth = 1.5;
@@ -889,18 +935,20 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.beginPath(); ctx.arc(cx, H - 4 - 3, 3, 0, 2 * Math.PI); ctx.fill();
   }
 
-  const fs = Math.max(9, Math.round(H * 0.16));
-  const labelY = Math.round(H * 0.22);
-  ctx.font = `${fs}px 'JetBrains Mono', monospace`;
-  if (isPW) {
-    ctx.fillStyle = "#66ccff"; ctx.fillText("Ψ(x,Y(t)) conditional", 6, labelY);
-    if (showProj) {
-      ctx.fillStyle = "#22ee88"; ctx.fillText("ρ_T(x)", Math.round(W * 0.22), labelY);
-      ctx.fillStyle = "#ff7744"; ctx.fillText("ρ_R(x)", Math.round(W * 0.29), labelY);
+  if (!isMW) {
+    const fs = Math.max(9, Math.round(H * 0.16));
+    const labelY = Math.round(H * 0.22);
+    ctx.font = `${fs}px 'JetBrains Mono', monospace`;
+    if (isPW) {
+      ctx.fillStyle = "#66ccff"; ctx.fillText("Ψ(x,Y(t)) conditional", 6, labelY);
+      if (showProj) {
+        ctx.fillStyle = "#22ee88"; ctx.fillText("ρ_T(x)", Math.round(W * 0.22), labelY);
+        ctx.fillStyle = "#ff7744"; ctx.fillText("ρ_R(x)", Math.round(W * 0.29), labelY);
+      }
+    } else {
+      ctx.fillStyle = "rgba(100,160,255,0.5)";
+      ctx.fillText("particle projection  ρ(x) = ∫|Ψ|²dy", 6, labelY);
     }
-  } else {
-    ctx.fillStyle = "rgba(100,160,255,0.5)";
-    ctx.fillText("particle projection  ρ(x) = ∫|Ψ|²dy", 6, labelY);
   }
 }
 
@@ -915,7 +963,7 @@ const XMarginalPanel = React.forwardRef(function XMarginalPanel(_, ref) {
 // ── Y-marginal panel: ∫|Ψ(x,y)|²dx  vs  y  (vertical strip right of 2D) ─────
 // The canvas is drawn with y mapping vertically (bottom=yLo, top=yHi).
 // The density curve fills horizontally (density → rightward).
-function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFade, bY, bX, xT, xR, sigX, isPW, showProj, yLo, yHi }) {
+function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFade, bY, bX, xT, xR, sigX, isPW, interp, sepFrac, showProj, yLo, yHi }) {
   // yRFixed: the R (not-transmitted) blob display position — kept in sync with 2D shader uYR.
   // yR itself (-lam*dtA) is only used for chi-weighting in x-panel (not drawing here).
   if (!canvas) return;
@@ -925,6 +973,8 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
   if (canvas.clientHeight > 0) canvas.height = canvas.clientHeight;
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
+  const isMW = interp === "mw";
+
     ctx.fillStyle = "#020812";
     ctx.fillRect(0, 0, W, H);
 
@@ -982,7 +1032,33 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
     };
 
     drawDensityY(y => (1 - bl) * 0.5 * gauss(y, yRFixed, sigY), "#88aaff");
-    if (isPW && bl > 0.05) {
+    if (isMW && bl > 0.05) {
+      // ── Many-Worlds: split Y-panel — above yRFixed = World T (green), below = World R (orange)
+      const sf  = Math.min(sepFrac * 1.5, 1);
+      const pyDiv = wy(yRFixed);
+      // Tinted backgrounds
+      ctx.fillStyle = `rgba(34,238,136,${0.07 * sf})`; ctx.fillRect(0, 0,     W, pyDiv);
+      ctx.fillStyle = `rgba(255,119,68,${0.07 * sf})`; ctx.fillRect(0, pyDiv, W, H - pyDiv);
+      // Separator line (horizontal, at yRFixed)
+      ctx.strokeStyle = `rgba(200,170,255,${0.5 * sf})`;
+      ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(0, pyDiv); ctx.lineTo(W, pyDiv); ctx.stroke();
+      ctx.setLineDash([]);
+      // World T density (above yRFixed = y > yRFixed, pyDiv is top boundary of R)
+      if (ampT > 0.001) {
+        const pkT = (() => { let pk=1e-10; for(let i=0;i<=N;i++){const y=YLO+(YHI-YLO)*i/N; const v=bl*ampT*gauss(y,yT,sigY); if(v>pk)pk=v;} return pk; })();
+        const scaleT = (W - 6) * 0.80 / pkT;
+        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, pyDiv); ctx.clip();
+        drawDensityY(y => bl * ampT * gauss(y, yT, sigY), "#22ee88");
+        ctx.restore();
+      }
+      // World R density (below yRFixed)
+      if (ampR > 0.001) {
+        ctx.save(); ctx.beginPath(); ctx.rect(0, pyDiv, W, H - pyDiv); ctx.clip();
+        drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744");
+        ctx.restore();
+      }
+    } else if (isPW && bl > 0.05) {
       // Conditional wavefunction: ψ_cond(y) ∝ Ψ(X(t), y)
       // x-amplitude split by barrier: T on right, R on left using analytical Gaussians
       const gXatBX_T = gauss(bX, xT, sigX);
@@ -996,13 +1072,13 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
         if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,       sigY), "#22ee88");
         if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744");
       }
-    } else if (!isPW) {
+    } else if (!isPW && !isMW) {
       if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,       sigY), "#22ee88");
       if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744");
     }
 
     // PW: horizontal marker line at Y(t)
-    if (isPW && bY !== undefined) {
+    if (!isMW && isPW && bY !== undefined) {
       const py = wy(bY);
       ctx.strokeStyle = "rgba(255,255,255,0.65)";
       ctx.lineWidth = 1.5;
@@ -1021,7 +1097,9 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
     ctx.font = `${fsY}px 'JetBrains Mono', monospace`;
     ctx.fillStyle = "rgba(100,160,255,0.5)";
     ctx.textAlign = "center";
-    ctx.fillText(isPW ? "ψ_cond(y|X(t))" : "pointer projection  ρ(y) = ∫|Ψ|²dx", 0, 0);
+    const yLabel = isMW ? "pointer projection — two worlds" :
+                   isPW ? "ψ_cond(y|X(t))" : "pointer projection  ρ(y) = ∫|Ψ|²dx";
+    ctx.fillText(yLabel, 0, 0);
     ctx.restore();
 }
 
@@ -1278,6 +1356,39 @@ export default function App() {
     lblT.position.set(6.5, 5.5, 0.2); scene.add(lblT);
     lblR.position.set(-6.5,-5.5, 0.2); scene.add(lblR);
 
+    // ── Many-Worlds overlay (diagonal tinted plane + separator line + world labels) ─
+    const mwUni = {
+      uSep:      { value: 0 },
+      uSepA:     { value: 0 },
+      uSepSlope: { value: -1 },
+    };
+    const mwOverlay = new THREE.Mesh(
+      new THREE.PlaneGeometry(60, 40),
+      new THREE.ShaderMaterial({
+        vertexShader: VERT_MW, fragmentShader: FRAG_MW,
+        uniforms: mwUni, transparent: true, depthWrite: false,
+      })
+    );
+    mwOverlay.position.z = 0.0; // above heatmap (z=-0.1)
+    mwOverlay.visible = false;
+    scene.add(mwOverlay);
+
+    // Separator line — updated each frame via geometry.setFromPoints
+    const mwDivLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-15, 0, 0.1), new THREE.Vector3(15, 0, 0.1)
+      ]),
+      new THREE.LineBasicMaterial({ color: 0xccaaff, transparent: true, opacity: 0 })
+    );
+    mwDivLine.visible = false;
+    scene.add(mwDivLine);
+
+    // World label sprites — "World 1 (transmitted)" / "World 2 (reflected)"
+    const lblMW1 = makeSprite("World 1  (transmitted)", "#44ee88");
+    const lblMW2 = makeSprite("World 2  (reflected)",   "#ff8844");
+    lblMW1.visible = false; lblMW2.visible = false;
+    scene.add(lblMW1); scene.add(lblMW2);
+
     // ── Bohmian trajectory lines + dots (pilot-wave only) ─────────────────────
     const fLines = Array.from({ length:MAX_P }, () => {
       const pos = new Float32Array((STEPS+1)*3);
@@ -1376,6 +1487,7 @@ export default function App() {
     T.current = {
       scene, camera, renderer, heatUni, heatMesh,
       fLines, fDots, fGlows, lblT, lblR,
+      mwOverlay, mwUni, mwDivLine, lblMW1, lblMW2,
       rebuild, trajs:()=>trajs, updateCam,
     };
 
@@ -1528,10 +1640,43 @@ export default function App() {
       const lblX = Math.min(6.5, halfW - 2.2);
       const lblSX = Math.min(5.2, halfW * 0.68);
       const lblSY = lblSX * (52 / 300); // maintain canvas aspect ratio
+      const isMW  = s.interp === "mw";
+      // T/R branch labels: hidden in MW mode (replaced by World 1/2 labels)
+      Tr.lblT.visible = !isMW && sepFrac > 0.3;
+      Tr.lblR.visible = !isMW && sepFrac > 0.3;
       Tr.lblT.position.set( lblX,  5.5, 0.2);
       Tr.lblR.position.set(-lblX, -5.5, 0.2);
       Tr.lblT.scale.set(lblSX, lblSY, 1);
       Tr.lblR.scale.set(lblSX, lblSY, 1);
+
+      // ── Many-Worlds overlay ────────────────────────────────────────────────
+      Tr.mwOverlay.visible = isMW;
+      Tr.mwDivLine.visible = isMW && sepFrac > 0.05;
+      Tr.lblMW1.visible    = isMW && sepFrac > 0.3;
+      Tr.lblMW2.visible    = isMW && sepFrac > 0.3;
+      if (isMW) {
+        // Perpendicular bisector between T-branch (xT,yT) and R-branch (xR,yRFixed)
+        // Midpoint: (0, yRFixed + lam*dtA); slope: -k0 / (2*lam)
+        const sepA     = yRFixed + s.lam * dtA;
+        const sepSlope = -s.k0 / (2 * s.lam);
+        Tr.mwUni.uSep.value      = sepFrac;
+        Tr.mwUni.uSepA.value     = sepA;
+        Tr.mwUni.uSepSlope.value = sepSlope;
+        // Update dividing line endpoints to span visible width
+        Tr.mwDivLine.geometry.setFromPoints([
+          new THREE.Vector3(-halfW, sepA + sepSlope * (-halfW), 0.1),
+          new THREE.Vector3( halfW, sepA + sepSlope *   halfW,  0.1),
+        ]);
+        Tr.mwDivLine.material.opacity = Math.min(sepFrac * 1.5, 0.65);
+        // World labels: track branch centres, clamped inside visible area
+        const pad = 2.5;
+        const lx1 = clamp(xT * 0.7, -(halfW-pad), halfW-pad);
+        const ly1 = clamp(yT * 0.7 + yRFixed * 0.3, s.camY-halfH+1, s.camY+halfH-1);
+        const lx2 = clamp(xR * 0.7, -(halfW-pad), halfW-pad);
+        const ly2 = clamp(yRFixed - halfH * 0.28, s.camY-halfH+1, s.camY+halfH-1);
+        Tr.lblMW1.position.set(lx1, ly1, 0.2); Tr.lblMW1.scale.set(lblSX, lblSY, 1);
+        Tr.lblMW2.position.set(lx2, ly2, 0.2); Tr.lblMW2.scale.set(lblSX, lblSY, 1);
+      }
 
       // ── Throttled React state updates (~10 Hz) ────────────────────────────
       const now = performance.now();
@@ -1569,6 +1714,8 @@ export default function App() {
         colBranch: s.colBranch, colFade: s.colFade,
         bX, bY,
         isPW: s.interp === "pw",
+        interp: s.interp,
+        sepFrac,
         showProj: s.showProj,
         // x-panel: use camera's actual visible range so particle position matches 2D canvas exactly
         xLo: s.camX - halfW,
