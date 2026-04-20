@@ -894,8 +894,8 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     // World R (bottom half): ρ_R in orange
     if (ampR > 0.001) drawDensityInRegion(rhoR, "#ff7744", (H-mid-6)/Math.max(peakDensity(rhoR),1e-10), mid, H-mid);
     // Labels
-    const fs = Math.max(9, Math.round(H * 0.16));
-    const lbY = Math.round(H * 0.12);
+    const fs = Math.max(6, Math.round(H * 0.04));
+    const lbY = Math.round(H * 0.07);
     ctx.font = `bold ${fs}px 'JetBrains Mono',monospace`;
     ctx.fillStyle = `rgba(34,238,136,${0.85 * sf})`; ctx.fillText("World 1  (transmitted)", 6, lbY);
     ctx.fillStyle = `rgba(255,119,68,${0.85 * sf})`; ctx.fillText("World 2  (reflected)",   6, mid + lbY);
