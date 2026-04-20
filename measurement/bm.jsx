@@ -809,7 +809,7 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
   const ampR = Rp * (1 - fadeR);
 
   const N = 350;
-  const SCALE = (H - 10) * 0.88;
+  const SCALE = (H - 10) * 0.66; // 0.88 × 0.75 — wave fills ~66% of panel height
 
   // Auto-scale: find peak density over visible range to fill the panel
   const peakDensity = (fn) => {
@@ -1621,8 +1621,8 @@ export default function App() {
       <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column",
         position:"relative", overflow:"hidden",
         height: sidebarBelow ? undefined : "100%",
-        // portrait: canvas ≈ min(winW,500) square, x-marg = 1/3 of that, + tab strip
-        minHeight: sidebarBelow ? Math.min(winW, 500) * 4/3 + 28 : 0 }}>
+        // portrait: canvas ≈ min(winW,500) square, x-marg = 1/4 of that, + tab strip
+        minHeight: sidebarBelow ? Math.min(winW, 500) * 1.25 + 28 : 0 }}>
 
         {/* Tab strip */}
         <div style={{ display:"flex", flexShrink:0, background:"rgba(4,10,30,0.9)",
@@ -1643,8 +1643,8 @@ export default function App() {
         <div style={{ display: canvasTab==="sim" ? "flex" : "none",
           flex:1, flexDirection:"column", overflow:"hidden" }}>
 
-        {/* Top row: 2D heatmap + y-marginal side by side — flex:3 so x-marg gets flex:1 (25% of canvas) */}
-        <div style={{ flex:3, minHeight:0, display:"flex", flexDirection:"row", overflow:"hidden" }}>
+        {/* Top row: 2D heatmap + y-marginal side by side — flex:4 so x-marg gets flex:1 (1/4 of canvas) */}
+        <div style={{ flex:4, minHeight:0, display:"flex", flexDirection:"row", overflow:"hidden" }}>
           {/* 2D Three.js canvas */}
           <div ref={mountRef} style={{ flex:1, position:"relative", overflow:"hidden", touchAction:"pan-y" }}>
             {/* Collapse flash overlay — CPN only */}
