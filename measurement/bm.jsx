@@ -920,47 +920,120 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.fillStyle = `rgba(34,238,136,${0.85 * sf})`; ctx.fillText("World 1  (transmitted)", 6, lbY);
     ctx.fillStyle = `rgba(255,119,68,${0.85 * sf})`; ctx.fillText("World 2  (reflected)",   6, mid + lbY);
   } else if (is1D) {
-    // ── Copenhagen 1D / Textbook operator picture ──────────────────────────
+    // ── Copenhagen 1D / Textbook: three-act narrative ──────────────────────
     ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
+
+    // Top label band (equation area) vs plot area below it
+    const labelH = Math.round(H * 0.20);
+    const plotH  = H - labelH;
+
+    // Separator between equation band and plot
+    ctx.strokeStyle = "rgba(40,60,140,0.5)"; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath(); ctx.moveTo(0, labelH); ctx.lineTo(W, labelH); ctx.stroke();
+    ctx.setLineDash([]);
+    // x-axis
     ctx.strokeStyle = "rgba(60,100,200,0.25)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, H - 2); ctx.lineTo(W, H - 2); ctx.stroke();
-    ctx.strokeStyle = "rgba(0,200,255,0.2)"; ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(wx(0),0); ctx.lineTo(wx(0),H); ctx.stroke();
+    // Barrier
+    ctx.strokeStyle = "rgba(0,200,255,0.18)"; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(wx(0), labelH); ctx.lineTo(wx(0), H); ctx.stroke();
     ctx.setLineDash([]);
+
+    const SCMAX = plotH * 0.82;
+    const drawIn1D = (fn, color, sc) => drawDensityInRegion(fn, color, sc, labelH, plotH);
     const collapsed = colBranch !== 0;
+
     if (!collapsed) {
-      // Before/during measurement: incoming packet + two branches
-      const pkBoth = Math.max(peakDensity(rhoTotal), 1e-10);
-      const scBoth = (H - 6) * 0.88 / pkBoth;
-      // Incoming packet (pre-scatter) fades out as bl→1
-      if (bl < 0.99) {
-        const gInFn = x => (1 - bl) * gIn(x);
-        drawDensity(gInFn, "#88aaff", scBoth);
+      // Normalize all curves to the same peak (rhoTotal peak)
+      const pkTotal = Math.max(peakDensity(rhoTotal), 1e-10);
+      const sc = SCMAX / pkTotal;
+
+      // Incoming packet (blue) fades out as bl→1
+      if (bl < 0.99) drawIn1D(x => (1 - bl) * gIn(x), "#88aaff", sc);
+      // T branch (green) and R branch (orange) fade in
+      if (bl > 0.02 && ampT > 0.001) drawIn1D(rhoT, "#22ee88", sc);
+      if (bl > 0.02 && ampR > 0.001) drawIn1D(rhoR, "#ff7744", sc);
+
+      // ── Equation in label band ────────────────────────────────────────────
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      const eqFS = Math.min(18, Math.max(12, Math.round(H * 0.043)));
+      ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+      const eqY = labelH / 2;
+
+      if (bl < 0.12) {
+        // Act 1: just the initial ket
+        ctx.fillStyle = "rgba(136,170,255,0.85)";
+        ctx.fillText("|ψ_in⟩", W / 2, eqY);
+      } else {
+        // Act 2: superposition, fade in
+        const alpha = Math.min(1, (bl - 0.12) / 0.25);
+        const aT = Math.sqrt(Tp).toFixed(2), aR = Math.sqrt(Rp).toFixed(2);
+        ctx.fillStyle = `rgba(210,225,255,${0.9 * alpha})`;
+        ctx.fillText(`|ψ⟩  =  ${aT} |ψ_T⟩  +  ${aR} |ψ_R⟩`, W / 2, eqY);
       }
-      // T and R branches fade in as bl→1
-      if (bl > 0.01 && ampT > 0.001) drawDensity(rhoT, "#22ee88", scBoth);
-      if (bl > 0.01 && ampR > 0.001) drawDensity(rhoR, "#ff7744", scBoth);
-      // Fixed-size legend
-      ctx.font = "12px 'JetBrains Mono',monospace";
-      if (bl < 0.99) { ctx.fillStyle = "#88aaffaa"; ctx.fillText("ψ_in(x)", 6, 14); }
-      if (bl > 0.01) {
-        ctx.fillStyle = "#22ee8899"; ctx.fillText("ρ_T(x)", bl < 0.99 ? 74 : 6,  14);
-        ctx.fillStyle = "#ff774499"; ctx.fillText("ρ_R(x)", bl < 0.99 ? 134 : 64, 14);
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+
+      // ── Lobe labels positioned above each peak ────────────────────────────
+      if (bl > 0.18) {
+        const alpha = Math.min(1, (bl - 0.18) / 0.35);
+        const lblFS = Math.min(13, Math.max(10, Math.round(H * 0.030)));
+        ctx.font = `${lblFS}px 'JetBrains Mono',monospace`;
+        ctx.textAlign = "center";
+        const base = labelH + plotH - 3; // bottom of plot area
+
+        if (ampT > 0.001) {
+          const pyT = base - rhoT(xT) * sc;
+          const lxT = clamp(wx(xT), 44, W - 44);
+          const lyT = Math.max(pyT - 10, labelH + lblFS + 4);
+          ctx.fillStyle = `rgba(34,238,136,${alpha})`;
+          ctx.fillText(`√T |ψ_T⟩`, lxT, lyT);
+        }
+        if (ampR > 0.001) {
+          const pyR = base - rhoR(xR) * sc;
+          const lxR = clamp(wx(xR), 44, W - 44);
+          const lyR = Math.max(pyR - 10, labelH + lblFS + 4);
+          ctx.fillStyle = `rgba(255,119,68,${alpha})`;
+          ctx.fillText(`√R |ψ_R⟩`, lxR, lyR);
+        }
+        ctx.textAlign = "left";
       }
+
     } else {
-      // After measurement: only surviving branch, rescaled to full height
-      const survivorFn = colBranch === 1 ? rhoT : rhoR;
-      const survivorCol = colBranch === 1 ? "#22ee88" : "#ff7744";
-      const pkS = Math.max(peakDensity(survivorFn), 1e-10);
-      drawDensity(survivorFn, survivorCol, (H - 6) * 0.88 / pkS);
-      // Operator annotation
+      // ── Act 3: post-collapse ───────────────────────────────────────────────
       const isT = colBranch === 1;
-      const projLabel = isT ? `P_T |ψ⟩  (prob = ${(Tp*100).toFixed(0)}%)` : `P_R |ψ⟩  (prob = ${(Rp*100).toFixed(0)}%)`;
+      const survivorFn = isT ? rhoT : rhoR;
+      const survivorCol = isT ? "#22ee88" : "#ff7744";
+      const pkS = Math.max(peakDensity(survivorFn), 1e-10);
+      drawIn1D(survivorFn, survivorCol, SCMAX / pkS);
+
+      // Operator equation in label band — two lines
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
       const col = isT ? "#22ee88" : "#ff7744";
-      const fs = Math.min(Math.max(7, Math.round(H * 0.08)), 28);
-      ctx.font = `bold ${fs}px 'JetBrains Mono',monospace`;
-      ctx.fillStyle = `${col}cc`;
-      ctx.fillText(projLabel, 6, Math.round(H * 0.12));
+      const pct = Math.round((isT ? Tp : Rp) * 100);
+      const eqFS = Math.min(20, Math.max(13, Math.round(H * 0.048)));
+      ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+      ctx.fillStyle = `${col}ee`;
+      ctx.fillText(
+        isT ? `P̂_T |ψ⟩  →  |ψ_T⟩` : `P̂_R |ψ⟩  →  |ψ_R⟩`,
+        W / 2, labelH * 0.36
+      );
+      const subFS = Math.round(eqFS * 0.75);
+      ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
+      ctx.fillStyle = `${col}88`;
+      ctx.fillText(`probability = ${pct}%`, W / 2, labelH * 0.76);
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+
+      // Faint label above the lobe
+      const lxS = clamp(wx(isT ? xT : xR), 44, W - 44);
+      const base = labelH + plotH - 3;
+      const peakY = base - survivorFn(isT ? xT : xR) * (SCMAX / pkS);
+      const lblFS = Math.min(13, Math.max(10, Math.round(H * 0.030)));
+      ctx.font = `${lblFS}px 'JetBrains Mono',monospace`;
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = `${survivorCol}cc`;
+      ctx.fillText(isT ? `|ψ_T⟩` : `|ψ_R⟩`, lxS, Math.max(peakY - 10, labelH + lblFS + 4));
+      ctx.textAlign = "left";
     }
   } else {
     // ── Standard (CPn / PW) background + axes ─────────────────────────────
