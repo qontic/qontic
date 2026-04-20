@@ -1332,6 +1332,18 @@ function MathPanel({ interp }) {
         {txt("This is the standard textbook postulate: the apparatus is invisible — measurement is an instantaneous, axiomatic operation.")}
       </>)}
 
+      {interp === "mw" && (<>
+        {sec("Many Worlds — no collapse")}
+        {txt("The wavefunction evolves unitarily forever. After scattering, the global state is:")}
+        {eq("Ψ(x,y,t) = √T · ψ_T(x,t) · χ_T(y,t)\n         + √R · ψ_R(x,t) · χ_R(y,t)")}
+        {txt("Both branches are equally real. There is no collapse and no preferred outcome. The universe 'splits' into two non-interacting worlds:")}
+        {eq("World 1:  ψ_T · χ_T   (particle transmitted, pointer up)\nWorld 2:  ψ_R · χ_R   (particle reflected, pointer down)")}
+        {txt("The diagonal dividing line in the simulation marks where the two branches separate in configuration space. Each half of the 2D canvas belongs to a different world.")}
+        {txt("The x- and y-projection panels are each split in two: the top/green half shows World 1 (transmitted), the bottom/orange half shows World 2 (reflected).")}
+        {txt("Probabilities emerge from the Born rule applied to the branch amplitudes — but in MW this is a derived (and debated) result, not a postulate.")}
+        {eq("P(World 1) = ‖√T ψ_T χ_T‖² = T\nP(World 2) = ‖√R ψ_R χ_R‖² = R")}
+      </>)}
+
       {interp === "pw" && (<>
         {sec("Pilot-wave — guidance equation")}
         {txt("The particle has a definite position (X,Y) at all times, guided by:")}
