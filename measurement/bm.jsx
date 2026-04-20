@@ -821,7 +821,7 @@ function _WF1DPanel_removed({ Tp, Rp, xT, xR, yT, yR, sigX, sigY, bX, bY, bl, sh
 
 
 // ── X-marginal panel: ∫|Ψ(x,y)|²dy  vs  x  (horizontal strip below 2D) ──────
-function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, cpnMode, sepFrac, showProj, xLo, xHi, rho, rhoXs }) {
+function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, cpnMode, sepFrac, showProj, xLo, xHi, rho, rhoXs, V0 }) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
@@ -935,7 +935,24 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     // x-axis
     ctx.strokeStyle = "rgba(60,100,200,0.25)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, H - 2); ctx.lineTo(W, H - 2); ctx.stroke();
-    // Barrier
+    // Barrier: filled rectangle spanning [-BARRIER_A, +BARRIER_A], height ∝ V0
+    {
+      const bLo = wx(-BARRIER_A), bHi = wx(BARRIER_A);
+      const bW = Math.max(bHi - bLo, 2);
+      // Scale barrier height to ~40% of plot area at max V0 (~50)
+      const barrierPx = Math.round(plotH * 0.40 * Math.min((V0 || 0) / 50, 1));
+      ctx.fillStyle = "rgba(0,200,255,0.10)";
+      ctx.fillRect(bLo, H - 2 - barrierPx, bW, barrierPx);
+      ctx.strokeStyle = "rgba(0,200,255,0.35)"; ctx.lineWidth = 1.5;
+      ctx.strokeRect(bLo, H - 2 - barrierPx, bW, barrierPx);
+      // Label
+      ctx.font = "11px 'JetBrains Mono',monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillStyle = "rgba(0,200,255,0.50)";
+      ctx.fillText("V₀", bLo + bW / 2, H - 4 - barrierPx);
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    }
+    // Barrier dashed centre line
     ctx.strokeStyle = "rgba(0,200,255,0.18)"; ctx.setLineDash([3,3]);
     ctx.beginPath(); ctx.moveTo(wx(0), labelH); ctx.lineTo(wx(0), H); ctx.stroke();
     ctx.setLineDash([]);
@@ -1887,6 +1904,7 @@ export default function App() {
         xHi: s.camX + halfW,
         yLo: s.camY - halfH, yHi: s.camY + halfH,
         rho: WP.rhoBuf, rhoXs: WP.xs,
+        V0: s.V0,
       };
       drawXMarg(xCanvasRef.current, margData);
       drawYMarg(yCanvasRef.current, margData);
