@@ -544,6 +544,7 @@ const SimPanel = React.memo(({
   showProj, setShowProj,
   running, setRunning,
   Tp, Rp,
+  cpnMode, setCpnMode,
   audioRef, audioPlaying, setAudioPlaying, audioTime, audioDuration,
   isMobile,
 }) => {
@@ -1988,6 +1989,7 @@ export default function App() {
           Tp={Tp} Rp={Rp}
           audioRef={audioRef} audioPlaying={audioPlaying} setAudioPlaying={setAudioPlaying}
           audioTime={audioTime} audioDuration={audioDuration}
+          cpnMode={cpnMode} setCpnMode={setCpnMode}
           isMobile={isMobile}
         />
       </div>
