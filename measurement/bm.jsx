@@ -1588,14 +1588,31 @@ export default function App() {
 
       // Camera geometry — ensure portrait phones always see ≥7 world units horizontally
       const tan26 = Math.tan(26 * Math.PI / 180); // ≈ 0.4877
-      const camAspect = Tr.renderer.domElement.clientWidth / (Tr.renderer.domElement.clientHeight || 1);
-      const minCamZ = 7.0 / (camAspect * tan26); // camZ needed to show ±7 horizontal
-      const effectiveCamZ = Math.max(s.camZ, minCamZ);
-      if (effectiveCamZ > s.camZ) camera.position.z = effectiveCamZ;
-
-      // Camera geometry — use effectiveCamZ for consistent world-to-screen mapping
-      const halfH = tan26 * effectiveCamZ;
-      const halfW = camAspect * halfH; // always ≥ 7.0 world units
+      const rendW = Tr.renderer.domElement.clientWidth;
+      const rendH = Tr.renderer.domElement.clientHeight;
+      const rendHidden = rendW === 0 || rendH === 0; // true in 1D mode (top row display:none)
+      let halfW, halfH;
+      if (!rendHidden) {
+        const camAspect = rendW / rendH;
+        const minCamZ = 7.0 / (camAspect * tan26); // camZ needed to show ±7 horizontal
+        const effectiveCamZ = Math.max(s.camZ, minCamZ);
+        if (effectiveCamZ > s.camZ) camera.position.z = effectiveCamZ;
+        halfH = tan26 * effectiveCamZ;
+        halfW = camAspect * halfH; // always ≥ 7.0 world units
+        s._halfW = halfW; s._halfH = halfH; // cache for 1D mode
+      } else {
+        // Renderer hidden (1D mode) — use cached values or fall back to xPanel dimensions
+        if (s._halfW) {
+          halfW = s._halfW; halfH = s._halfH;
+        } else {
+          // First frame before any valid render — derive from x-panel canvas aspect
+          const xc = xCanvasRef.current;
+          const aspect = xc ? (xc.clientWidth / Math.max(xc.clientHeight, 1)) : 4;
+          halfH = 7.0 / Math.max(aspect, 0.1);
+          halfW = aspect * halfH;
+          s._halfW = halfW; s._halfH = halfH;
+        }
+      }
       // R/incoming blob: 20% up from bottom, pointer stays here when not transmitted
       const yRFixed = s.camY - halfH * 0.6;
 
