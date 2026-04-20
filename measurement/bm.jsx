@@ -1003,7 +1003,7 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
     const N = 350;
     const SCALE = (W - 6) * 0.88;
 
-    const drawDensityY = (getDensity, color) => {
+    const drawDensityY = (getDensity, color, xOff = 4, scale = SCALE) => {
       ctx.beginPath();
       ctx.strokeStyle = color;
       ctx.fillStyle = color + "28";
@@ -1012,11 +1012,11 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       for (let i = 0; i <= N; i++) {
         const y  = YLO + (YHI - YLO) * i / N;
         const py = wy(y);
-        const px = 4 + getDensity(y) * SCALE;
-        if (first) { ctx.moveTo(4, py); ctx.lineTo(px, py); first = false; }
+        const px = xOff + getDensity(y) * scale;
+        if (first) { ctx.moveTo(xOff, py); ctx.lineTo(px, py); first = false; }
         else ctx.lineTo(px, py);
       }
-      ctx.lineTo(4, wy(YLO));
+      ctx.lineTo(xOff, wy(YLO));
       ctx.closePath();
       ctx.fill();
       ctx.beginPath();
@@ -1024,7 +1024,7 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       for (let i = 0; i <= N; i++) {
         const y  = YLO + (YHI - YLO) * i / N;
         const py = wy(y);
-        const px = 4 + getDensity(y) * SCALE;
+        const px = xOff + getDensity(y) * scale;
         if (first) { ctx.moveTo(px, py); first = false; }
         else ctx.lineTo(px, py);
       }
@@ -1033,27 +1033,28 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
 
     drawDensityY(y => (1 - bl) * 0.5 * gauss(y, yRFixed, sigY), "#88aaff");
     if (isMW && bl > 0.05) {
-      // ── Many-Worlds: split Y-panel at H/2 — top = World T (green), bottom = World R (orange)
-      const sf     = Math.min(sepFrac * 1.5, 1);
-      const pyMid  = H / 2;
+      // ── Many-Worlds: split Y-panel with vertical line at W/2
+      // Bars extend rightward, so left half = World T, right half = World R
+      const sf    = Math.min(sepFrac * 1.5, 1);
+      const pxMid = W / 2;
       // Tinted backgrounds
-      ctx.fillStyle = `rgba(34,238,136,${0.07 * sf})`; ctx.fillRect(0, 0,      W, pyMid);
-      ctx.fillStyle = `rgba(255,119,68,${0.07 * sf})`;  ctx.fillRect(0, pyMid,  W, H - pyMid);
-      // Separator line at midpoint
+      ctx.fillStyle = `rgba(34,238,136,${0.07 * sf})`;  ctx.fillRect(0,      0, pxMid,      H);
+      ctx.fillStyle = `rgba(255,119,68,${0.07 * sf})`;  ctx.fillRect(pxMid,  0, W - pxMid,  H);
+      // Separator line (vertical) at W/2
       ctx.strokeStyle = `rgba(200,170,255,${0.5 * sf})`;
       ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-      ctx.beginPath(); ctx.moveTo(0, pyMid); ctx.lineTo(W, pyMid); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pxMid, 0); ctx.lineTo(pxMid, H); ctx.stroke();
       ctx.setLineDash([]);
-      // World T density clipped to top half
+      // World T density clipped to left half
       if (ampT > 0.001) {
-        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, pyMid); ctx.clip();
-        drawDensityY(y => bl * ampT * gauss(y, yT, sigY), "#22ee88");
+        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, pxMid, H); ctx.clip();
+        drawDensityY(y => bl * ampT * gauss(y, yT, sigY), "#22ee88", 4, (pxMid - 6) * 0.88);
         ctx.restore();
       }
-      // World R density clipped to bottom half
+      // World R density clipped to right half
       if (ampR > 0.001) {
-        ctx.save(); ctx.beginPath(); ctx.rect(0, pyMid, W, H - pyMid); ctx.clip();
-        drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744");
+        ctx.save(); ctx.beginPath(); ctx.rect(pxMid, 0, W - pxMid, H); ctx.clip();
+        drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744", pxMid + 2, (W - pxMid - 6) * 0.88);
         ctx.restore();
       }
     } else if (isPW && bl > 0.05) {
