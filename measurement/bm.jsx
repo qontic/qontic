@@ -934,6 +934,10 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       const scBoth = (H - 6) * 0.88 / pkBoth;
       if (ampT > 0.001) drawDensity(rhoT, "#22ee88", scBoth);
       if (ampR > 0.001) drawDensity(rhoR, "#ff7744", scBoth);
+      // Fixed-size legend
+      ctx.font = "12px 'JetBrains Mono',monospace";
+      ctx.fillStyle = "#22ee8899"; ctx.fillText("ρ_T(x)", 6, 14);
+      ctx.fillStyle = "#ff774499"; ctx.fillText("ρ_R(x)", 60, 14);
     } else {
       // After measurement: only surviving branch, rescaled to full height
       const survivorFn = colBranch === 1 ? rhoT : rhoR;
@@ -944,10 +948,10 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       const isT = colBranch === 1;
       const projLabel = isT ? `P_T |ψ⟩  (prob = ${(Tp*100).toFixed(0)}%)` : `P_R |ψ⟩  (prob = ${(Rp*100).toFixed(0)}%)`;
       const col = isT ? "#22ee88" : "#ff7744";
-      const fs = Math.max(7, Math.round(H * 0.22));
+      const fs = Math.min(Math.max(7, Math.round(H * 0.08)), 28);
       ctx.font = `bold ${fs}px 'JetBrains Mono',monospace`;
       ctx.fillStyle = `${col}cc`;
-      ctx.fillText(projLabel, 6, Math.round(H * 0.30));
+      ctx.fillText(projLabel, 6, Math.round(H * 0.12));
     }
   } else {
     // ── Standard (CPn / PW) background + axes ─────────────────────────────
@@ -985,7 +989,7 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.beginPath(); ctx.arc(cx, H - 4 - 3, 3, 0, 2 * Math.PI); ctx.fill();
   }
 
-  if (!isMW) {
+  if (!isMW && !is1D) {
     const fs = Math.max(9, Math.round(H * 0.16));
     const labelY = Math.round(H * 0.22);
     ctx.font = `${fs}px 'JetBrains Mono', monospace`;
