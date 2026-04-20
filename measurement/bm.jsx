@@ -1316,14 +1316,20 @@ function MathPanel({ interp }) {
       {eq("T = 1 / [1 + V₀² sinh²(κa) / (4E(V₀-E))]   (E < V₀)\nT = 1 / [1 + V₀² sin²(κa)  / (4E(E-V₀))]   (E > V₀)\n\nE = k₀²/2,   κ = √(2|V₀-E|)")}
 
       {sec("Marginal densities")}
-      {txt("The projections shown below and to the right of the 2D canvas:")}
+      {txt("The x-projection (below) and y-projection (right strip, when apparatus is visible):")}
       {eq("ρ(x,t) = ∫|Ψ(x,y,t)|²dy  ≈  T·|ψ_T(x)|² + R·|ψ_R(x)|²\n\nρ(y,t) = ∫|Ψ(x,y,t)|²dx  ≈  T·|χ_T(y)|² + R·|χ_R(y)|²")}
 
       {interp === "cpn" && (<>
-        {sec("Copenhagen — collapse")}
-        {txt("At a random time after scattering, the global wavefunction collapses to one branch with Born-rule probability:")}
+        {sec("Copenhagen — collapse (+ Apparatus view)")}
+        {txt("The 2D canvas shows the full configuration space (x = particle, y = pointer). At a random time after scattering, the global wavefunction collapses to one branch with Born-rule probability:")}
         {eq("Ψ(x,y,t*)  →  ψ_T · χ_T   with prob T\n            →  ψ_R · χ_R   with prob R = 1 - T")}
         {txt("The mechanism of collapse is not specified by the theory.")}
+        {sec("Copenhagen — operator picture (Operator view)")}
+        {txt("Tracing out the apparatus degree of freedom y, the particle state alone is:")}
+        {eq("ρ̂_particle = T |ψ_T⟩⟨ψ_T| + R |ψ_R⟩⟨ψ_R|")}
+        {txt("Measurement is described by projection operators acting on the 1D state |ψ(x)⟩:")}
+        {eq("P̂_T = |ψ_T⟩⟨ψ_T|  (projects onto transmitted subspace)\nP̂_R = |ψ_R⟩⟨ψ_R|  (projects onto reflected subspace)\n\n|ψ⟩  →  P̂_T|ψ⟩ / ‖P̂_T|ψ⟩‖  with prob T = ⟨ψ|P̂_T|ψ⟩\n     →  P̂_R|ψ⟩ / ‖P̂_R|ψ⟩‖  with prob R = ⟨ψ|P̂_R|ψ⟩")}
+        {txt("This is the standard textbook postulate: the apparatus is invisible — measurement is an instantaneous, axiomatic operation.")}
       </>)}
 
       {interp === "pw" && (<>
@@ -2088,6 +2094,7 @@ export default function App() {
               "In the Pilot-Wave interpretation — also called Bohmian mechanics — the wavefunction never collapses. Both branches continue to exist. But the particle itself follows a definite trajectory, guided by the wave. The white dot traces that trajectory. It enters one branch and stays there — guided deterministically by its initial position. The other branch becomes empty. It still exists mathematically, but it carries no particle and has no further effect. This is what Bohmian mechanics calls the empty wave.",
               "The side panels show the conditional wavefunction: a slice of the full two-dimensional wavefunction at the particle's actual position. Unlike the global projection, which always shows two peaks, the conditional wavefunction has a single peak — localised on the occupied branch. This is the effective wavefunction the particle actually rides.",
               "Both interpretations give the same experimental predictions. The difference is not about what we measure — it is about what we believe is really happening.",
+              "The Copenhagen interpretation also offers two levels of description. In the Operator view, the apparatus is hidden and measurement is an abstract projection operator P̂_T or P̂_R acting instantaneously on the particle state. In the + Apparatus view, the apparatus is made explicit as the y coordinate — and you can watch the entanglement and collapse unfold.",
               "This simulation makes that difference visible.",
             ].map((para, i) => (
               <p key={i} style={{
