@@ -1007,7 +1007,7 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       const pkS = Math.max(peakDensity(survivorFn), 1e-10);
       drawIn1D(survivorFn, survivorCol, SCMAX / pkS);
 
-      // Operator equation in label band — two lines
+      // Operator equation in label band — three lines
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       const col = isT ? "#22ee88" : "#ff7744";
       const pct = Math.round((isT ? Tp : Rp) * 100);
@@ -1016,12 +1016,19 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       ctx.fillStyle = `${col}ee`;
       ctx.fillText(
         isT ? `P̂_T |ψ⟩  →  |ψ_T⟩` : `P̂_R |ψ⟩  →  |ψ_R⟩`,
-        W / 2, labelH * 0.36
+        W / 2, labelH * 0.30
       );
-      const subFS = Math.round(eqFS * 0.75);
+      const subFS = Math.round(eqFS * 0.72);
       ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
-      ctx.fillStyle = `${col}88`;
-      ctx.fillText(`probability = ${pct}%`, W / 2, labelH * 0.76);
+      ctx.fillStyle = `${col}aa`;
+      ctx.fillText(
+        isT ? `P̂_T = projector onto transmitted state` : `P̂_R = projector onto reflected state`,
+        W / 2, labelH * 0.60
+      );
+      const sub2FS = Math.round(eqFS * 0.55);
+      ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+      ctx.fillStyle = `${col}66`;
+      ctx.fillText(`outcome probability = ${pct}%`, W / 2, labelH * 0.85);
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
 
       // Faint label above the lobe
