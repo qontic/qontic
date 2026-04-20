@@ -1254,14 +1254,14 @@ export default function App() {
     // ── Branch label sprites ──────────────────────────────────────────────────
     function makeSprite(text, color) {
       const cv = document.createElement("canvas");
-      cv.width=220; cv.height=48;
+      cv.width=320; cv.height=48;
       const ctx = cv.getContext("2d");
-      ctx.font = "bold 19px 'JetBrains Mono',monospace";
+      ctx.font = "bold 17px 'JetBrains Mono',monospace";
       ctx.fillStyle = color; ctx.textAlign="center"; ctx.textBaseline="middle";
-      ctx.fillText(text, 110, 24);
+      ctx.fillText(text, 160, 24);
       const tex = new THREE.CanvasTexture(cv);
       const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, opacity:0.85 }));
-      spr.scale.set(4, 0.9, 1);
+      spr.scale.set(5, 0.75, 1);
       return spr;
     }
     const lblT = makeSprite("T-branch  (x>0,  y>0)", "#44ee88");
@@ -1517,11 +1517,11 @@ export default function App() {
       Tr.lblT.visible = sepFrac > 0.3;
       Tr.lblR.visible = sepFrac > 0.3;
       const lblX = Math.min(6.5, halfW - 2.2);
-      const lblScale = Math.min(4, halfW * 0.52);
+      const lblScale = Math.min(5, halfW * 0.65);
       Tr.lblT.position.set( lblX,  5.5, 0.2);
       Tr.lblR.position.set(-lblX, -5.5, 0.2);
-      Tr.lblT.scale.set(lblScale, 0.9, 1);
-      Tr.lblR.scale.set(lblScale, 0.9, 1);
+      Tr.lblT.scale.set(lblScale, 0.75, 1);
+      Tr.lblR.scale.set(lblScale, 0.75, 1);
 
       // ── Throttled React state updates (~10 Hz) ────────────────────────────
       const now = performance.now();
