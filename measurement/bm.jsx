@@ -490,7 +490,7 @@ const VIEWS      = ["cpn","pw","mw"];
 const VIEW_LABEL = { cpn:"Copenhagen", pw:"Pilot-Wave", mw:"Many Worlds" };
 const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff",   mw:"#cc88ff" };
 const VIEW_DESC  = {
-  cpn: "Global |Ψ(x,y)|² — always two branches. At a random moment one branch is selected and the other collapses.",
+  cpn: "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Global |Ψ(x,y)|² always has two branches; at a random moment one is selected and the other collapses.",
   pw:  "Same global |Ψ(x,y)|² plus the Bohmian particle (X,Y) that rides one branch. Below: conditional wavefunction ψ_cond(x,Y(t)) and the two marginals.",
   mw:  "Both branches persist — the universe splits. World 1: particle transmitted, pointer deflected. World 2: particle reflected, pointer at rest. Neither world 'knows about' the other.",
 };
@@ -979,9 +979,14 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       const eqY = labelH / 2;
 
       if (bl < 0.12) {
-        // Act 1: just the initial ket
+        // Act 1: ket + setup subtitle
         ctx.fillStyle = "rgba(136,170,255,0.85)";
-        ctx.fillText("|ψ_in⟩", W / 2, eqY);
+        ctx.fillText("|ψ_in⟩", W / 2, eqY * 0.55);
+        const subFS2 = Math.round(eqFS * 0.55);
+        ctx.font = `${subFS2}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(120,150,210,0.55)";
+        ctx.fillText("quantum particle approaching potential barrier V\u2080", W / 2, eqY * 1.45);
+        ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
       } else {
         // Act 2: superposition, fade in
         const alpha = Math.min(1, (bl - 0.12) / 0.25);
