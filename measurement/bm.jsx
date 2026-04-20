@@ -940,7 +940,7 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.beginPath(); ctx.moveTo(wx(0), labelH); ctx.lineTo(wx(0), H); ctx.stroke();
     ctx.setLineDash([]);
 
-    const SCMAX = plotH * 0.82;
+    const SCMAX = plotH * 0.82 * 0.80;
     const drawIn1D = (fn, color, sc) => drawDensityInRegion(fn, color, sc, labelH, plotH);
     const collapsed = colBranch !== 0;
 
@@ -957,7 +957,7 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
 
       // ── Equation in label band ────────────────────────────────────────────
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      const eqFS = Math.min(18, Math.max(12, Math.round(H * 0.043)));
+      const eqFS = Math.min(27, Math.max(18, Math.round(H * 0.043 * 1.5)));
       ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
       const eqY = labelH / 2;
 
@@ -977,7 +977,7 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       // ── Lobe labels positioned above each peak ────────────────────────────
       if (bl > 0.18) {
         const alpha = Math.min(1, (bl - 0.18) / 0.35);
-        const lblFS = Math.min(13, Math.max(10, Math.round(H * 0.030)));
+        const lblFS = Math.min(26, Math.max(20, Math.round(H * 0.030 * 2.0)));
         ctx.font = `${lblFS}px 'JetBrains Mono',monospace`;
         ctx.textAlign = "center";
         const base = labelH + plotH - 3; // bottom of plot area
@@ -1011,7 +1011,7 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       const col = isT ? "#22ee88" : "#ff7744";
       const pct = Math.round((isT ? Tp : Rp) * 100);
-      const eqFS = Math.min(20, Math.max(13, Math.round(H * 0.048)));
+      const eqFS = Math.min(30, Math.max(19, Math.round(H * 0.048 * 1.5)));
       ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
       ctx.fillStyle = `${col}ee`;
       ctx.fillText(
@@ -1028,7 +1028,7 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       const lxS = clamp(wx(isT ? xT : xR), 44, W - 44);
       const base = labelH + plotH - 3;
       const peakY = base - survivorFn(isT ? xT : xR) * (SCMAX / pkS);
-      const lblFS = Math.min(13, Math.max(10, Math.round(H * 0.030)));
+      const lblFS = Math.min(26, Math.max(20, Math.round(H * 0.030 * 2.0)));
       ctx.font = `${lblFS}px 'JetBrains Mono',monospace`;
       ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
       ctx.fillStyle = `${survivorCol}cc`;
