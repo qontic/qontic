@@ -1325,11 +1325,13 @@ function MathPanel({ interp }) {
         {eq("Ψ(x,y,t*)  →  ψ_T · χ_T   with prob T\n            →  ψ_R · χ_R   with prob R = 1 - T")}
         {txt("The mechanism of collapse is not specified by the theory.")}
         {sec("Copenhagen — operator picture (Operator view)")}
-        {txt("Tracing out the apparatus degree of freedom y, the particle state alone is:")}
+        {txt("The measurement observable is the detector that distinguishes 'transmitted' from 'reflected'. It is a hermitian operator with two eigenspaces:")}
+        {eq("M̂ = (+1) Π̂_T  +  (−1) Π̂_R\n\nΠ̂_T = ∫₀^∞ |x⟩⟨x| dx   (projector onto x > 0)\nΠ̂_R = ∫₋∞^0 |x⟩⟨x| dx   (projector onto x < 0)\n\neigenvalue +1  →  particle found transmitted\neigenvalue −1  →  particle found reflected\n\n⟨M̂⟩ = T − R")}
+        {txt("After scattering the particle state is |ψ⟩ = √T |ψ_T⟩ + √R |ψ_R⟩. Applying the measurement postulate:")}
+        {eq("|ψ⟩  →  Π̂_T|ψ⟩ / ‖Π̂_T|ψ⟩‖  =  |ψ_T⟩   with prob ⟨ψ|Π̂_T|ψ⟩ = T\n     →  Π̂_R|ψ⟩ / ‖Π̂_R|ψ⟩‖  =  |ψ_R⟩   with prob ⟨ψ|Π̂_R|ψ⟩ = R")}
+        {txt("The post-measurement state is the projected (and renormalised) branch. The apparatus is invisible in this picture — measurement is an instantaneous, axiomatic operation on the 1D state.")}
+        {txt("Tracing out the apparatus degree of freedom y gives the pre-measurement mixed state:")}
         {eq("ρ̂_particle = T |ψ_T⟩⟨ψ_T| + R |ψ_R⟩⟨ψ_R|")}
-        {txt("Measurement is described by projection operators acting on the 1D state |ψ(x)⟩:")}
-        {eq("P̂_T = |ψ_T⟩⟨ψ_T|  (projects onto transmitted subspace)\nP̂_R = |ψ_R⟩⟨ψ_R|  (projects onto reflected subspace)\n\n|ψ⟩  →  P̂_T|ψ⟩ / ‖P̂_T|ψ⟩‖  with prob T = ⟨ψ|P̂_T|ψ⟩\n     →  P̂_R|ψ⟩ / ‖P̂_R|ψ⟩‖  with prob R = ⟨ψ|P̂_R|ψ⟩")}
-        {txt("This is the standard textbook postulate: the apparatus is invisible — measurement is an instantaneous, axiomatic operation.")}
       </>)}
 
       {interp === "mw" && (<>
