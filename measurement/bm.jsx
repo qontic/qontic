@@ -1057,24 +1057,25 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
         // ── Phase 0: show M̂ operator — both lobes visible ─────────────────
         drawIn1D(x => bl * Tp * gT(x), "#22ee88", scBoth);
         drawIn1D(x => bl * Rp * gR(x), "#ff7744", scBoth);
-        // Lobe labels
+        // Lobe labels — annotate each component of |ψ⟩
         const lbFS = Math.min(26, Math.max(20, Math.round(H * 0.060)));
         ctx.font = `${lbFS}px 'JetBrains Mono',monospace`;
         if (Tp > 0.001) { ctx.fillStyle = "rgba(34,238,136,0.85)"; ctx.fillText("√T |ψ_T⟩", clamp(wx(xT), 60, W-60), labelH + 20); }
         if (Rp > 0.001) { ctx.fillStyle = "rgba(255,119,68,0.85)";  ctx.fillText("√R |ψ_R⟩", clamp(wx(xR), 60, W-60), labelH + 20); }
-        // Operator equation in label band
+        // Label band: observable definition + state decomposition + Born rule
         ctx.font = `bold ${sub2FS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = "rgba(100,160,255,0.70)";
-        ctx.fillText("─── Operator Application ───", W / 2, labelH * 0.14);
+        ctx.fillText("─── Operator Application ───", W / 2, labelH * 0.12);
         ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = "rgba(210,230,255,0.92)";
-        ctx.fillText("M̂  =  (+1) Π̂_T  +  (−1) Π̂_R", W / 2, labelH * 0.42);
+        ctx.fillText("M̂  =  (+1) Π̂_T  +  (−1) Π̂_R", W / 2, labelH * 0.38);
         ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
-        ctx.fillStyle = "rgba(150,180,230,0.65)";
-        ctx.fillText("Π̂_T = ∫₀^∞|x⟩⟨x|dx     Π̂_R = ∫₋∞^0|x⟩⟨x|dx", W / 2, labelH * 0.68);
+        ctx.fillStyle = "rgba(150,180,230,0.72)";
+        // State decomposition — connects equation to the two lobes shown
+        ctx.fillText("|ψ⟩  =  √T |ψ_T⟩  +  √R |ψ_R⟩", W / 2, labelH * 0.63);
         ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
-        ctx.fillStyle = "rgba(120,150,200,0.50)";
-        ctx.fillText("eigenvalue +1 → transmitted   −1 → reflected", W / 2, labelH * 0.88);
+        ctx.fillStyle = "rgba(120,150,200,0.52)";
+        ctx.fillText("P(m) = ‖Π̂_m |ψ⟩‖²   (Born rule)", W / 2, labelH * 0.87);
         // Step mode: click-to-advance hint at bottom-right
         if (stepMode) {
           ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
@@ -1084,26 +1085,34 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
         }
 
       } else if (phase === 1) {
-        // ── Phase 1: collapse — dying lobe fades out ───────────────────────
-        const dyingAlpha = stepMode ? 0.35 : (1 - localFade);  // step: freeze at 35% so user sees both
+        // ── Phase 1: projector applied — dying lobe fades out ──────────────
+        const dyingAlpha = stepMode ? 0.35 : (1 - localFade);
         if (dyingAlpha > 0.02) drawIn1D(x => dyingFn(x) * dyingAlpha, colDying, scBoth);
         drawIn1D(survivorFn, col, scBoth);
-        // Label band: projection being applied
+        // Label band: what the projector does, exact result, Born probability
         ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = `${col}ee`;
+        // Π̂_T |ψ⟩ = √T |ψ_T⟩  (exact — the non-surviving component is annihilated)
         ctx.fillText(
-          isT ? "Π̂_T |ψ⟩  /  ‖Π̂_T|ψ⟩‖" : "Π̂_R |ψ⟩  /  ‖Π̂_R|ψ⟩‖",
-          W / 2, labelH * 0.30
+          isT ? "Π̂_T |ψ⟩  =  √T |ψ_T⟩" : "Π̂_R |ψ⟩  =  √R |ψ_R⟩",
+          W / 2, labelH * 0.28
         );
         ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
-        ctx.fillStyle = `${col}88`;
+        ctx.fillStyle = `${col}99`;
+        // Born rule: probability = squared norm of projected state
         ctx.fillText(
-          isT ? "projecting onto transmitted subspace…" : "projecting onto reflected subspace…",
-          W / 2, labelH * 0.62
+          isT
+            ? `P(m=+1)  =  ‖Π̂_T|ψ⟩‖²  =  T  =  ${pct}%`
+            : `P(m=−1)  =  ‖Π̂_R|ψ⟩‖²  =  R  =  ${pct}%`,
+          W / 2, labelH * 0.60
         );
         ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
-        ctx.fillStyle = "rgba(180,140,60,0.55)";
-        ctx.fillText(`outcome: M̂|ψ⟩ = ${isT ? "+1" : "−1"} (prob = ${pct}%)`, W / 2, labelH * 0.87);
+        ctx.fillStyle = "rgba(180,200,150,0.55)";
+        // Post-measurement state: renormalise the projected state
+        ctx.fillText(
+          isT ? "|ψ_post⟩  =  Π̂_T|ψ⟩ / √T  =  |ψ_T⟩" : "|ψ_post⟩  =  Π̂_R|ψ⟩ / √R  =  |ψ_R⟩",
+          W / 2, labelH * 0.86
+        );
         if (stepMode) {
           ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
           ctx.fillStyle = "rgba(100,180,255,0.55)";
@@ -1112,22 +1121,27 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
         }
 
       } else {
-        // ── Phase 2: result — survivor at full height + label ──────────────
+        // ── Phase 2: post-measurement eigenstate ───────────────────────────
         const pkS = Math.max(peakDensity(survivorFn), 1e-10);
         drawIn1D(survivorFn, col, SCMAX / pkS);
-        // Label band
+        // Label band: collapsed state + eigenvalue equation + Born probability
         ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = `${col}ee`;
-        ctx.fillText(isT ? "Π̂_T |ψ⟩  →  |ψ_T⟩" : "Π̂_R |ψ⟩  →  |ψ_R⟩", W / 2, labelH * 0.30);
+        // Post-measurement state is an eigenstate of M̂
+        ctx.fillText(isT ? "|ψ_post⟩  =  |ψ_T⟩" : "|ψ_post⟩  =  |ψ_R⟩", W / 2, labelH * 0.28);
         ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = `${col}aa`;
+        // Eigenvalue equation — this is the correct way to say the outcome is +1/-1
         ctx.fillText(
-          isT ? "Π̂_T = projector onto transmitted state" : "Π̂_R = projector onto reflected state",
-          W / 2, labelH * 0.60
+          isT ? "M̂ |ψ_T⟩  =  +1 · |ψ_T⟩" : "M̂ |ψ_R⟩  =  −1 · |ψ_R⟩",
+          W / 2, labelH * 0.58
         );
         ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = `${col}66`;
-        ctx.fillText(`outcome probability = ${pct}%`, W / 2, labelH * 0.85);
+        ctx.fillText(
+          isT ? `Born rule:  P(m=+1) = T = ${pct}%` : `Born rule:  P(m=−1) = R = ${pct}%`,
+          W / 2, labelH * 0.86
+        );
         // Lobe label
         const lxS = clamp(wx(xSurv), 44, W - 44);
         const base = labelH + plotH - 3;
