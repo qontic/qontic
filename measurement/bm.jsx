@@ -824,7 +824,7 @@ function _WF1DPanel_removed({ Tp, Rp, xT, xR, yT, yR, sigX, sigY, bX, bY, bl, sh
 
 
 // ── X-marginal panel: ∫|Ψ(x,y)|²dy  vs  x  (horizontal strip below 2D) ──────
-function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, cpnMode, sepFrac, showProj, xLo, xHi, rho, rhoXs, V0 }) {
+function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, cpnMode, colElapsedMs, sepFrac, showProj, xLo, xHi, rho, rhoXs, V0 }) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
@@ -1025,47 +1025,89 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       }
 
     } else {
-      // ── Act 3: post-collapse ───────────────────────────────────────────────
+      // ── Act 3: three-phase measurement narrative driven by wall-clock time ─
+      // Phase A (0–1200ms):  M̂ shown on top of both lobes
+      // Phase B (1200–2600ms): collapse — dying lobe fades, survivor stays
+      // Phase C (2600ms+):  result — survivor at full height + label
       const isT = colBranch === 1;
-      const survivorFn = isT ? rhoT : rhoR;
-      const survivorCol = isT ? "#22ee88" : "#ff7744";
-      const pkS = Math.max(peakDensity(survivorFn), 1e-10);
-      drawIn1D(survivorFn, survivorCol, SCMAX / pkS);
+      const col      = isT ? "#22ee88" : "#ff7744";
+      const colDying = isT ? "#ff7744" : "#22ee88";
+      const survivorFn = isT ? (x => bl * Tp * gT(x)) : (x => bl * Rp * gR(x));
+      const dyingFn    = isT ? (x => bl * Rp * gR(x)) : (x => bl * Tp * gT(x));
+      const xSurv = isT ? xT : xR;
+      const pkBoth = Math.max(peakDensity(rhoTotal), 1e-10);
+      const scBoth = SCMAX / pkBoth;
 
-      // Operator equation in label band — three lines
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      const col = isT ? "#22ee88" : "#ff7744";
-      const pct = Math.round((isT ? Tp : Rp) * 100);
-      const eqFS = Math.min(30, Math.max(19, Math.round(H * 0.048 * 1.5)));
-      ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
-      ctx.fillStyle = `${col}ee`;
-      ctx.fillText(
-        isT ? `P̂_T |ψ⟩  →  |ψ_T⟩` : `P̂_R |ψ⟩  →  |ψ_R⟩`,
-        W / 2, labelH * 0.30
-      );
+      const eqFS  = Math.min(30, Math.max(19, Math.round(H * 0.048 * 1.5)));
       const subFS = Math.round(eqFS * 0.72);
-      ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
-      ctx.fillStyle = `${col}aa`;
-      ctx.fillText(
-        isT ? `P̂_T = projector onto transmitted state` : `P̂_R = projector onto reflected state`,
-        W / 2, labelH * 0.60
-      );
       const sub2FS = Math.round(eqFS * 0.55);
-      ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
-      ctx.fillStyle = `${col}66`;
-      ctx.fillText(`outcome probability = ${pct}%`, W / 2, labelH * 0.85);
-      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      const pct = Math.round((isT ? Tp : Rp) * 100);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
 
-      // Faint label above the lobe
-      const lxS = clamp(wx(isT ? xT : xR), 44, W - 44);
-      const base = labelH + plotH - 3;
-      const peakY = base - survivorFn(isT ? xT : xR) * (SCMAX / pkS);
-      const lblFS = Math.min(26, Math.max(20, Math.round(H * 0.030 * 2.0)));
-      ctx.font = `${lblFS}px 'JetBrains Mono',monospace`;
-      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillStyle = `${survivorCol}cc`;
-      ctx.fillText(isT ? `|ψ_T⟩` : `|ψ_R⟩`, lxS, Math.max(peakY - 10, labelH + lblFS + 4));
-      ctx.textAlign = "left";
+      if (colElapsedMs < 1200) {
+        // ── Phase A: show M̂ operator on top of both lobes ─────────────────
+        drawIn1D(x => bl * Tp * gT(x), "#22ee88", scBoth);
+        drawIn1D(x => bl * Rp * gR(x), "#ff7744", scBoth);
+        // Lobe labels
+        const lbFS = Math.min(26, Math.max(20, Math.round(H * 0.060)));
+        ctx.font = `${lbFS}px 'JetBrains Mono',monospace`;
+        if (Tp > 0.001) { ctx.fillStyle = "rgba(34,238,136,0.85)"; ctx.fillText("√T |ψ_T⟩", clamp(wx(xT), 60, W-60), labelH + 20); }
+        if (Rp > 0.001) { ctx.fillStyle = "rgba(255,119,68,0.85)";  ctx.fillText("√R |ψ_R⟩", clamp(wx(xR), 60, W-60), labelH + 20); }
+        // Operator equation in label band
+        ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(210,230,255,0.92)";
+        ctx.fillText("M̂  =  (+1) Π̂_T  +  (−1) Π̂_R", W / 2, labelH * 0.32);
+        ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(150,180,230,0.65)";
+        ctx.fillText("Π̂_T = ∫₀^∞|x⟩⟨x|dx     Π̂_R = ∫₋∞^0|x⟩⟨x|dx", W / 2, labelH * 0.62);
+        ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(120,150,200,0.50)";
+        ctx.fillText("eigenvalue +1 → transmitted   −1 → reflected", W / 2, labelH * 0.87);
+
+      } else if (colElapsedMs < 2600) {
+        // ── Phase B: collapse — dying lobe fades out ───────────────────────
+        const localFade = Math.min((colElapsedMs - 1200) / 1400, 1);
+        const dyingAlpha = 1 - localFade;
+        if (dyingAlpha > 0.02) drawIn1D(x => dyingFn(x) * dyingAlpha, colDying, scBoth);
+        drawIn1D(survivorFn, col, scBoth);
+        // Label band: projection being applied
+        ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}ee`;
+        ctx.fillText(
+          isT ? "Π̂_T |ψ⟩  /  ‖Π̂_T|ψ⟩‖" : "Π̂_R |ψ⟩  /  ‖Π̂_R|ψ⟩‖",
+          W / 2, labelH * 0.35
+        );
+        ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}88`;
+        ctx.fillText(isT ? "projecting onto transmitted subspace…" : "projecting onto reflected subspace…", W / 2, labelH * 0.72);
+
+      } else {
+        // ── Phase C: result ────────────────────────────────────────────────
+        const pkS = Math.max(peakDensity(survivorFn), 1e-10);
+        drawIn1D(survivorFn, col, SCMAX / pkS);
+        // Label band
+        ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}ee`;
+        ctx.fillText(isT ? "Π̂_T |ψ⟩  →  |ψ_T⟩" : "Π̂_R |ψ⟩  →  |ψ_R⟩", W / 2, labelH * 0.30);
+        ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}aa`;
+        ctx.fillText(
+          isT ? "Π̂_T = projector onto transmitted state" : "Π̂_R = projector onto reflected state",
+          W / 2, labelH * 0.60
+        );
+        ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}66`;
+        ctx.fillText(`outcome probability = ${pct}%`, W / 2, labelH * 0.85);
+        // Lobe label
+        const lxS = clamp(wx(xSurv), 44, W - 44);
+        const base = labelH + plotH - 3;
+        const peakY = base - survivorFn(xSurv) * (SCMAX / pkS);
+        const lblFS = Math.min(26, Math.max(20, Math.round(H * 0.060)));
+        ctx.font = `${lblFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}cc`;
+        ctx.fillText(isT ? "|ψ_T⟩" : "|ψ_R⟩", lxS, Math.max(peakY - 10, labelH + lblFS + 4));
+      }
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
     }
   } else {
     // ── Standard (CPn / PW) background + axes ─────────────────────────────
@@ -1776,10 +1818,11 @@ export default function App() {
           s.colTriggered = true;
           s.colBranch = Math.random() < Tprob ? 1 : -1;
           s.colFade   = 0;
+          s.colStartMs = performance.now();
           s._flashPending = true;
           // Freeze here — lobe centre is still inside canvas
           // In 1D textbook mode, hold longer so the post-collapse state is readable
-          s.pauseUntil = performance.now() + (s.cpnMode === "1d" ? 4000 : 1800);
+          s.pauseUntil = performance.now() + (s.cpnMode === "1d" ? 4500 : 1800);
         }
         if (s.colTriggered) {
           s.colFade = Math.min(s.colFade + 0.08, 1);
@@ -1925,6 +1968,7 @@ export default function App() {
         isPW: s.interp === "pw",
         interp: s.interp,
         cpnMode: s.cpnMode,
+        colElapsedMs: s.colTriggered ? (performance.now() - (s.colStartMs || 0)) : 0,
         sepFrac,
         showProj: s.showProj,
         // x-panel: use camera's actual visible range so particle position matches 2D canvas exactly
