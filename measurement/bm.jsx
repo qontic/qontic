@@ -500,42 +500,6 @@ const VIEW_DESC  = {
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 // ── Shared audio player ─────────────────────────────────────────────────────
-function SharedAudioPlayer({ audioRef, playing, setPlaying, time, duration }) {
-  const pct = duration > 0 ? time / duration : 0;
-  const fmt = s => {
-    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2,'0')}`;
-  };
-  const seek = e => {
-    if (!audioRef.current) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    audioRef.current.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
-  };
-  return (
-    <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-        <button onClick={() => {
-          if (!audioRef.current) return;
-          playing ? audioRef.current.pause() : audioRef.current.play();
-        }} style={{
-          width:28, height:28, borderRadius:"50%", border:"none", cursor:"pointer",
-          background:"rgba(40,100,220,0.7)", color:"#fff", fontSize:13,
-          display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
-        }}>{playing ? "⏸" : "▶"}</button>
-        <div onClick={seek} style={{ flex:1, height:4, background:"rgba(255,255,255,0.12)",
-          borderRadius:2, cursor:"pointer", position:"relative" }}>
-          <div style={{ position:"absolute", left:0, top:0, height:"100%",
-            width:`${pct*100}%`, background:"#5588ff", borderRadius:2,
-            pointerEvents:"none" }} />
-        </div>
-        <span style={{ fontSize:10, color:"#7090b8", flexShrink:0, fontFamily:"monospace" }}>
-          {fmt(time)}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 const SimPanel = React.memo(({
   interp, setInterp,
   tTarget, setTTarget, tTargetRef,
@@ -549,7 +513,6 @@ const SimPanel = React.memo(({
   Tp, Rp,
   cpnMode, setCpnMode,
   stepMode, setStepMode,
-  audioRef, audioPlaying, setAudioPlaying, audioTime, audioDuration,
   isMobile,
 }) => {
   const vc  = VIEW_COLOR[interp];
@@ -685,11 +648,6 @@ const SimPanel = React.memo(({
           Drag: pan
         </div>}
 
-        <div style={{ borderTop:"1px solid rgba(50,80,180,0.15)", paddingTop:8 }}>
-          <div style={{ fontSize:10, color:"#44bbff", marginBottom:6 }}>▶ Narration</div>
-          <SharedAudioPlayer audioRef={audioRef} playing={audioPlaying}
-            setPlaying={setAudioPlaying} time={audioTime} duration={audioDuration} />
-        </div>
       </div>
     </div>
   );
@@ -2052,10 +2010,6 @@ export default function App() {
   }, []);
 
   const [canvasTab, setCanvasTab] = useState("sim"); // "sim" | "math"
-  const audioRef = useRef(null);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  const [audioTime,    setAudioTime]    = useState(0);
-  const [audioDuration,setAudioDuration]= useState(0);
 
   return (
     <div style={{ display:"flex", flexDirection: sidebarBelow ? "column" : "row",
@@ -2064,13 +2018,6 @@ export default function App() {
       background:"#040a1c",
       overflowX:"hidden",
       overflowY: sidebarBelow ? "auto" : "hidden" }}>
-      <audio ref={audioRef} src="measurement-expanation.mp3"
-        onPlay={() => setAudioPlaying(true)}
-        onPause={() => setAudioPlaying(false)}
-        onEnded={() => setAudioPlaying(false)}
-        onTimeUpdate={e => setAudioTime(e.target.currentTime)}
-        onLoadedMetadata={e => setAudioDuration(e.target.duration)}
-      />
       {/* Left: canvas area + tab strip */}
       <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column",
         position:"relative", overflow:"hidden",
@@ -2210,11 +2157,7 @@ export default function App() {
           <div style={{ flex:1, overflowY:"auto", padding:"28px 36px",
             fontFamily:"Georgia,'Times New Roman',serif",
             background:"#040a1c", color:"#c8d8f0", lineHeight:1.9, fontSize:15 }}>
-            <div style={{ marginBottom:28 }}>
-              <SharedAudioPlayer audioRef={audioRef} playing={audioPlaying}
-                setPlaying={setAudioPlaying} time={audioTime} duration={audioDuration} />
-            </div>
-            {[
+              {[
               "What does it mean to measure a quantum particle?",
               "This simulation shows a quantum particle — say, an electron — approaching a potential barrier from the left. The horizontal axis is the particle's position x. In the + Apparatus view, the vertical axis is the pointer of a measuring device: a needle that deflects upward if the particle transmits, and stays at rest if it reflects.",
               "Before the particle hits the barrier, the two-dimensional wavefunction is a single blob moving diagonally. The particle and pointer are not yet entangled.",
@@ -2261,8 +2204,6 @@ export default function App() {
           showProj={showProj} setShowProj={setShowProj}
           running={running} setRunning={setRunning}
           Tp={Tp} Rp={Rp}
-          audioRef={audioRef} audioPlaying={audioPlaying} setAudioPlaying={setAudioPlaying}
-          audioTime={audioTime} audioDuration={audioDuration}
           cpnMode={cpnMode} setCpnMode={setCpnMode}
           stepMode={stepMode} setStepMode={setStepMode}
           isMobile={isMobile}
