@@ -2216,7 +2216,7 @@ export default function App() {
             </div>
             {[
               "What does it mean to measure a quantum particle?",
-              "This simulation shows a quantum particle — say, an electron — approaching a potential barrier from the left. The horizontal axis is the particle's position x. In the + Apparatus view, the vertical axis is the pointer of a measuring device: a needle that deflects up if the particle transmits, and down if it reflects.",
+              "This simulation shows a quantum particle — say, an electron — approaching a potential barrier from the left. The horizontal axis is the particle's position x. In the + Apparatus view, the vertical axis is the pointer of a measuring device: a needle that deflects upward if the particle transmits, and stays at rest if it reflects.",
               "Before the particle hits the barrier, the two-dimensional wavefunction is a single blob moving diagonally. The particle and pointer are not yet entangled.",
               "At the barrier, the wavefunction splits into two branches. The transmitted branch moves to the upper right — the particle passes through and the pointer deflects upward. The reflected branch moves to the left while the pointer stays at its resting position — the particle bounces back, and the device registers nothing. The marginal projections on the sides show the two distinct outcomes.",
               "What happens next depends on your interpretation of quantum mechanics.",
