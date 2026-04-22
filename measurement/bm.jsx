@@ -1063,15 +1063,18 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
         if (Tp > 0.001) { ctx.fillStyle = "rgba(34,238,136,0.85)"; ctx.fillText("√T |ψ_T⟩", clamp(wx(xT), 60, W-60), labelH + 20); }
         if (Rp > 0.001) { ctx.fillStyle = "rgba(255,119,68,0.85)";  ctx.fillText("√R |ψ_R⟩", clamp(wx(xR), 60, W-60), labelH + 20); }
         // Operator equation in label band
+        ctx.font = `bold ${sub2FS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(100,160,255,0.70)";
+        ctx.fillText("─── Operator Application ───", W / 2, labelH * 0.14);
         ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = "rgba(210,230,255,0.92)";
-        ctx.fillText("M̂  =  (+1) Π̂_T  +  (−1) Π̂_R", W / 2, labelH * 0.32);
+        ctx.fillText("M̂  =  (+1) Π̂_T  +  (−1) Π̂_R", W / 2, labelH * 0.42);
         ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = "rgba(150,180,230,0.65)";
-        ctx.fillText("Π̂_T = ∫₀^∞|x⟩⟨x|dx     Π̂_R = ∫₋∞^0|x⟩⟨x|dx", W / 2, labelH * 0.62);
+        ctx.fillText("Π̂_T = ∫₀^∞|x⟩⟨x|dx     Π̂_R = ∫₋∞^0|x⟩⟨x|dx", W / 2, labelH * 0.68);
         ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = "rgba(120,150,200,0.50)";
-        ctx.fillText("eigenvalue +1 → transmitted   −1 → reflected", W / 2, labelH * 0.87);
+        ctx.fillText("eigenvalue +1 → transmitted   −1 → reflected", W / 2, labelH * 0.88);
         // Step mode: click-to-advance hint at bottom-right
         if (stepMode) {
           ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
