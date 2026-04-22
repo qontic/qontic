@@ -548,6 +548,7 @@ const SimPanel = React.memo(({
   running, setRunning,
   Tp, Rp,
   cpnMode, setCpnMode,
+  stepMode, setStepMode,
   audioRef, audioPlaying, setAudioPlaying, audioTime, audioDuration,
   isMobile,
 }) => {
@@ -824,7 +825,7 @@ function _WF1DPanel_removed({ Tp, Rp, xT, xR, yT, yR, sigX, sigY, bX, bY, bl, sh
 
 
 // ── X-marginal panel: ∫|Ψ(x,y)|²dy  vs  x  (horizontal strip below 2D) ──────
-function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, cpnMode, colElapsedMs, sepFrac, showProj, xLo, xHi, rho, rhoXs, V0 }) {
+function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, cpnMode, colElapsedMs, stepMode, colPhase, sepFrac, showProj, xLo, xHi, rho, rhoXs, V0 }) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
@@ -1025,10 +1026,10 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       }
 
     } else {
-      // ── Act 3: three-phase measurement narrative driven by wall-clock time ─
-      // Phase A (0–1200ms):  M̂ shown on top of both lobes
-      // Phase B (1200–2600ms): collapse — dying lobe fades, survivor stays
-      // Phase C (2600ms+):  result — survivor at full height + label
+      // ── Act 3: three-phase measurement narrative ──────────────────────────
+      // Phase 0: M̂ shown on top of both lobes
+      // Phase 1: collapse — dying lobe fades, survivor stays
+      // Phase 2: result — survivor at full height + label
       const isT = colBranch === 1;
       const col      = isT ? "#22ee88" : "#ff7744";
       const colDying = isT ? "#ff7744" : "#22ee88";
@@ -1044,8 +1045,16 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       const pct = Math.round((isT ? Tp : Rp) * 100);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
 
-      if (colElapsedMs < 1200) {
-        // ── Phase A: show M̂ operator on top of both lobes ─────────────────
+      // Resolve which phase to display
+      const phase = stepMode
+        ? colPhase
+        : colElapsedMs < 1200 ? 0 : colElapsedMs < 2600 ? 1 : 2;
+
+      // In phase B (auto mode), compute local fade from elapsed time; step mode snaps to mid-fade=0
+      const localFade = stepMode ? 0 : Math.min((colElapsedMs - 1200) / 1400, 1);
+
+      if (phase === 0) {
+        // ── Phase 0: show M̂ operator — both lobes visible ─────────────────
         drawIn1D(x => bl * Tp * gT(x), "#22ee88", scBoth);
         drawIn1D(x => bl * Rp * gR(x), "#ff7744", scBoth);
         // Lobe labels
@@ -1063,11 +1072,17 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
         ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = "rgba(120,150,200,0.50)";
         ctx.fillText("eigenvalue +1 → transmitted   −1 → reflected", W / 2, labelH * 0.87);
+        // Step mode: click-to-advance hint at bottom-right
+        if (stepMode) {
+          ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+          ctx.fillStyle = "rgba(100,180,255,0.55)";
+          ctx.textAlign = "right";
+          ctx.fillText("click to apply M̂  →", W - 10, H - 8);
+        }
 
-      } else if (colElapsedMs < 2600) {
-        // ── Phase B: collapse — dying lobe fades out ───────────────────────
-        const localFade = Math.min((colElapsedMs - 1200) / 1400, 1);
-        const dyingAlpha = 1 - localFade;
+      } else if (phase === 1) {
+        // ── Phase 1: collapse — dying lobe fades out ───────────────────────
+        const dyingAlpha = stepMode ? 0.35 : (1 - localFade);  // step: freeze at 35% so user sees both
         if (dyingAlpha > 0.02) drawIn1D(x => dyingFn(x) * dyingAlpha, colDying, scBoth);
         drawIn1D(survivorFn, col, scBoth);
         // Label band: projection being applied
@@ -1075,14 +1090,26 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
         ctx.fillStyle = `${col}ee`;
         ctx.fillText(
           isT ? "Π̂_T |ψ⟩  /  ‖Π̂_T|ψ⟩‖" : "Π̂_R |ψ⟩  /  ‖Π̂_R|ψ⟩‖",
-          W / 2, labelH * 0.35
+          W / 2, labelH * 0.30
         );
         ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
         ctx.fillStyle = `${col}88`;
-        ctx.fillText(isT ? "projecting onto transmitted subspace…" : "projecting onto reflected subspace…", W / 2, labelH * 0.72);
+        ctx.fillText(
+          isT ? "projecting onto transmitted subspace…" : "projecting onto reflected subspace…",
+          W / 2, labelH * 0.62
+        );
+        ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(180,140,60,0.55)";
+        ctx.fillText(`outcome: M̂|ψ⟩ = ${isT ? "+1" : "−1"} (prob = ${pct}%)`, W / 2, labelH * 0.87);
+        if (stepMode) {
+          ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+          ctx.fillStyle = "rgba(100,180,255,0.55)";
+          ctx.textAlign = "right";
+          ctx.fillText("click to see collapsed state  →", W - 10, H - 8);
+        }
 
       } else {
-        // ── Phase C: result ────────────────────────────────────────────────
+        // ── Phase 2: result — survivor at full height + label ──────────────
         const pkS = Math.max(peakDensity(survivorFn), 1e-10);
         drawIn1D(survivorFn, col, SCMAX / pkS);
         // Label band
@@ -1449,6 +1476,8 @@ export default function App() {
     drag:null,
     // Copenhagen collapse state
     colBranch:0, colFade:0, colTriggered:false,
+    colPhase:0,          // manual step phase (0/1/2) used when stepMode=true
+    stepMode:false,      // manual click-through vs auto-timed Act 3
     // Projection panel state
     marg: { Tp:0.5, Rp:0.5, xIn:X0, xT:0, xR:0, yT:0, yR:0,
             sigX:0.5, sigY:0.3, bl:0, colBranch:0, colFade:0, bX:0, bY:0 },
@@ -1472,6 +1501,8 @@ export default function App() {
   // Copenhagen sub-mode: "2d" = full configuration space (default), "1d" = textbook operator picture
   const [cpnMode, setCpnModeUI] = useState("2d");
   const setCpnMode = v => { S.current.cpnMode = v; setCpnModeUI(v); };
+  const [stepMode, setStepModeUI] = useState(false);
+  const setStepMode = v => { S.current.stepMode = v; setStepModeUI(v); };
 
   const setInterp = v => {
     S.current.interp = v; setInterpUI(v);
@@ -1819,10 +1850,12 @@ export default function App() {
           s.colBranch = Math.random() < Tprob ? 1 : -1;
           s.colFade   = 0;
           s.colStartMs = performance.now();
+          s.colPhase = 0;
           s._flashPending = true;
           // Freeze here — lobe centre is still inside canvas
           // In 1D textbook mode, hold longer so the post-collapse state is readable
-          s.pauseUntil = performance.now() + (s.cpnMode === "1d" ? 4500 : 1800);
+          // stepMode: no auto-advance, so pauseUntil is irrelevant but we set a long hold to prevent restart
+          s.pauseUntil = performance.now() + (s.cpnMode === "1d" ? (s.stepMode ? 60000 : 4500) : 1800);
         }
         if (s.colTriggered) {
           s.colFade = Math.min(s.colFade + 0.08, 1);
@@ -1969,6 +2002,8 @@ export default function App() {
         interp: s.interp,
         cpnMode: s.cpnMode,
         colElapsedMs: s.colTriggered ? (performance.now() - (s.colStartMs || 0)) : 0,
+        stepMode: s.stepMode,
+        colPhase: s.colPhase,
         sepFrac,
         showProj: s.showProj,
         // x-panel: use camera's actual visible range so particle position matches 2D canvas exactly
@@ -2109,7 +2144,16 @@ export default function App() {
             In 1D mode it fills the whole canvas area (top row hidden) so flex:5 */}
         <div ref={xMargRowRef} style={{ flex: cpnMode === "1d" ? 5 : 1, minHeight:0, display:"flex", flexDirection:"row",
           borderTop:"1px solid rgba(40,80,180,0.3)", position:"relative" }}>
-          <div style={{ flex:1, background:"#020812", overflow:"hidden" }}>
+          <div style={{ flex:1, background:"#020812", overflow:"hidden" }}
+            onClick={() => {
+              const s = S.current;
+              if (s.cpnMode === "1d" && s.stepMode && s.colTriggered && s.colPhase < 2) {
+                s.colPhase += 1;
+                // Extend pause so manual mode never auto-restarts mid-phase
+                s.pauseUntil = performance.now() + 60000;
+              }
+            }}
+            style={{ cursor: (cpnMode === "1d" && stepMode && S.current.colTriggered && S.current.colPhase < 2) ? "pointer" : "default" }}>
             <XMarginalPanel ref={xCanvasRef} />
           </div>
           {/* spacer matching Y-panel width so X axis aligns with 2D canvas — desktop only */}
@@ -2117,12 +2161,23 @@ export default function App() {
             borderLeft:"1px solid rgba(40,80,180,0.3)" }} />}
           {/* In 1D mode: show badge + toggle in top-right of the X-panel */}
           {cpnMode === "1d" && (
-          <div style={{ position:"absolute", top:8, right:12, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+          <div style={{ position:"absolute", top:8, right:12, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
             <div style={{ color:"#ff9966", fontSize:12, fontWeight:700,
               fontFamily:"'JetBrains Mono','Courier New',monospace",
               background:"rgba(4,10,30,0.7)", padding:"3px 8px", borderRadius:4,
               border:"1px solid #ff996655" }}>Copenhagen</div>
-
+            {/* Step / Auto toggle */}
+            <button onClick={() => setStepMode(!stepMode)} title={stepMode ? "Switch to auto-timed mode" : "Switch to manual step mode"}
+              style={{
+                fontFamily:"'JetBrains Mono','Courier New',monospace",
+                fontSize:11, padding:"3px 9px", borderRadius:4, cursor:"pointer",
+                background: stepMode ? "rgba(80,180,255,0.18)" : "rgba(255,255,255,0.06)",
+                color: stepMode ? "#88ddff" : "rgba(160,190,230,0.55)",
+                border:`1px solid ${stepMode ? "#88ddff66" : "rgba(80,120,180,0.25)"}`,
+                fontWeight: stepMode ? 700 : 400,
+              }}>
+              {stepMode ? "▶ Step" : "▶ Auto"}
+            </button>
           </div>
           )}
         </div>
@@ -2192,6 +2247,7 @@ export default function App() {
           audioRef={audioRef} audioPlaying={audioPlaying} setAudioPlaying={setAudioPlaying}
           audioTime={audioTime} audioDuration={audioDuration}
           cpnMode={cpnMode} setCpnMode={setCpnMode}
+          stepMode={stepMode} setStepMode={setStepMode}
           isMobile={isMobile}
         />
       </div>
