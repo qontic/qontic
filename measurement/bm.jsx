@@ -1204,6 +1204,7 @@ export default function App() {
     drag:null,
     // Copenhagen collapse state
     colBranch:0, colFade:0, colTriggered:false,
+    colYHold:0,
     colPhase:0,
     // Projection panel state
     marg: { Tp:0.5, Rp:0.5, xIn:X0, xT:0, xR:0, yT:0, yR:0,
@@ -1228,7 +1229,7 @@ export default function App() {
   const flashRaf = useRef(null);
   const setInterp = v => {
     S.current.interp = v; setInterpUI(v);
-    S.current.colBranch = 0; S.current.colFade = 0; S.current.colTriggered = false;
+    S.current.colBranch = 0; S.current.colFade = 0; S.current.colTriggered = false; S.current.colYHold = 0;
 
     S.current.dirty = true;
   };
@@ -1514,7 +1515,7 @@ export default function App() {
           if (nowMs >= s.pauseUntil) {
             s.tick = 0;
             s.pauseUntil = 0;
-            s.colTriggered = false; s.colBranch = 0; s.colFade = 0;
+            s.colTriggered = false; s.colBranch = 0; s.colFade = 0; s.colYHold = 0;
             s.dirty = true;  // rebuild trajectory with new random initial conditions
           }
           // else: don't advance tick
@@ -1574,7 +1575,7 @@ export default function App() {
       // In Copenhagen mode, a transmitted collapse should register as an immediate
       // detector click, so the surviving pointer branch jumps to a visible "up" state.
       const dtPShown = (s.interp === "cpn" && s.colTriggered && s.colBranch > 0)
-        ? Math.max(dtP, 1.0)
+        ? s.colYHold
         : dtP;
       // T blob starts at yRFixed and moves up only after wave hits pointer; R stays at yRFixed.
       const yT       = yRFixed + 2 * s.lam * dtPShown, yR = yRFixed;
@@ -1585,30 +1586,39 @@ export default function App() {
       // Stop when lobe centre is 1.5 world units from screen edge (adaptive to halfW).
       // Cap at 9.0 so zoomed-out views still stop at a reasonable time.
       const edgeX = Math.min(halfW - 1.5, 9.0);
-      if (s.running && s.pauseUntil === 0 && s.interp !== "cpn" && xT > edgeX) {
-        s.pauseUntil = performance.now() + 1500;
+      if (s.running && s.pauseUntil === 0 && xT > edgeX) {
+        s.pauseUntil = performance.now() + 500;
       }
 
       // ── Copenhagen: collapse logic ─────────────────────────────────────────
       // Collapse is tied to measurement: as soon as the transmitted wave reaches
       // the detector position, select an outcome and fade the other branch out.
       if (s.interp === "cpn") {
+        // New cycle: restore pre-collapse superposition so both branches are visible
+        // again until the transmitted branch reaches the detector.
+        if (tFrac < 0.02 && s.colTriggered) {
+          s.colTriggered = false;
+          s.colBranch = 0;
+          s.colFade = 0;
+          s.colYHold = 0;
+        }
         if (!s.colTriggered && tPhys >= tPointerHit) {
           s.colTriggered = true;
           s.colBranch = Math.random() < Tprob ? 1 : -1;
+          // Capture jump at detector-triggered collapse, then hold y constant.
+          s.colYHold = Math.max(dtP, 1.0);
           s.colFade   = 0;
           s.colStartMs = performance.now();
           s.colPhase = 0;
           s._flashPending = true;
-          // Hold the selected outcome briefly so the detector event reads clearly.
-          s.pauseUntil = performance.now() + 1800;
+          // Keep dynamics running after collapse.
         }
         if (s.colTriggered) {
           s.colFade = Math.min(s.colFade + 0.08, 1);
         }
         // Reset is handled by the pause-restart cycle above
       } else {
-        s.colBranch = 0; s.colFade = 0; s.colTriggered = false;
+        s.colBranch = 0; s.colFade = 0; s.colTriggered = false; s.colYHold = 0;
       }
 
       // ── Pilot-wave: trajectories + dots ───────────────────────────────────
