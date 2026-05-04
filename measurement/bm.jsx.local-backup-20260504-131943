@@ -18,7 +18,6 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import ReactDOM from "react-dom";
 import { createRoot } from "react-dom/client";
 import * as THREE from "three";
 
@@ -286,9 +285,7 @@ function computeTraj(k0, V0, lam, sigX, sigY, y0) {
   const tTotal   = tScatter + 9.0;
   const dt       = tTotal / STEPS;
   // Bohmian non-crossing: sign of y0 determines branch deterministically.
-  // dir = +1 → T branch (transmitted), -1 → R branch (reflected).
-  // Pointer branch displacement is applied in screen mapping (animate loop),
-  // so Y here stores only the branch-relative offset.
+  // dir = +1 → T branch (transmitted, pointer climbs), -1 → R branch (reflected, pointer stays).
   const dir = y0 >= 0 ? 1 : -1;
   let X = X0, Y = y0;
   const pts = [];
@@ -302,8 +299,7 @@ function computeTraj(k0, V0, lam, sigX, sigY, y0) {
     } else {
       // Commit to branch immediately at scatter — no lag from smooth alpha weighting.
       X += dir * k0  * dt;
-      // Keep branch-relative Y offset fixed; display-space branch motion is applied later.
-      Y += 0;
+      Y += dir * lam * dt;
     }
   }
   return pts;
@@ -454,41 +450,22 @@ const FRAG_MW = /* glsl */`
 
 // ── Small React helpers ───────────────────────────────────────────────────────
 const Tip = ({ text, children }) => {
-  const [pos, setPos] = React.useState(null);
-  const ref = React.useRef();
-  const show = () => {
-    if (!text) return;
-    const r = ref.current?.getBoundingClientRect();
-    if (r) setPos({ x: r.left + r.width / 2, yTop: r.top, yBot: r.bottom });
-  };
-  const hide = () => setPos(null);
-  // Tooltip width cap is 260px; estimate ~14px per line for height
-  const tooltipW = 260;
-  const spaceAbove = pos ? pos.yTop : 999;
-  const above = spaceAbove > 120; // enough room above?
+  const [show, setShow] = React.useState(false);
   return (
-    <span ref={ref} style={{ position:"relative", display:"block" }}
-      onMouseEnter={show} onMouseLeave={hide}>
+    <span style={{ position: "relative", display: "block" }}
+      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       {children}
-      {pos && text && ReactDOM.createPortal(
+      {show && text && (
         <span style={{
-          position:"fixed",
-          // Clamp left so tooltip never goes off-screen edges
-          left: Math.min(
-            Math.max(pos.x - tooltipW / 2, 8),
-            window.innerWidth - tooltipW - 8
-          ),
-          top: above ? pos.yTop - 8 : pos.yBot + 8,
-          transform: above ? "translateY(-100%)" : "none",
-          background:"rgba(8,20,55,0.97)",
+          position:"absolute", bottom:"calc(100% + 6px)", left:"50%",
+          transform:"translateX(-50%)", background:"rgba(8,20,55,0.97)",
           border:"1px solid rgba(80,140,255,0.4)", borderRadius:5,
-          padding:"6px 10px", fontSize:11, color:"#b8d4ff",
-          whiteSpace:"pre-wrap", width: tooltipW, lineHeight:1.5,
-          zIndex:99999, pointerEvents:"none",
+          padding:"5px 9px", fontSize:11, color:"#b8d4ff",
+          whiteSpace:"pre-wrap", maxWidth:220, lineHeight:1.5,
+          zIndex:999, pointerEvents:"none",
           fontFamily:"'JetBrains Mono','Courier New',monospace",
           boxShadow:"0 4px 16px rgba(0,0,30,0.7)",
-        }}>{text}</span>,
-        document.body
+        }}>{text}</span>
       )}
     </span>
   );
@@ -510,35 +487,16 @@ const SL = ({ label, tip, children, fullWidth }) => (
 );
 
 const VIEWS      = ["cpn","pw","mw"];
-const VIEW_LABEL = { cpn:"Projection Postulate", pw:"Pilot-Wave", mw:"Many Worlds" };
+const VIEW_LABEL = { cpn:"Copenhagen", pw:"Pilot-Wave", mw:"Many Worlds" };
 const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff",   mw:"#cc88ff" };
-const VIEW_TIP   = {
-  cpn: "Projection Postulate (von Neumann):\nThe wavefunction collapses instantly on measurement.\nThe outcome is random with Born-rule probabilities.\nNo physical mechanism for collapse is specified —\nit is an additional postulate added to the Schrödinger\nequation. This is the version routinely taught in\nuniversity QM courses, often called 'Copenhagen',\nthough Copenhagen itself is not a single well-defined\ninterpretation. Contrast with GRW/CSL, which do\nprovide an explicit collapse mechanism.",
-  pw:  "Pilot-Wave / de Broglie–Bohm:\nThe particle always has a definite position, guided\nby the wavefunction via the quantum potential.\nNo collapse occurs; randomness arises solely from\nuncertainty in the particle's initial position.",
-  mw:  "Many-Worlds (Everett):\nThe wavefunction never collapses. Every outcome\noccurs — in separate, non-communicating branches\nof a universal wavefunction. There is no preferred\noutcome and no randomness beyond branch indexing.",
-};
 const VIEW_DESC  = {
-  cpn: "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). The 2D canvas shows the full configuration space: x = particle position, y = pointer of the measuring device. When the wave reaches the detector (yellow line), measurement occurs: one branch is selected by the Born rule and the other collapses, while the pointer starts moving with the transmitted outcome.",
+  cpn: {
+    "2d": "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). The 2D canvas shows the full configuration space: x = particle position, y = pointer of the measuring device. Only transmission deflects the pointer upward; reflection leaves it at its resting position. Global |Ψ(x,y)|² splits into two branches; at a random moment one is selected and the other collapses.",
+    "1d": "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). The textbook operator view: only the particle coordinate x is shown. Measurement is modelled by a projection operator P̂_T or P̂_R acting on |ψ(x)⟩ — no apparatus visible.",
+  },
   pw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Same global |Ψ(x,y)|² plus the Bohmian particle (X,Y) that rides one branch. Below: conditional wavefunction ψ_cond(x,Y(t)) and the two marginals.",
   mw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Both branches persist — the universe splits. World 1: particle transmitted. World 2: particle reflected. Neither world 'knows about' the other.",
 };
-
-// ── Collapsible description ──────────────────────────────────────────────────
-function ShowDesc({ text }) {
-  const [open, setOpen] = React.useState(false);
-  return (
-    <div style={{ marginTop: 3 }}>
-      <button onClick={() => setOpen(o => !o)} style={{
-        background: "none", border: "none", padding: 0, cursor: "pointer",
-        fontSize: 10, color: "#4a6a9a", fontFamily: "'JetBrains Mono','Courier New',monospace",
-        textDecoration: "underline dotted",
-      }}>{open ? "▲ hide" : "▼ what is this?"}</button>
-      {open && (
-        <div style={{ fontSize: 11, color: "#99b8e8", lineHeight: 1.6, marginTop: 4 }}>{text}</div>
-      )}
-    </div>
-  );
-}
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 // ── Shared audio player ─────────────────────────────────────────────────────
@@ -546,16 +504,15 @@ const SimPanel = React.memo(({
   interp, setInterp,
   tTarget, setTTarget, tTargetRef,
   lam, setLam, lamRef,
-  xPointer, setXPointer, xPointerRef,
   sigX, setSigX, sigXRef,
   speed, setSpeed, speedRef,
   showWave, setShowWave,
   showTraj, setShowTraj,
   showProj, setShowProj,
   running, setRunning,
-  barrierOn, setBarrierOn,
-  detectorOn, setDetectorOn,
   Tp, Rp,
+  cpnMode, setCpnMode,
+  stepMode, setStepMode,
   isMobile,
 }) => {
   const vc  = VIEW_COLOR[interp];
@@ -571,53 +528,56 @@ const SimPanel = React.memo(({
       <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 6 : 10, padding:p }}>
 
         {/* Interpretation switcher — full width */}
-        <SL label="Interpretation" tip="Click to cycle: Projection Postulate → Pilot-Wave → Many Worlds&#10;&#10;Projection Postulate: wavefunction collapses on measurement (Born rule). No mechanism specified — the rule is postulated. Used in virtually all university courses.&#10;&#10;Pilot-Wave (de Broglie–Bohm): particle has a definite trajectory guided by the wavefunction. No collapse; randomness comes from unknown initial positions.&#10;&#10;Many Worlds (Everett): wavefunction never collapses. All outcomes happen in branching worlds.">
-          <Tip text={VIEW_TIP[interp]}>
-            <button onClick={() => setInterp(VIEWS[(VIEWS.indexOf(interp)+1)%VIEWS.length])}
-              style={{
-                display:"block", width:"100%", padding:"7px 10px", marginBottom:5,
-                background:`rgba(${interp==="cpn"?"200,80,40":"30,160,220"},0.18)`,
-                border:`2px solid ${vc}`, borderRadius:6, color:vc,
-                cursor:"pointer", fontSize:13,
-                fontFamily:"'JetBrains Mono','Courier New',monospace",
-                fontWeight:700, textAlign:"center",
-              }}>{">"} {VIEW_LABEL[interp]}</button>
-          </Tip>
-          <ShowDesc text={interp === "cpn" ? VIEW_DESC.cpn : VIEW_DESC[interp]} />
+        <SL label="Interpretation" tip="Click to cycle: Copenhagen → Pilot-Wave">
+          <button onClick={() => setInterp(VIEWS[(VIEWS.indexOf(interp)+1)%VIEWS.length])}
+            style={{
+              display:"block", width:"100%", padding:"7px 10px", marginBottom:5,
+              background:`rgba(${interp==="cpn"?"200,80,40":"30,160,220"},0.18)`,
+              border:`2px solid ${vc}`, borderRadius:6, color:vc,
+              cursor:"pointer", fontSize:13,
+              fontFamily:"'JetBrains Mono','Courier New',monospace",
+              fontWeight:700, textAlign:"center",
+            }}>{">"} {VIEW_LABEL[interp]}</button>
+          <div style={{ fontSize:11, color:"#99b8e8", lineHeight:1.6 }}>{interp === "cpn" ? VIEW_DESC.cpn[cpnMode] : VIEW_DESC[interp]}</div>
+          {interp === "cpn" && (
+          <div style={{ display:"flex", gap:4, marginTop:6 }}>
+            {["2d","1d"].map(v => {
+              const active = cpnMode === v;
+              return (
+                <button key={v} onClick={() => setCpnMode(v)} style={{
+                  flex:1, padding:"4px 0", borderRadius:4, cursor:"pointer",
+                  fontFamily:"'JetBrains Mono','Courier New',monospace", fontSize:11,
+                  fontWeight: active ? 700 : 400,
+                  background: active ? "rgba(200,80,40,0.25)" : "rgba(200,80,40,0.07)",
+                  color: active ? "#ff9966" : "rgba(180,140,120,0.6)",
+                  border:`1px solid ${active ? "#ff9966" : "rgba(150,80,40,0.3)"}`,
+                }}>{v === "2d" ? "+ Apparatus" : "Operator"}</button>
+              );
+            })}
+          </div>
+          )}
         </SL>
 
-        <SL label={`Transmission  ${barrierOn ? Math.round(tTarget*100)+"%" : "100% (barrier off)"}`}
+        <SL label={`Transmission  ${Math.round(tTarget*100)}%`}
           tip={"Fraction of the wave that passes through the barrier.\n0% = total reflection,  100% = total transmission.\n(Sets the barrier height internally.)"}>
           <input type="range" min={0} max={100} step={1}
             defaultValue={Math.round(tTarget*100)}
             ref={tTargetRef}
             onInput={e => setTTarget(+e.target.value / 100)}
-            disabled={!barrierOn}
-            style={{ width:"100%", accentColor:"#5090f0", opacity: barrierOn ? 1 : 0.35 }} />
+            style={{ width:"100%", accentColor:"#5090f0" }} />
           <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
             <span style={{color:"#ff7744"}}>← all reflected</span>
             <span style={{color:"#44ee88"}}>all transmitted →</span>
           </div>
         </SL>
 
-        <SL label={`Coupling  ${detectorOn ? Math.round(lam/3*100)+"%" : "off (detector off)"}`}
+        <SL label={`Coupling  ${Math.round(lam/3*100)}%`}
           tip={"How far the pointer deflects after the interaction.\n0 = pointer does not move (no measurement).\nHigh = pointer clearly separates the two branches."}>
           <input type="range" min={0} max={3} step={0.05} defaultValue={lam}
             ref={lamRef} onInput={e => setLam(+e.target.value)}
-            disabled={!detectorOn}
-            style={{ width:"100%", accentColor:"#44ffaa", opacity: detectorOn ? 1 : 0.35 }} />
+            style={{ width:"100%", accentColor:"#44ffaa" }} />
           <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
             <span>off</span><span>strong</span></div>
-        </SL>
-
-        <SL label={`Detector at x = ${xPointer.toFixed(1)}`}
-          tip={"Position of the detector (yellow line).\nThe pointer only starts moving when the wave reaches this position."}>
-          <input type="range" min={1} max={9} step={0.5} defaultValue={xPointer}
-            ref={xPointerRef} onInput={e => setXPointer(+e.target.value)}
-            disabled={!detectorOn}
-            style={{ width:"100%", accentColor:"#ffcc44", opacity: detectorOn ? 1 : 0.35 }} />
-          <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
-            <span>near</span><span>far</span></div>
         </SL>
 
         <SL label={`σ = ${sigX.toFixed(2)}`}
@@ -650,26 +610,6 @@ const SimPanel = React.memo(({
             style={{ width:"100%", accentColor:"#ffcc44" }} />
           <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
             <span>×{speed.toFixed(1)}</span></div>
-        </SL>
-
-        <SL label="Physics">
-          <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-            {[
-              { key:"barrier",  label:"Barrier",  on:barrierOn,  fn:setBarrierOn,  tip:"Toggle the potential barrier.\nOff = 100% transmission (free particle)." },
-              { key:"detector", label:"Detector", on:detectorOn, fn:setDetectorOn, tip:"Toggle the measuring device.\nOff = no coupling, pointer stays at rest." },
-            ].map(({ key, label, on, fn, tip }) => (
-              <Tip key={key} text={tip}>
-                <button onClick={() => fn(!on)} style={{
-                  padding:"5px 10px",
-                  background: on ? "rgba(40,80,180,0.5)" : "rgba(15,30,70,0.5)",
-                  border:"1px solid " + (on ? "#5588cc" : "#334466"),
-                  borderRadius:5, color: on ? "#c8e8ff" : "#7090b8",
-                  cursor:"pointer", fontSize:12,
-                  fontFamily:"'JetBrains Mono','Courier New',monospace",
-                }}>{on ? "◉" : "○"} {label}</button>
-              </Tip>
-            ))}
-          </div>
         </SL>
 
         <SL label="Toggles">
@@ -843,7 +783,7 @@ function _WF1DPanel_removed({ Tp, Rp, xT, xR, yT, yR, sigX, sigY, bX, bY, bl, sh
 
 
 // ── X-marginal panel: ∫|Ψ(x,y)|²dy  vs  x  (horizontal strip below 2D) ──────
-function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, bIsTransmit, yT, yR, sigY, isPW, interp, colElapsedMs, colPhase, sepFrac, showProj, xLo, xHi, rho, rhoXs, V0 }) {
+function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, yT, yR, sigY, isPW, interp, cpnMode, colElapsedMs, stepMode, colPhase, sepFrac, showProj, xLo, xHi, rho, rhoXs, V0 }) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
@@ -853,13 +793,15 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
   ctx.clearRect(0, 0, W, H);
 
   const isMW  = interp === "mw";
+  const is1D  = interp === "cpn" && cpnMode === "1d";
   const XLO = xLo, XHI = xHi;
   const wx = x => (x - XLO) / (XHI - XLO) * W;
 
   const fadeT = colBranch === -1 ? colFade : 0;
   const fadeR = colBranch ===  1 ? colFade : 0;
-  const ampT = Tp * (1 - fadeT);
-  const ampR = Rp * (1 - fadeR);
+  // In 1D mode collapse is instantaneous — as soon as colBranch is set, kill the branch
+  const ampT = is1D ? (colBranch === -1 ? 0 : Tp) : Tp * (1 - fadeT);
+  const ampR = is1D ? (colBranch ===  1 ? 0 : Rp) : Rp * (1 - fadeR);
 
   const N = 350;
   const SCALE = (H - 10) * 0.66; // wave fills ~66% of panel height
@@ -939,6 +881,236 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.font = `bold ${fs}px 'JetBrains Mono',monospace`;
     ctx.fillStyle = `rgba(34,238,136,${0.85 * sf})`; ctx.fillText("World 1  (transmitted)", 6, lbY);
     ctx.fillStyle = `rgba(255,119,68,${0.85 * sf})`; ctx.fillText("World 2  (reflected)",   6, mid + lbY);
+  } else if (is1D) {
+    // ── Copenhagen 1D / Textbook: three-act narrative ──────────────────────
+    ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
+
+    // Top label band (equation area) vs plot area below it
+    const labelH = Math.round(H * 0.20);
+    const plotH  = H - labelH;
+
+    // Separator between equation band and plot
+    ctx.strokeStyle = "rgba(40,60,140,0.5)"; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath(); ctx.moveTo(0, labelH); ctx.lineTo(W, labelH); ctx.stroke();
+    ctx.setLineDash([]);
+    // x-axis
+    ctx.strokeStyle = "rgba(60,100,200,0.25)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, H - 2); ctx.lineTo(W, H - 2); ctx.stroke();
+    // Barrier: filled rectangle spanning [-BARRIER_A, +BARRIER_A], height ∝ V0
+    {
+      const bLo = wx(-BARRIER_A), bHi = wx(BARRIER_A);
+      const bW = Math.max(bHi - bLo, 2);
+      // Scale barrier height to ~40% of plot area at max V0 (~50)
+      const barrierPx = Math.round(plotH * 0.40 * Math.min((V0 || 0) / 50, 1));
+      ctx.fillStyle = "rgba(0,200,255,0.10)";
+      ctx.fillRect(bLo, H - 2 - barrierPx, bW, barrierPx);
+      ctx.strokeStyle = "rgba(0,200,255,0.35)"; ctx.lineWidth = 1.5;
+      ctx.strokeRect(bLo, H - 2 - barrierPx, bW, barrierPx);
+      // Label
+      ctx.font = "11px 'JetBrains Mono',monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillStyle = "rgba(0,200,255,0.50)";
+      ctx.fillText("V₀", bLo + bW / 2, H - 4 - barrierPx);
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    }
+    // Barrier dashed centre line
+    ctx.strokeStyle = "rgba(0,200,255,0.18)"; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(wx(0), labelH); ctx.lineTo(wx(0), H); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const SCMAX = plotH * 0.82 * 0.80;
+    const drawIn1D = (fn, color, sc) => drawDensityInRegion(fn, color, sc, labelH, plotH);
+    const collapsed = colBranch !== 0;
+
+    if (!collapsed) {
+      // Normalize all curves to the same peak (rhoTotal peak)
+      const pkTotal = Math.max(peakDensity(rhoTotal), 1e-10);
+      const sc = SCMAX / pkTotal;
+
+      // Incoming packet (blue) fades out as bl→1
+      if (bl < 0.99) drawIn1D(x => (1 - bl) * gIn(x), "#88aaff", sc);
+      // T branch (green) and R branch (orange) fade in
+      if (bl > 0.02 && ampT > 0.001) drawIn1D(rhoT, "#22ee88", sc);
+      if (bl > 0.02 && ampR > 0.001) drawIn1D(rhoR, "#ff7744", sc);
+
+      // ── Equation in label band ────────────────────────────────────────────
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      const eqFS = Math.min(27, Math.max(18, Math.round(H * 0.043 * 1.5)));
+      ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+      const eqY = labelH / 2;
+
+      if (bl < 0.12) {
+        // Act 1: ket + setup subtitle
+        ctx.fillStyle = "rgba(136,170,255,0.85)";
+        ctx.fillText("|ψ_in⟩", W / 2, eqY * 0.55);
+        const subFS2 = Math.round(eqFS * 0.55);
+        ctx.font = `${subFS2}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(120,150,210,0.55)";
+        ctx.fillText("quantum particle approaching potential barrier V\u2080", W / 2, eqY * 1.45);
+        ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+      } else {
+        // Act 2: superposition, fade in
+        const alpha = Math.min(1, (bl - 0.12) / 0.25);
+        const aT = Math.sqrt(Tp).toFixed(2), aR = Math.sqrt(Rp).toFixed(2);
+        ctx.fillStyle = `rgba(210,225,255,${0.9 * alpha})`;
+        ctx.fillText(`|ψ⟩  =  ${aT} |ψ_T⟩  +  ${aR} |ψ_R⟩`, W / 2, eqY);
+      }
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+
+      // ── Lobe labels positioned above each peak ────────────────────────────
+      if (bl > 0.18) {
+        const alpha = Math.min(1, (bl - 0.18) / 0.35);
+        const lblFS = Math.min(26, Math.max(20, Math.round(H * 0.030 * 2.0)));
+        ctx.font = `${lblFS}px 'JetBrains Mono',monospace`;
+        ctx.textAlign = "center";
+        const base = labelH + plotH - 3; // bottom of plot area
+
+        if (ampT > 0.001) {
+          const pyT = base - rhoT(xT) * sc;
+          const lxT = clamp(wx(xT), 44, W - 44);
+          const lyT = Math.max(pyT - 10, labelH + lblFS + 4);
+          ctx.fillStyle = `rgba(34,238,136,${alpha})`;
+          ctx.fillText(`√T |ψ_T⟩`, lxT, lyT);
+        }
+        if (ampR > 0.001) {
+          const pyR = base - rhoR(xR) * sc;
+          const lxR = clamp(wx(xR), 44, W - 44);
+          const lyR = Math.max(pyR - 10, labelH + lblFS + 4);
+          ctx.fillStyle = `rgba(255,119,68,${alpha})`;
+          ctx.fillText(`√R |ψ_R⟩`, lxR, lyR);
+        }
+        ctx.textAlign = "left";
+      }
+
+    } else {
+      // ── Act 3: three-phase measurement narrative ──────────────────────────
+      // Phase 0: M̂ shown on top of both lobes
+      // Phase 1: collapse — dying lobe fades, survivor stays
+      // Phase 2: result — survivor at full height + label
+      const isT = colBranch === 1;
+      const col      = isT ? "#22ee88" : "#ff7744";
+      const colDying = isT ? "#ff7744" : "#22ee88";
+      const survivorFn = isT ? (x => bl * Tp * gT(x)) : (x => bl * Rp * gR(x));
+      const dyingFn    = isT ? (x => bl * Rp * gR(x)) : (x => bl * Tp * gT(x));
+      const xSurv = isT ? xT : xR;
+      const pkBoth = Math.max(peakDensity(rhoTotal), 1e-10);
+      const scBoth = SCMAX / pkBoth;
+
+      const eqFS  = Math.min(30, Math.max(19, Math.round(H * 0.048 * 1.5)));
+      const subFS = Math.round(eqFS * 0.72);
+      const sub2FS = Math.round(eqFS * 0.55);
+      const pct = Math.round((isT ? Tp : Rp) * 100);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      // Resolve which phase to display
+      const phase = stepMode
+        ? colPhase
+        : colElapsedMs < 1200 ? 0 : colElapsedMs < 2600 ? 1 : 2;
+
+      // In phase B (auto mode), compute local fade from elapsed time; step mode snaps to mid-fade=0
+      const localFade = stepMode ? 0 : Math.min((colElapsedMs - 1200) / 1400, 1);
+
+      if (phase === 0) {
+        // ── Phase 0: show M̂ operator — both lobes visible ─────────────────
+        drawIn1D(x => bl * Tp * gT(x), "#22ee88", scBoth);
+        drawIn1D(x => bl * Rp * gR(x), "#ff7744", scBoth);
+        // Lobe labels — annotate each component of |ψ⟩
+        const lbFS = Math.min(26, Math.max(20, Math.round(H * 0.060)));
+        ctx.font = `${lbFS}px 'JetBrains Mono',monospace`;
+        if (Tp > 0.001) { ctx.fillStyle = "rgba(34,238,136,0.85)"; ctx.fillText("√T |ψ_T⟩", clamp(wx(xT), 60, W-60), labelH + 20); }
+        if (Rp > 0.001) { ctx.fillStyle = "rgba(255,119,68,0.85)";  ctx.fillText("√R |ψ_R⟩", clamp(wx(xR), 60, W-60), labelH + 20); }
+        // Label band: observable definition + state decomposition + Born rule
+        ctx.font = `bold ${sub2FS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(100,160,255,0.70)";
+        ctx.fillText("─── Operator Application ───", W / 2, labelH * 0.12);
+        ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(210,230,255,0.92)";
+        ctx.fillText("M̂  =  (+1) Π̂_T  +  (−1) Π̂_R", W / 2, labelH * 0.38);
+        ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(150,180,230,0.72)";
+        // State decomposition — connects equation to the two lobes shown
+        ctx.fillText("|ψ⟩  =  √T |ψ_T⟩  +  √R |ψ_R⟩", W / 2, labelH * 0.63);
+        ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(120,150,200,0.52)";
+        ctx.fillText("P(m) = ‖Π̂_m |ψ⟩‖²   (Born rule)", W / 2, labelH * 0.87);
+        // Step mode: click-to-advance hint at bottom-right
+        if (stepMode) {
+          ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+          ctx.fillStyle = "rgba(100,180,255,0.55)";
+          ctx.textAlign = "right";
+          ctx.fillText("click to apply M̂  →", W - 10, H - 8);
+        }
+
+      } else if (phase === 1) {
+        // ── Phase 1: projector applied — dying lobe fades out ──────────────
+        const dyingAlpha = stepMode ? 0.35 : (1 - localFade);
+        if (dyingAlpha > 0.02) drawIn1D(x => dyingFn(x) * dyingAlpha, colDying, scBoth);
+        drawIn1D(survivorFn, col, scBoth);
+        // Label band: what the projector does, exact result, Born probability
+        ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}ee`;
+        // Π̂_T |ψ⟩ = √T |ψ_T⟩  (exact — the non-surviving component is annihilated)
+        ctx.fillText(
+          isT ? "Π̂_T |ψ⟩  =  √T |ψ_T⟩" : "Π̂_R |ψ⟩  =  √R |ψ_R⟩",
+          W / 2, labelH * 0.28
+        );
+        ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}99`;
+        // Born rule: probability = squared norm of projected state
+        ctx.fillText(
+          isT
+            ? `P(m=+1)  =  ‖Π̂_T|ψ⟩‖²  =  T  =  ${pct}%`
+            : `P(m=−1)  =  ‖Π̂_R|ψ⟩‖²  =  R  =  ${pct}%`,
+          W / 2, labelH * 0.60
+        );
+        ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = "rgba(180,200,150,0.55)";
+        // Post-measurement state: renormalise the projected state
+        ctx.fillText(
+          isT ? "|ψ_post⟩  =  Π̂_T|ψ⟩ / √T  =  |ψ_T⟩" : "|ψ_post⟩  =  Π̂_R|ψ⟩ / √R  =  |ψ_R⟩",
+          W / 2, labelH * 0.86
+        );
+        if (stepMode) {
+          ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+          ctx.fillStyle = "rgba(100,180,255,0.55)";
+          ctx.textAlign = "right";
+          ctx.fillText("click to see collapsed state  →", W - 10, H - 8);
+        }
+
+      } else {
+        // ── Phase 2: post-measurement eigenstate ───────────────────────────
+        const pkS = Math.max(peakDensity(survivorFn), 1e-10);
+        drawIn1D(survivorFn, col, SCMAX / pkS);
+        // Label band: collapsed state + eigenvalue equation + Born probability
+        ctx.font = `bold ${eqFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}ee`;
+        // Post-measurement state is an eigenstate of M̂
+        ctx.fillText(isT ? "|ψ_post⟩  =  |ψ_T⟩" : "|ψ_post⟩  =  |ψ_R⟩", W / 2, labelH * 0.28);
+        ctx.font = `${subFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}aa`;
+        // Eigenvalue equation — this is the correct way to say the outcome is +1/-1
+        ctx.fillText(
+          isT ? "M̂ |ψ_T⟩  =  +1 · |ψ_T⟩" : "M̂ |ψ_R⟩  =  −1 · |ψ_R⟩",
+          W / 2, labelH * 0.58
+        );
+        ctx.font = `${sub2FS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}66`;
+        ctx.fillText(
+          isT ? `Born rule:  P(m=+1) = T = ${pct}%` : `Born rule:  P(m=−1) = R = ${pct}%`,
+          W / 2, labelH * 0.86
+        );
+        // Lobe label
+        const lxS = clamp(wx(xSurv), 44, W - 44);
+        const base = labelH + plotH - 3;
+        const peakY = base - survivorFn(xSurv) * (SCMAX / pkS);
+        const lblFS = Math.min(26, Math.max(20, Math.round(H * 0.060)));
+        ctx.font = `${lblFS}px 'JetBrains Mono',monospace`;
+        ctx.fillStyle = `${col}cc`;
+        ctx.fillText(isT ? "|ψ_T⟩" : "|ψ_R⟩", lxS, Math.max(peakY - 10, labelH + lblFS + 4));
+      }
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    }
   } else {
     // ── Standard (CPn / PW) background + axes ─────────────────────────────
     ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
@@ -950,28 +1122,17 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     if (isPW) {
       const chiT = gauss(bY, yT, sigY), chiR = gauss(bY, yR, sigY);
       const maxChi = Math.max(chiT, chiR, 1e-8);
-      // Pre-scatter: single blue incoming blob
-      if (1 - bl > 0.01) drawDensity(x => (1 - bl) * gIn(x), "#88aaff", SCALE);
-      // Post-scatter: T component in green, R component in orange (conditional weights)
-      if (bl > 0.05 && ampT > 0.001) {
-        const scaleT = SCALE / Math.max(peakDensity(x => bl * Tp * (chiT/maxChi) * gT(x)), 1e-10) * bl * Tp * (chiT/maxChi);
-        drawDensity(x => bl * Tp * (chiT/maxChi) * gT(x), "#22ee88", SCALE);
-      }
-      if (bl > 0.05 && ampR > 0.001) {
-        drawDensity(x => bl * Rp * (chiR/maxChi) * gR(x), "#ff7744", SCALE);
-      }
+      const mainFn = x => (1 - bl) * gIn(x) + bl * (
+        Tp*(1-fadeT) * gT(x) * (chiT/maxChi) +
+        Rp*(1-fadeR) * gR(x) * (chiR/maxChi)
+      );
+      drawDensity(mainFn, "#66ccff", SCALE / peakDensity(mainFn));
       if (showProj) {
-        if (ampT > 0.001) drawDensity(rhoT, "rgba(34,238,136,0.4)", SCALE / peakDensity(rhoT));
-        if (ampR > 0.001) drawDensity(rhoR, "rgba(255,119,68,0.4)", SCALE / peakDensity(rhoR));
+        if (ampT > 0.001) drawDensity(rhoT, "#22ee88", SCALE / peakDensity(rhoT));
+        if (ampR > 0.001) drawDensity(rhoR, "#ff7744", SCALE / peakDensity(rhoR));
       }
     } else {
-      // Three separate colour-coded curves, all normalised to the same combined peak
-      // so relative heights reflect actual T/R amplitudes.
-      const normScale = SCALE;
-      const preFrac = 1 - bl;
-      if (preFrac > 0.01) drawDensity(x => preFrac * gIn(x), "#88aaff", normScale);
-      if (bl > 0.01 && ampT > 0.001) drawDensity(rhoT, "#22ee88", normScale);
-      if (bl > 0.01 && ampR > 0.001) drawDensity(rhoR, "#ff7744", normScale);
+      drawDensity(rhoTotal, "#88aaff", SCALE / peakDensity(rhoTotal));
     }
   }
 
@@ -986,29 +1147,19 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.beginPath(); ctx.arc(cx, H - 4 - 3, 3, 0, 2 * Math.PI); ctx.fill();
   }
 
-  if (!isMW) {
+  if (!isMW && !is1D) {
     const fs = Math.max(9, Math.round(H * 0.16));
     const labelY = Math.round(H * 0.22);
     ctx.font = `${fs}px 'JetBrains Mono', monospace`;
     if (isPW) {
-      if (bl < 0.05) {
-        ctx.fillStyle = "#88aaff"; ctx.fillText("Ψ_in(x)", 6, labelY);
-      } else {
-        if (bIsTransmit && ampT > 0.001) { ctx.fillStyle = "#22ee88"; ctx.fillText("T", wx(xT) - 6, labelY); }
-        if (!bIsTransmit && ampR > 0.001) { ctx.fillStyle = "#ff7744"; ctx.fillText("R", wx(xR) - 6, labelY); }
+      ctx.fillStyle = "#66ccff"; ctx.fillText("Ψ(x,Y(t)) conditional", 6, labelY);
+      if (showProj) {
+        ctx.fillStyle = "#22ee88"; ctx.fillText("ρ_T(x)", Math.round(W * 0.22), labelY);
+        ctx.fillStyle = "#ff7744"; ctx.fillText("ρ_R(x)", Math.round(W * 0.29), labelY);
       }
     } else {
-      // Floating labels at each blob's x-centre — only show the winning branch post-collapse
-      const showT = colBranch >= 0;  // 0 = pre-collapse (show both), 1 = T won
-      const showR = colBranch <= 0;  // 0 = pre-collapse (show both), -1 = R won
-      if (bl > 0.12 && ampT > 0.05 && showT) {
-        ctx.fillStyle = `rgba(34,238,136,${Math.min(bl * 1.5, 0.9)})`;
-        ctx.fillText("T", Math.min(W - 20, wx(xT) - 6), labelY);
-      }
-      if (bl > 0.12 && ampR > 0.05 && showR) {
-        ctx.fillStyle = `rgba(255,119,68,${Math.min(bl * 1.5, 0.9)})`;
-        ctx.fillText("R", Math.max(6, wx(xR) - 6), labelY);
-      }
+      ctx.fillStyle = "rgba(100,160,255,0.5)";
+      ctx.fillText("particle projection  ρ(x) = ∫|Ψ|²dy", 6, labelY);
     }
   }
 }
@@ -1024,7 +1175,7 @@ const XMarginalPanel = React.forwardRef(function XMarginalPanel(_, ref) {
 // ── Y-marginal panel: ∫|Ψ(x,y)|²dx  vs  y  (vertical strip right of 2D) ─────
 // The canvas is drawn with y mapping vertically (bottom=yLo, top=yHi).
 // The density curve fills horizontally (density → rightward).
-function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFade, bY, bX, bIsTransmit, xT, xR, sigX, isPW, interp, sepFrac, showProj, yLo, yHi }) {
+function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFade, bY, bX, xT, xR, sigX, isPW, interp, sepFrac, showProj, yLo, yHi }) {
   // yRFixed: the R (not-transmitted) blob display position — kept in sync with 2D shader uYR.
   // yR itself (-lam*dtA) is only used for chi-weighting in x-panel (not drawing here).
   if (!canvas) return;
@@ -1092,7 +1243,7 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       ctx.stroke();
     };
 
-    drawDensityY(y => (1 - bl) * gauss(y, yRFixed, sigY), "#88aaff");
+    drawDensityY(y => (1 - bl) * 0.5 * gauss(y, yRFixed, sigY), "#88aaff");
     if (isMW && bl > 0.05) {
       // ── Many-Worlds: split Y-panel with vertical line at W/2
       // Bars extend rightward, so left half = World T, right half = World R
@@ -1119,18 +1270,18 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
         ctx.restore();
       }
     } else if (isPW && bl > 0.05) {
-      // Conditional wavefunction: split into T (green) and R (orange) components,
-      // weighted by the Bohmian particle's current x-position.
+      // Conditional wavefunction: ψ_cond(y) ∝ Ψ(X(t), y)
+      // x-amplitude split by barrier: T on right, R on left using analytical Gaussians
       const gXatBX_T = gauss(bX, xT, sigX);
       const gXatBX_R = gauss(bX, xR, sigX);
       const maxGX = Math.max(gXatBX_T, gXatBX_R, 1e-8);
-      if (ampT > 0.001) drawDensityY(
-        y => bl * Tp * (gXatBX_T/maxGX) * gauss(y, yT, sigY), "#22ee88");
-      if (ampR > 0.001) drawDensityY(
-        y => bl * Rp * (gXatBX_R/maxGX) * gauss(y, yRDisplay, sigY), "#ff7744");
+      drawDensityY(y => bl * (
+        Tp*(1-fadeT) * gXatBX_T/maxGX * gauss(y,yT,sigY) +
+        Rp*(1-fadeR) * gXatBX_R/maxGX * gauss(y,yRDisplay,sigY)
+      ), "#66ccff");
       if (showProj) {
-        if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,       sigY), "rgba(34,238,136,0.35)");
-        if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "rgba(255,119,68,0.35)");
+        if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,       sigY), "#22ee88");
+        if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744");
       }
     } else if (!isPW && !isMW) {
       if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,       sigY), "#22ee88");
@@ -1147,26 +1298,6 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       ctx.setLineDash([]);
       ctx.fillStyle = "#ffffff";
       ctx.beginPath(); ctx.arc(4 + 3, py, 3, 0, 2 * Math.PI); ctx.fill();
-    }
-
-    // ── Curve labels (horizontal, at each blob centre) ────────────────────
-    if (!isMW) {
-      const fsL = Math.max(8, Math.round(W * 0.17));
-      ctx.font = `bold ${fsL}px 'JetBrains Mono', monospace`;
-      ctx.textAlign = "left";
-      const labelX = 5;
-      // For PW: show only the branch the Bohmian particle is actually in.
-      // For CPN: show only the winning branch post-collapse (colBranch 0 = both, 1 = T, -1 = R).
-      const showT = isPW ? (bl > 0.05 && bIsTransmit) : colBranch >= 0;
-      const showR = isPW ? (bl > 0.05 && !bIsTransmit) : colBranch <= 0;
-      if (bl > 0.12 && ampT > 0.05 && showT) {
-        ctx.fillStyle = `rgba(34,238,136,${Math.min(bl * 1.5, 0.9)})`;
-        ctx.fillText("T", labelX, wy(yT) - 4);
-      }
-      if (bl > 0.12 && ampR > 0.05 && showR && Math.abs(yT - yRDisplay) > sigY * 0.5) {
-        ctx.fillStyle = `rgba(255,119,68,${Math.min(bl * 1.5, 0.9)})`;
-        ctx.fillText("R", labelX, wy(yRDisplay) - 4);
-      }
     }
 
     // Label (rotated)
@@ -1229,14 +1360,22 @@ function MathPanel({ interp }) {
       {eq("T = 1 / [1 + V₀² sinh²(κa) / (4E(V₀-E))]   (E < V₀)\nT = 1 / [1 + V₀² sin²(κa)  / (4E(E-V₀))]   (E > V₀)\n\nE = k₀²/2,   κ = √(2|V₀-E|)")}
 
       {sec("Marginal densities")}
-      {txt("The x-projection (below) and y-projection (right strip):")}
+      {txt("The x-projection (below) and y-projection (right strip, when apparatus is visible):")}
       {eq("ρ(x,t) = ∫|Ψ(x,y,t)|²dy  ≈  T·|ψ_T(x)|² + R·|ψ_R(x)|²\n\nρ(y,t) = ∫|Ψ(x,y,t)|²dx  ≈  T·|χ_T(y)|² + R·|χ_R(y)|²")}
 
       {interp === "cpn" && (<>
-        {sec("Projection Postulate")}
-        {txt("The 2D canvas shows the full configuration space (x = particle, y = pointer). The yellow detector line marks where measurement begins. When the wave reaches that detector, the global wavefunction collapses to one branch with Born-rule probability:")}
+        {sec("Copenhagen — collapse (+ Apparatus view)")}
+        {txt("The 2D canvas shows the full configuration space (x = particle, y = pointer). At a random time after scattering, the global wavefunction collapses to one branch with Born-rule probability:")}
         {eq("Ψ(x,y,t*)  →  ψ_T · χ_T   with prob T\n            →  ψ_R · χ_R   with prob R = 1 - T")}
         {txt("The mechanism of collapse is not specified by the theory.")}
+        {sec("Copenhagen — operator picture (Operator view)")}
+        {txt("The measurement observable is the detector that distinguishes 'transmitted' from 'reflected'. It is a hermitian operator with two eigenspaces:")}
+        {eq("M̂ = (+1) Π̂_T  +  (−1) Π̂_R\n\nΠ̂_T = ∫₀^∞ |x⟩⟨x| dx   (projector onto x > 0)\nΠ̂_R = ∫₋∞^0 |x⟩⟨x| dx   (projector onto x < 0)\n\neigenvalue +1  →  particle found transmitted\neigenvalue −1  →  particle found reflected\n\n⟨M̂⟩ = T − R")}
+        {txt("After scattering the particle state is |ψ⟩ = √T |ψ_T⟩ + √R |ψ_R⟩. Applying the measurement postulate:")}
+        {eq("|ψ⟩  →  Π̂_T|ψ⟩ / ‖Π̂_T|ψ⟩‖  =  |ψ_T⟩   with prob ⟨ψ|Π̂_T|ψ⟩ = T\n     →  Π̂_R|ψ⟩ / ‖Π̂_R|ψ⟩‖  =  |ψ_R⟩   with prob ⟨ψ|Π̂_R|ψ⟩ = R")}
+        {txt("The post-measurement state is the projected (and renormalised) branch. The apparatus is invisible in this picture — measurement is an instantaneous, axiomatic operation on the 1D state.")}
+        {txt("Tracing out the apparatus degree of freedom y gives the pre-measurement mixed state:")}
+        {eq("ρ̂_particle = T |ψ_T⟩⟨ψ_T| + R |ψ_R⟩⟨ψ_R|")}
       </>)}
 
       {interp === "mw" && (<>
@@ -1266,85 +1405,10 @@ function MathPanel({ interp }) {
 }
 
 
-// ── Gauge face renderer ──────────────────────────────────────────────────────
-// needles: [{fraction 0→1, color, alpha}]
-// fraction 0 = R side (left), 0.5 = centre, 1 = T side (right)
-function drawGaugeFace(gCtx, W, H, needles) {
-  gCtx.clearRect(0, 0, W, H);
-  const cx = W / 2, cy = H / 2;
-  const R  = Math.min(cx, cy) - 3;
-  const sweepHalf = (2 * Math.PI) / 3;   // ±120° sweep
-
-  // Outer ring
-  gCtx.beginPath();
-  gCtx.arc(cx, cy, R, 0, 2 * Math.PI);
-  gCtx.fillStyle   = "rgba(8,16,40,0.92)";
-  gCtx.fill();
-  gCtx.strokeStyle = "rgba(180,200,255,0.65)";
-  gCtx.lineWidth   = 2.5;
-  gCtx.stroke();
-
-  // Sweep arc (active range)
-  gCtx.beginPath();
-  gCtx.arc(cx, cy, R - 5, -Math.PI / 2 - sweepHalf, -Math.PI / 2 + sweepHalf);
-  gCtx.strokeStyle = "rgba(60,100,200,0.22)";
-  gCtx.lineWidth   = 5;
-  gCtx.stroke();
-
-  // Tick marks
-  const nTicks = 6;
-  for (let i = 0; i <= nTicks; i++) {
-    const frac  = i / nTicks;
-    const angle = -Math.PI / 2 + (frac - 0.5) * 2 * sweepHalf;
-    const isMain = i === 0 || i === nTicks || i === nTicks / 2;
-    const tLen  = isMain ? R * 0.22 : R * 0.13;
-    gCtx.strokeStyle = isMain ? "rgba(200,210,255,0.8)" : "rgba(140,160,210,0.4)";
-    gCtx.lineWidth   = isMain ? 2 : 1;
-    gCtx.beginPath();
-    gCtx.moveTo(cx + Math.cos(angle) * (R - tLen - 2), cy + Math.sin(angle) * (R - tLen - 2));
-    gCtx.lineTo(cx + Math.cos(angle) * (R - 3),        cy + Math.sin(angle) * (R - 3));
-    gCtx.stroke();
-  }
-
-  // R / T labels
-  const lR  = R * 0.67;
-  const lAng = -Math.PI / 2 - sweepHalf;
-  const rAng = -Math.PI / 2 + sweepHalf;
-  gCtx.font = `bold ${Math.round(R * 0.28)}px 'JetBrains Mono',monospace`;
-  gCtx.textAlign = "center"; gCtx.textBaseline = "middle";
-  gCtx.fillStyle = "rgba(255,110,60,0.85)";
-  gCtx.fillText("R", cx + Math.cos(lAng) * lR, cy + Math.sin(lAng) * lR);
-  gCtx.fillStyle = "rgba(34,238,136,0.85)";
-  gCtx.fillText("T", cx + Math.cos(rAng) * lR, cy + Math.sin(rAng) * lR);
-
-  // Needles
-  needles.forEach(({ fraction, color, alpha }) => {
-    if (alpha < 0.03) return;
-    const angle = -Math.PI / 2 + (fraction - 0.5) * 2 * sweepHalf;
-    gCtx.save();
-    gCtx.globalAlpha = alpha;
-    gCtx.shadowColor = color; gCtx.shadowBlur = 7;
-    gCtx.strokeStyle = color; gCtx.lineWidth = 2.5; gCtx.lineCap = "round";
-    // Needle: short tail behind pivot, long arm forward
-    gCtx.beginPath();
-    gCtx.moveTo(cx + Math.cos(angle + Math.PI) * R * 0.18,
-                cy + Math.sin(angle + Math.PI) * R * 0.18);
-    gCtx.lineTo(cx + Math.cos(angle) * R * 0.76,
-                cy + Math.sin(angle) * R * 0.76);
-    gCtx.stroke();
-    // Pivot cap
-    gCtx.shadowBlur = 0;
-    gCtx.fillStyle = "rgba(210,225,255,0.95)";
-    gCtx.beginPath(); gCtx.arc(cx, cy, 4, 0, 2 * Math.PI); gCtx.fill();
-    gCtx.restore();
-  });
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function App() {
   const mountRef  = useRef(null);
   const tTargetRef = useRef(null), lamRef = useRef(null);
-  const xPointerRef = useRef(null);
   const sigXRef = useRef(null), speedRef = useRef(null);
   const T = useRef(null);
   const xCanvasRef = useRef(null);
@@ -1377,9 +1441,8 @@ export default function App() {
   const sidebarW     = isLandscape ? 200 : (isMobile ? "100%" : 240);
 
   const S = useRef({
-    interp:"cpn",
+    interp:"cpn", cpnMode:"2d",
     k0:4.0, V0:invertT(0.5,4.0), tTarget:0.5, lam:1.5, sigX:0.5, sigY:0.3,
-    xPointer: 3.0,
     speed:0.5,
     showWave:true, showTraj:true, showProj:false, running:true,
     tick:0, dirty:true,
@@ -1388,10 +1451,8 @@ export default function App() {
     drag:null,
     // Copenhagen collapse state
     colBranch:0, colFade:0, colTriggered:false,
-    colYHold:0,
-    colPhase:0,
-    barrierOn:true,
-    detectorOn:true,
+    colPhase:0,          // manual step phase (0/1/2) used when stepMode=true
+    stepMode:false,      // manual click-through vs auto-timed Act 3
     // Projection panel state
     marg: { Tp:0.5, Rp:0.5, xIn:X0, xT:0, xR:0, yT:0, yR:0,
             sigX:0.5, sigY:0.3, bl:0, colBranch:0, colFade:0, bX:0, bY:0 },
@@ -1400,25 +1461,28 @@ export default function App() {
   const [interp,    setInterpUI]    = useState("cpn");
   const [tTarget,   setTTargetUI]   = useState(0.5);
   const [lam,       setLamUI]       = useState(1.5);
-  const [xPointer,  setXPointerUI]  = useState(3.0);
   const [sigX,     setSigXUI]     = useState(0.5);
   const [speed,    setSpeedUI]    = useState(0.5);
   const [showWave, setShowWaveUI] = useState(true);
   const [showTraj, setShowTrajUI] = useState(true);
   const [showProj, setShowProjUI] = useState(false);
   const [running,  setRunningUI]  = useState(true);
-  const [barrierOn,  setBarrierOnUI]  = useState(true);
-  const [detectorOn, setDetectorOnUI] = useState(true);
   const [Tp,       setTpUI]       = useState(0.5);
   const [Rp,       setRpUI]       = useState(0.5);
   // Collapse flash: branch = ±1 while flashing, 0 when idle
   const [flashBranch, setFlashBranch] = useState(0);
   const [flashAlpha,  setFlashAlpha]  = useState(0);
   const flashRaf = useRef(null);
+  // Copenhagen sub-mode: "2d" = full configuration space (default), "1d" = textbook operator picture
+  const [cpnMode, setCpnModeUI] = useState("2d");
+  const setCpnMode = v => { S.current.cpnMode = v; setCpnModeUI(v); };
+  const [stepMode, setStepModeUI] = useState(false);
+  const setStepMode = v => { S.current.stepMode = v; setStepModeUI(v); };
+
   const setInterp = v => {
     S.current.interp = v; setInterpUI(v);
-    S.current.colBranch = 0; S.current.colFade = 0; S.current.colTriggered = false; S.current.colYHold = 0;
-
+    S.current.colBranch = 0; S.current.colFade = 0; S.current.colTriggered = false;
+    if (v !== "cpn") { S.current.cpnMode = "2d"; setCpnModeUI("2d"); }
     S.current.dirty = true;
   };
   const setTTarget = v => {
@@ -1430,15 +1494,12 @@ export default function App() {
     if (tTargetRef.current) tTargetRef.current.value = Math.round(v * 100);
   };
   const setLam = v => { S.current.lam = v; S.current.dirty=true; setLamUI(v); if(lamRef.current) lamRef.current.value=v; };
-  const setXPointer = v => { S.current.xPointer = v; setXPointerUI(v); if(xPointerRef.current) xPointerRef.current.value=v; };
   const setSigX= v => { S.current.sigX=v; S.current.sigY=v*1.2; S.current.dirty=true; setSigXUI(v); if(sigXRef.current) sigXRef.current.value=v; };
   const setSpeed= v => { S.current.speed=v; setSpeedUI(v); if(speedRef.current) speedRef.current.value=v; };
   const setShowWave = v => { S.current.showWave=v; setShowWaveUI(v); };
   const setShowTraj = v => { S.current.showTraj=v; setShowTrajUI(v); };
   const setShowProj = v => { S.current.showProj=v; setShowProjUI(v); };
-  const setRunning   = v => { S.current.running=v;  setRunningUI(v);  };
-  const setBarrierOn  = v => { S.current.barrierOn=v;  S.current.dirty=true; setBarrierOnUI(v);  };
-  const setDetectorOn = v => { S.current.detectorOn=v; S.current.dirty=true; setDetectorOnUI(v); };
+  const setRunning  = v => { S.current.running=v;  setRunningUI(v);  };
 
 
   useEffect(() => {
@@ -1508,35 +1569,20 @@ export default function App() {
 
     // ── Barrier ────────────────────────────────────────────────────────────────
     const bMat = new THREE.LineBasicMaterial({ color:0x00ccff, transparent:true, opacity:0.5 });
-    const bLine1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(
-      [new THREE.Vector3(-0.5,-10,0),new THREE.Vector3(-0.5,10,0)]), bMat);
-    scene.add(bLine1);
-    const bLine2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(
-      [new THREE.Vector3(0.5,-10,0),new THREE.Vector3(0.5,10,0)]), bMat);
-    scene.add(bLine2);
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+      [new THREE.Vector3(-0.5,-10,0),new THREE.Vector3(-0.5,10,0)]), bMat));
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+      [new THREE.Vector3(0.5,-10,0),new THREE.Vector3(0.5,10,0)]), bMat));
     const bFill = new THREE.Mesh(new THREE.PlaneGeometry(1.0,20),
       new THREE.MeshBasicMaterial({ color:0x002244, transparent:true, opacity:0.15, side:THREE.DoubleSide }));
     scene.add(bFill);
 
-    // ── Detector (vertical yellow guide) ─
-    const ptrLineMat = new THREE.LineBasicMaterial({ color:0xffcc44, transparent:true, opacity:0.7 });
-    const ptrLineGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(3.0, -10, 0.05), new THREE.Vector3(3.0, 10, 0.05)
-    ]);
-    const ptrLine = new THREE.Line(ptrLineGeo, ptrLineMat);
-    scene.add(ptrLine);
-    const labelFont = "700 24px 'JetBrains Mono','Courier New',monospace";
-    const lblPointer = makeSprite("detector", "#ffcc44", labelFont);
-    lblPointer.scale.set(4.6, 1.05, 1);
-    lblPointer.position.set(3.0, 9.0, 0.2);
-    scene.add(lblPointer);
-
     // ── Branch label sprites ──────────────────────────────────────────────────
-    function makeSprite(text, color, font = "700 16px 'JetBrains Mono','Courier New',monospace") {
+    function makeSprite(text, color) {
       const cv = document.createElement("canvas");
       cv.width=300; cv.height=52;
       const ctx = cv.getContext("2d");
-      ctx.font = font;
+      ctx.font = "bold 16px 'JetBrains Mono',monospace";
       ctx.fillStyle = color; ctx.textAlign="center"; ctx.textBaseline="middle";
       ctx.fillText(text, 150, 26);
       const tex = new THREE.CanvasTexture(cv);
@@ -1544,10 +1590,6 @@ export default function App() {
       spr.scale.set(5.2, 0.9, 1); // aspect matches 300/52 * 0.9 ≈ 5.2
       return spr;
     }
-    const lblBarrier = makeSprite("barrier V0", "#00dcff", labelFont);
-    lblBarrier.scale.set(4.6, 1.05, 1);
-    lblBarrier.position.set(0.0, 9.0, 0.2);
-    scene.add(lblBarrier);
     const lblT = makeSprite("T-branch  (x>0,  y>0)", "#44ee88");
     const lblR = makeSprite("R-branch  (x<0,  y<0)", "#ff8844");
     lblT.position.set(6.5, 5.5, 0.2); scene.add(lblT);
@@ -1615,10 +1657,8 @@ export default function App() {
 
     function rebuild() {
       const s = S.current;
-      const effV0  = s.barrierOn  ? s.V0  : 0;
-      const effLam = s.detectorOn ? s.lam : 0;
       // Re-compute spectral wavepacket whenever parameters change
-      wpPrecompute(s.k0, effV0, s.sigX);
+      wpPrecompute(s.k0, s.V0, s.sigX);
       // Copenhagen has no trajectories
       if (s.interp === "cpn") {
         trajs = [];
@@ -1627,7 +1667,7 @@ export default function App() {
         fGlows.forEach(g => g.visible = false);
         return;
       }
-      trajs = computeMultiTraj(s.k0, effV0, effLam, s.sigX, s.sigY, 1);
+      trajs = computeMultiTraj(s.k0, s.V0, s.lam, s.sigX, s.sigY, 1);
       const tScat_rb = Math.abs(X0) / s.k0;
       const dt_rb    = (tScat_rb + 9.0) / STEPS;
       const mid = Math.round(STEPS*0.4);
@@ -1683,23 +1723,10 @@ export default function App() {
     el.addEventListener("wheel",onWheel,{passive:false});
     el.addEventListener("contextmenu",noCtx);
 
-    // ── Gauge sprite (meter dial at top of detector line) ───────────────────────
-    const gaugeCanvas = document.createElement("canvas");
-    gaugeCanvas.width = 128; gaugeCanvas.height = 128;
-    const gaugeCtx = gaugeCanvas.getContext("2d");
-    const gaugeTex = new THREE.CanvasTexture(gaugeCanvas);
-    const gaugeSprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: gaugeTex, transparent: true, depthWrite: false })
-    );
-    scene.add(gaugeSprite);
-
     T.current = {
       scene, camera, renderer, heatUni, heatMesh,
       fLines, fDots, fGlows, lblT, lblR,
       mwOverlay, mwUni, mwDivLine, lblMW1, lblMW2,
-      ptrLine, lblPointer, lblBarrier,
-      bLine1, bLine2, bFill,
-      gaugeCanvas, gCtx: gaugeCtx, gaugeTex, gaugeSprite,
       rebuild, trajs:()=>trajs, updateCam,
     };
 
@@ -1721,7 +1748,7 @@ export default function App() {
           if (nowMs >= s.pauseUntil) {
             s.tick = 0;
             s.pauseUntil = 0;
-            s.colTriggered = false; s.colBranch = 0; s.colFade = 0; s.colYHold = 0;
+            s.colTriggered = false; s.colBranch = 0; s.colFade = 0;
             s.dirty = true;  // rebuild trajectory with new random initial conditions
           }
           // else: don't advance tick
@@ -1736,7 +1763,7 @@ export default function App() {
       const tan26 = Math.tan(26 * Math.PI / 180); // ≈ 0.4877
       const rendW = Tr.renderer.domElement.clientWidth;
       const rendH = Tr.renderer.domElement.clientHeight;
-      const rendHidden = rendW === 0 || rendH === 0;
+      const rendHidden = rendW === 0 || rendH === 0; // true in 1D mode (top row display:none)
       let halfW, halfH;
       if (!rendHidden) {
         const camAspect = rendW / rendH;
@@ -1745,9 +1772,9 @@ export default function App() {
         if (effectiveCamZ > s.camZ) camera.position.z = effectiveCamZ;
         halfH = tan26 * effectiveCamZ;
         halfW = camAspect * halfH; // always ≥ 7.0 world units
-        s._halfW = halfW; s._halfH = halfH;
+        s._halfW = halfW; s._halfH = halfH; // cache for 1D mode
       } else {
-        // Renderer hidden: use cached values or fall back to x-panel dimensions
+        // Renderer hidden (1D mode) — use cached values or fall back to xPanel dimensions
         if (s._halfW) {
           halfW = s._halfW; halfH = s._halfH;
         } else {
@@ -1762,9 +1789,7 @@ export default function App() {
       // R/incoming blob: 20% up from bottom, pointer stays here when not transmitted
       const yRFixed = s.camY - halfH * 0.6;
 
-      const effV0   = s.barrierOn  ? s.V0  : 0;
-      const effLam  = s.detectorOn ? s.lam : 0;
-      const Tprob  = clamp(exactT(s.k0, effV0), 0, 1);
+      const Tprob  = clamp(exactT(s.k0, s.V0), 0, 1);
       const Rprob  = 1 - Tprob;
       const v0     = s.k0;
       const tScatter = Math.abs(X0) / v0;
@@ -1777,62 +1802,48 @@ export default function App() {
       const dtA      = Math.max(0, tPhys - tScatter);
       const xIn      = X0 + v0 * Math.min(tPhys, tScatter);
       const xT       =  v0 * dtA,  xR = -v0 * dtA;
-      // Pointer coupling starts only when the T wave-front reaches xPointer.
-      const tPointerHit = tScatter + s.xPointer / v0;
-      const dtP      = Math.max(0, tPhys - tPointerHit);  // time since wave hit pointer
-      // In Copenhagen mode, a transmitted collapse should register as an immediate
-      // detector click, so the surviving pointer branch jumps to a visible "up" state.
-      const dtPShown = (s.interp === "cpn" && s.colTriggered && s.colBranch > 0)
-        ? s.colYHold
-        : dtP;
-      // T blob starts at yRFixed and moves up only after wave hits pointer; R stays at yRFixed.
-      const yT       = yRFixed + 2 * effLam * dtPShown, yR = yRFixed;
-      const sepFrac  = effLam > 0 ? clamp(dtPShown / 3.0, 0, 1) : 0;
+      // T blob starts at yRFixed and moves diagonally up; R stays at yRFixed.
+      const yT       = yRFixed + 2 * s.lam * dtA, yR = yRFixed;
+      const sepFrac  = clamp(dtA / 3.0, 0, 1);
       const tIdx     = clamp(Math.round(tFrac*STEPS), 0, STEPS);
 
       // ── Stop before lobes exit canvas, pause 1.5 s then restart ───────────
       // Stop when lobe centre is 1.5 world units from screen edge (adaptive to halfW).
       // Cap at 9.0 so zoomed-out views still stop at a reasonable time.
       const edgeX = Math.min(halfW - 1.5, 9.0);
-      if (s.running && s.pauseUntil === 0 && xT > edgeX) {
-        s.pauseUntil = performance.now() + 500;
+      if (s.running && s.pauseUntil === 0 && s.interp !== "cpn" && xT > edgeX) {
+        s.pauseUntil = performance.now() + 1500;
       }
 
       // ── Copenhagen: collapse logic ─────────────────────────────────────────
-      // Collapse is tied to measurement: as soon as the transmitted wave reaches
-      // the detector position, select an outcome and fade the other branch out.
-      if (s.interp === "cpn" && s.detectorOn) {
-        // New cycle: restore pre-collapse superposition so both branches are visible
-        // again until the transmitted branch reaches the detector.
-        if (tFrac < 0.02 && s.colTriggered) {
-          s.colTriggered = false;
-          s.colBranch = 0;
-          s.colFade = 0;
-          s.colYHold = 0;
-        }
-        if (!s.colTriggered && tPhys >= tPointerHit) {
+      // Trigger when the leading edge of the T-lobe reaches near the canvas edge.
+      // Uses halfW so collapse always happens while blobs are still visible.
+      if (s.interp === "cpn") {
+        // Trigger when xT + 2σ reaches the adaptive canvas edge.
+        if (!s.colTriggered && bl > 0.85 && xT + 2 * s.sigX >= Math.min(halfW - 0.5, 9.0)) {
           s.colTriggered = true;
           s.colBranch = Math.random() < Tprob ? 1 : -1;
-          // Capture jump at detector-triggered collapse, then hold y constant.
-          s.colYHold = Math.max(dtP, 1.0);
           s.colFade   = 0;
           s.colStartMs = performance.now();
           s.colPhase = 0;
           s._flashPending = true;
-          // Keep dynamics running after collapse.
+          // Freeze here — lobe centre is still inside canvas
+          // In 1D textbook mode, hold longer so the post-collapse state is readable
+          // stepMode: no auto-advance, so pauseUntil is irrelevant but we set a long hold to prevent restart
+          s.pauseUntil = performance.now() + (s.cpnMode === "1d" ? (s.stepMode ? 60000 : 4500) : 1800);
         }
         if (s.colTriggered) {
           s.colFade = Math.min(s.colFade + 0.08, 1);
         }
         // Reset is handled by the pause-restart cycle above
       } else {
-        s.colBranch = 0; s.colFade = 0; s.colTriggered = false; s.colYHold = 0;
+        s.colBranch = 0; s.colFade = 0; s.colTriggered = false;
       }
 
       // ── Pilot-wave: trajectories + dots ───────────────────────────────────
       const td = Tr.trajs();
       // Pick first trajectory for the 1D conditional wavefunction
-      let bX = 0, bY = 0, bIsTransmit = false;
+      let bX = 0, bY = 0;
       td.forEach(({ pts, isTransmit }, i) => {
         const fl = fLines[i];
         if (i >= 1 || s.interp !== "pw") {
@@ -1841,23 +1852,16 @@ export default function App() {
         fl.line.visible = s.showTraj;
         if (s.showTraj) fl.geo.setDrawRange(0, tIdx+1);
         // Re-upload y-positions every frame with screen-space transform:
-        // Y_screen = yRFixed + Y_raw + branchShift,
-        // where branchShift matches displayed branch centres (T: +2*lam*dtP, R: 0).
+        // Y_screen = Y_raw + yRFixed + lam*dtA  (T climbs diag, R stays at bottom)
         if (fl.rawY && fl.dtAs) {
-          const dtPointerOffset = s.xPointer / s.k0; // additional delay after scatter
           for (let j = 0; j <= STEPS; j++) {
-            const dtP_j = Math.max(0, fl.dtAs[j] - dtPointerOffset);
-            const branchShift = isTransmit ? (2 * effLam * dtP_j) : 0;
-            fl.pos[j*3+1] = yRFixed + fl.rawY[j] + branchShift;
+            fl.pos[j*3+1] = fl.rawY[j] + yRFixed + s.lam * fl.dtAs[j];
           }
           fl.geo.attributes.position.needsUpdate = true;
         }
         const pt = pts[tIdx];
-        const dtPointerOffset = s.xPointer / s.k0;
-        const dtP_cur = Math.max(0, (fl.dtAs ? fl.dtAs[tIdx] : 0) - dtPointerOffset);
-        const branchShiftCur = isTransmit ? (2 * effLam * dtP_cur) : 0;
-        const ptYScreen = yRFixed + pt.y + branchShiftCur;
-        if (i === 0) { bX = pt.x; bY = ptYScreen; bIsTransmit = isTransmit; }
+        const ptYScreen = pt.y + yRFixed + s.lam * (fl.dtAs ? fl.dtAs[tIdx] : 0);
+        if (i === 0) { bX = pt.x; bY = ptYScreen; }
         fDots[i].visible  = s.showTraj;
         fGlows[i].visible = s.showTraj;
         if (s.showTraj) {
@@ -1871,26 +1875,6 @@ export default function App() {
           fGlows[i].material.opacity = 0.20 * sepFrac;
         }
       });
-
-      // ── Update pointer line position ───────────────────────────────────────
-      if (Tr.ptrLine) {
-        Tr.ptrLine.geometry.setFromPoints([
-          new THREE.Vector3(s.xPointer, -20, 0.05),
-          new THREE.Vector3(s.xPointer,  20, 0.05),
-        ]);
-        Tr.ptrLine.visible = s.detectorOn;
-      }
-      if (Tr.lblPointer) {
-        Tr.lblPointer.position.set(s.xPointer, s.camY + halfH - 0.8, 0.2);
-        Tr.lblPointer.visible = s.detectorOn;
-      }
-      if (Tr.lblBarrier) {
-        Tr.lblBarrier.position.set(0, s.camY + halfH - 0.8, 0.2);
-        Tr.lblBarrier.visible = s.barrierOn;
-      }
-      if (Tr.bLine1) Tr.bLine1.visible = s.barrierOn;
-      if (Tr.bLine2) Tr.bLine2.visible = s.barrierOn;
-      if (Tr.bFill)  Tr.bFill.visible  = s.barrierOn;
 
       // ── Update heatmap ─────────────────────────────────────────────────────
       // Evaluate real wavepacket and upload density texture
@@ -1933,8 +1917,8 @@ export default function App() {
       if (isMW) {
         // Perpendicular bisector between T-branch (xT,yT) and R-branch (xR,yRFixed)
         // Midpoint: (0, yRFixed + lam*dtA); slope: -k0 / (2*lam)
-        const sepA     = yRFixed + effLam * dtA;
-        const sepSlope = effLam > 0 ? -s.k0 / (2 * effLam) : 0;
+        const sepA     = yRFixed + s.lam * dtA;
+        const sepSlope = -s.k0 / (2 * s.lam);
         Tr.mwUni.uSep.value      = sepFrac;
         Tr.mwUni.uSepA.value     = sepA;
         Tr.mwUni.uSepSlope.value = sepSlope;
@@ -1988,10 +1972,12 @@ export default function App() {
         sigX: s.sigX, sigY: s.sigY,
         bl,
         colBranch: s.colBranch, colFade: s.colFade,
-        bX, bY, bIsTransmit,
+        bX, bY,
         isPW: s.interp === "pw",
         interp: s.interp,
+        cpnMode: s.cpnMode,
         colElapsedMs: s.colTriggered ? (performance.now() - (s.colStartMs || 0)) : 0,
+        stepMode: s.stepMode,
         colPhase: s.colPhase,
         sepFrac,
         showProj: s.showProj,
@@ -2004,70 +1990,6 @@ export default function App() {
       };
       drawXMarg(xCanvasRef.current, margData);
       drawYMarg(yCanvasRef.current, margData);
-
-      // ── Gauge dial ─────────────────────────────────────────────────────
-      if (Tr.gaugeSprite && s.detectorOn) {
-        // Size: adapt to screen so it stays below the detector label
-        const gaugeSize = Math.min(halfH * 0.40, 2.2);
-        Tr.gaugeSprite.scale.set(gaugeSize, gaugeSize, 1);
-        Tr.gaugeSprite.position.set(
-          s.xPointer,
-          s.camY + halfH - gaugeSize * 0.5 - 1.15,
-          0.4
-        );
-        Tr.gaugeSprite.visible = true;
-
-        // Needle fraction: 0 = R side (rest/no-deflection), 1 = T side (full deflection)
-        // Gate on dtPShown: before the wave reaches the detector the pointer is at rest.
-        const pointerHit = dtPShown > 0.02;
-        const ySpan  = Math.max(yT - yRFixed, 0.001);
-        // PW: track Bohmian particle Y relative to current T-blob span.
-        // Guard so division by near-zero ySpan (before hit) doesn't swing the needle.
-        const bYFrac = (pointerHit && dtPShown > 0.02)
-          ? clamp((bY - yRFixed) / ySpan, 0, 1)
-          : 0;
-        // Gauge-specific deflection fraction: normalize by the actual time available
-        // between pointer hit and cycle end, so the needle always reaches 1 before reset.
-        const gWindow = Math.max(edgeX - s.xPointer, 0.3) / s.k0;
-        const gFrac = clamp(dtPShown / gWindow, 0, 1);
-        // Pre-collapse mean fraction: Tprob * gFrac
-        const meanFrac = Tprob * gFrac;
-
-        const needles = [];
-        if (!pointerHit) {
-          // Wave hasn't reached detector yet — needle at dead rest
-          needles.push({ fraction: 0, color: "#88aaff", alpha: 0.55 });
-        } else if (isMW) {
-          // Two worlds: T world needle grows toward 1, R world stays at 0
-          const sf = Math.min(gFrac * 2, 1);
-          needles.push({ fraction: gFrac, color: "#22ee88", alpha: sf * 0.88 });
-          needles.push({ fraction: 0,     color: "#ff7744", alpha: sf * 0.88 });
-        } else if (s.interp === "pw") {
-          // Pilot-wave: needle tracks how far the blob has traveled (gFrac),
-          // pinned to the T or R side depending on which branch the particle is on.
-          // This gives smooth motion coordinated with the Y blob, not an instant jump.
-          const pwFrac = bIsTransmit ? gFrac : 0;
-          needles.push({ fraction: pwFrac, color: "#ffffff", alpha: 0.92 });
-        } else {
-          // Copenhagen
-          if (!s.colTriggered) {
-            // Superposition: needle drifts toward Tprob as the Y blobs separate
-            needles.push({ fraction: meanFrac, color: "#88aaff", alpha: 0.82 });
-          } else if (s.colBranch > 0) {
-            // Collapsed to T: winner at full T deflection (fraction 1)
-            needles.push({ fraction: 1,  color: "#22ee88", alpha: 0.95 });
-            needles.push({ fraction: 0,  color: "#ff7744", alpha: (1 - s.colFade) * 0.55 });
-          } else {
-            // Collapsed to R: winner stays at rest (fraction 0), T ghost fades from meanFrac
-            needles.push({ fraction: 0,        color: "#ff7744", alpha: 0.95 });
-            needles.push({ fraction: meanFrac, color: "#22ee88", alpha: (1 - s.colFade) * 0.55 });
-          }
-        }
-        drawGaugeFace(Tr.gCtx, 128, 128, needles);
-        Tr.gaugeTex.needsUpdate = true;
-      } else if (Tr.gaugeSprite) {
-        Tr.gaugeSprite.visible = false;
-      }
 
       Tr.renderer.render(Tr.scene, Tr.camera);
     }
@@ -2123,7 +2045,7 @@ export default function App() {
           flex:1, flexDirection:"column", overflow:"hidden" }}>
 
         {/* Top row: 2D heatmap + y-marginal side by side — flex:4 so x-marg gets flex:1 (1/4 of canvas) */}
-        <div style={{ flex:4, minHeight:0, display:"flex", flexDirection:"row", overflow:"hidden" }}>
+        <div style={{ flex:4, minHeight:0, display: cpnMode === "1d" ? "none" : "flex", flexDirection:"row", overflow:"hidden" }}>
           {/* 2D Three.js canvas */}
           <div ref={mountRef} style={{ flex:1, position:"relative", overflow:"hidden", touchAction:"pan-y" }}>
             {/* Collapse flash overlay — CPN only */}
@@ -2156,19 +2078,18 @@ export default function App() {
               y — pointer
             </div>
             )}
+            <div style={{ position:"absolute", top:10, left:"50%", transform:"translateX(-50%)",
+              color:"rgba(0,200,255,0.45)", fontSize:10, pointerEvents:"none",
+              fontFamily:"'JetBrains Mono','Courier New',monospace" }}>
+              barrier V₀
+            </div>
             {/* Interpretation badge */}
-            <div style={{ position:"absolute", top:10, right:12 }}>
-              <Tip text={VIEW_TIP[interp]}>
-                <div style={{
-                  color: VIEW_COLOR[interp], fontSize:12, fontWeight:700,
-                  fontFamily:"'JetBrains Mono','Courier New',monospace",
-                  background:"rgba(4,10,30,0.7)", padding:"3px 8px", borderRadius:4,
-                  border:`1px solid ${VIEW_COLOR[interp]}55`,
-                  cursor:"help",
-                }}>
-                  {VIEW_LABEL[interp]}
-                </div>
-              </Tip>
+            <div style={{ position:"absolute", top:10, right:12,
+              color: VIEW_COLOR[interp], fontSize:12, fontWeight:700,
+              fontFamily:"'JetBrains Mono','Courier New',monospace",
+              background:"rgba(4,10,30,0.7)", padding:"3px 8px", borderRadius:4,
+              border:`1px solid ${VIEW_COLOR[interp]}55` }}>
+              {VIEW_LABEL[interp]}
             </div>
 
           </div>
@@ -2183,15 +2104,46 @@ export default function App() {
           )}
         </div>
 
-        {/* X-marginal: horizontal strip — flex:1 so it is 1/4 the height of the canvas row above */}
-        <div ref={xMargRowRef} style={{ flex:1, minHeight:0, display:"flex", flexDirection:"row",
+        {/* X-marginal: horizontal strip — flex:1 so it is 1/4 the height of the canvas row above
+            In 1D mode it fills the whole canvas area (top row hidden) so flex:5 */}
+        <div ref={xMargRowRef} style={{ flex: cpnMode === "1d" ? 5 : 1, minHeight:0, display:"flex", flexDirection:"row",
           borderTop:"1px solid rgba(40,80,180,0.3)", position:"relative" }}>
-          <div style={{ flex:1, background:"#020812", overflow:"hidden" }}>
+          <div style={{ flex:1, background:"#020812", overflow:"hidden" }}
+            onClick={() => {
+              const s = S.current;
+              if (s.cpnMode === "1d" && s.stepMode && s.colTriggered && s.colPhase < 2) {
+                s.colPhase += 1;
+                // Extend pause so manual mode never auto-restarts mid-phase
+                s.pauseUntil = performance.now() + 60000;
+              }
+            }}
+            style={{ cursor: (cpnMode === "1d" && stepMode && S.current.colTriggered && S.current.colPhase < 2) ? "pointer" : "default" }}>
             <XMarginalPanel ref={xCanvasRef} />
           </div>
           {/* spacer matching Y-panel width so X axis aligns with 2D canvas — desktop only */}
-          {showYPanel && <div style={{ width:yPanelW, flexShrink:0, background:"#020812",
+          {showYPanel && cpnMode !== "1d" && <div style={{ width:yPanelW, flexShrink:0, background:"#020812",
             borderLeft:"1px solid rgba(40,80,180,0.3)" }} />}
+          {/* In 1D mode: show badge + toggle in top-right of the X-panel */}
+          {cpnMode === "1d" && (
+          <div style={{ position:"absolute", top:8, right:12, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+            <div style={{ color:"#ff9966", fontSize:12, fontWeight:700,
+              fontFamily:"'JetBrains Mono','Courier New',monospace",
+              background:"rgba(4,10,30,0.7)", padding:"3px 8px", borderRadius:4,
+              border:"1px solid #ff996655" }}>Copenhagen</div>
+            {/* Step / Auto toggle */}
+            <button onClick={() => setStepMode(!stepMode)} title={stepMode ? "Switch to auto-timed mode" : "Switch to manual step mode"}
+              style={{
+                fontFamily:"'JetBrains Mono','Courier New',monospace",
+                fontSize:11, padding:"3px 9px", borderRadius:4, cursor:"pointer",
+                background: stepMode ? "rgba(80,180,255,0.18)" : "rgba(255,255,255,0.06)",
+                color: stepMode ? "#88ddff" : "rgba(160,190,230,0.55)",
+                border:`1px solid ${stepMode ? "#88ddff66" : "rgba(80,120,180,0.25)"}`,
+                fontWeight: stepMode ? 700 : 400,
+              }}>
+              {stepMode ? "▶ Step" : "▶ Auto"}
+            </button>
+          </div>
+          )}
         </div>
 
 
@@ -2207,11 +2159,12 @@ export default function App() {
             background:"#040a1c", color:"#c8d8f0", lineHeight:1.9, fontSize:15 }}>
               {[
               "What does it mean to measure a quantum particle?",
-              "This simulation shows a quantum particle — say, an electron — approaching a potential barrier from the left. The horizontal axis is the particle's position x. The vertical axis is the pointer of a measuring device: a needle that deflects upward if the particle transmits, and stays at rest if it reflects. The yellow vertical line marks the detector position where coupling begins.",
+              "This simulation shows a quantum particle — say, an electron — approaching a potential barrier from the left. The horizontal axis is the particle's position x. In the + Apparatus view, the vertical axis is the pointer of a measuring device: a needle that deflects upward if the particle transmits, and stays at rest if it reflects.",
               "Before the particle hits the barrier, the two-dimensional wavefunction is a single blob moving diagonally. The particle and pointer are not yet entangled.",
               "At the barrier, the wavefunction splits into two branches. The transmitted branch moves to the upper right — the particle passes through and the pointer deflects upward. The reflected branch moves to the left while the pointer stays at its resting position — the particle bounces back, and the device registers nothing. The marginal projections on the sides show the two distinct outcomes.",
               "What happens next depends on your interpretation of quantum mechanics. This simulation lets you switch between three.",
-              "In the Projection Postulate interpretation, measurement collapses the wavefunction onto one of its eigenstates. One branch survives; the other vanishes. The outcome is random, governed by the Born rule — the probability of each result is set by how much of the wavefunction sits in that branch. The pointer lands at a definite value. No mechanism is given for when or why collapse occurs — it is simply postulated as a rule of the theory. This is what is assumed in most university physics courses, and it correctly predicts all experimental outcomes.",
+              "In the Copenhagen interpretation, measurement causes the wavefunction to collapse. One branch survives; the other vanishes. The outcome is random, governed by the Born rule — the probability of each result is set by how much of the wavefunction sits in that branch. The pointer lands at a definite value. This is what we observe in the lab.",
+              "The Copenhagen interpretation offers two levels of description. Switch to Operator view to see the textbook formalism without the apparatus. Here the measurement device is hidden and replaced by an abstract observable — a mathematical operator whose two possible outcomes are +1 for transmission and −1 for reflection. Before the measurement, the particle is in a superposition of both outcomes. Applying the operator picks one: the branch corresponding to the observed result survives and is renormalised; the other is discarded. Use the Step button to walk through these stages one click at a time.",
               "In the Many-Worlds interpretation, the wavefunction never collapses and nothing is ever discarded. Both branches continue to exist — but in separate, non-communicating worlds. In one world the particle transmits and the pointer deflects; in the other it reflects and the pointer stays put. The universe itself has split, and each copy of the observer sees a definite outcome. There is no randomness in the dynamics — only the appearance of it, from inside one branch.",
               "In the Pilot-Wave interpretation — also called Bohmian mechanics — the wavefunction never collapses either. Both branches persist, but the particle follows a single definite trajectory, guided by the wave. The white dot traces that path. It enters one branch and stays there, guided deterministically by its initial position. The other branch becomes empty: it still exists mathematically, but carries no particle and has no further physical effect. This is the empty wave.",
               "The side panels show the conditional wavefunction: a slice of the full two-dimensional state at the particle's actual position. Unlike the global projection — which always shows two peaks — the conditional wavefunction has a single peak, localised on the occupied branch. This is the effective wavefunction the particle actually rides.",
@@ -2224,10 +2177,6 @@ export default function App() {
                 color: i === 0 ? "#88ccff" : "#c8d8f0",
               }}>{para}</p>
             ))}
-            <p style={{ marginTop:"2em", fontSize:11,
-              color:"#2a4060", fontFamily:"'JetBrains Mono','Courier New',monospace" }}>
-              Bohmian Measurement · v{__APP_VERSION__}
-            </p>
           </div>
         )}
 
@@ -2248,16 +2197,15 @@ export default function App() {
           interp={interp}   setInterp={setInterp}
           tTarget={tTarget} setTTarget={setTTarget} tTargetRef={tTargetRef}
           lam={lam} setLam={setLam} lamRef={lamRef}
-          xPointer={xPointer} setXPointer={setXPointer} xPointerRef={xPointerRef}
           sigX={sigX} setSigX={setSigX} sigXRef={sigXRef}
           speed={speed} setSpeed={setSpeed} speedRef={speedRef}
           showWave={showWave} setShowWave={setShowWave}
           showTraj={showTraj} setShowTraj={setShowTraj}
           showProj={showProj} setShowProj={setShowProj}
           running={running} setRunning={setRunning}
-          barrierOn={barrierOn} setBarrierOn={setBarrierOn}
-          detectorOn={detectorOn} setDetectorOn={setDetectorOn}
           Tp={Tp} Rp={Rp}
+          cpnMode={cpnMode} setCpnMode={setCpnMode}
+          stepMode={stepMode} setStepMode={setStepMode}
           isMobile={isMobile}
         />
       </div>

@@ -117,20 +117,6 @@
         </div>
 
         <div class="sim-card">
-          <h3>Quantum Measurement with Detector</h3>
-          <span class="tag tag-live">Live</span>
-          <span class="tag tag-topic">Measurement</span>
-          <span class="tag tag-topic">Detector coupling</span>
-          <span class="tag tag-topic">Interpretations</span>
-          <p>
-            Detector-coupled tunneling simulation comparing
-            Collapse/Copenhagen, Pilot-Wave, and Many-Worlds pictures,
-            with explicit detector back-action and outcome statistics.
-          </p>
-          <a class="button" href="measurement/" target="_blank" rel="noopener noreferrer">Launch</a>
-        </div>
-
-        <div class="sim-card">
           <h3>Bell Experiment — Entanglement</h3>
           <span class="tag tag-live">Live</span>
           <span class="tag tag-topic">Entanglement</span>

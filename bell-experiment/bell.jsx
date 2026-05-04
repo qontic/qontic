@@ -41,6 +41,23 @@ const COLOR_ENTANGLED = new THREE.Color(0x55aaff); // blue — superposition
 function lerp(a, b, t) { return a + (b - a) * t; }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
+// CSS color helpers — mirrors the Three.js axisColors() used in the shader
+// so the React overlay labels always match the wave/magnet colors exactly.
+const CSS_A_UP = '#00ccff', CSS_A_DN = '#cc44ff'; // A ↑ cyan, ↓ violet
+const CSS_B_UP = '#88ff44', CSS_B_DN = '#ff4422'; // B ↑ lime, ↓ red-orange
+function lerpChannel(a, b, t) { return Math.round(a + (b - a) * t); }
+function lerpCss(ha, hb, t) {
+  const p = s => parseInt(s, 16);
+  const rA = p(ha.slice(1,3)), gA = p(ha.slice(3,5)), bA = p(ha.slice(5,7));
+  const rB = p(hb.slice(1,3)), gB = p(hb.slice(3,5)), bB = p(hb.slice(5,7));
+  return '#' + [lerpChannel(rA,rB,t), lerpChannel(gA,gB,t), lerpChannel(bA,bB,t)]
+    .map(v => v.toString(16).padStart(2,'0')).join('');
+}
+function axisColorsCss(phi) {
+  const t = Math.sin((phi % 180) * Math.PI / 180);
+  return { up: lerpCss(CSS_A_UP, CSS_B_UP, t), dn: lerpCss(CSS_A_DN, CSS_B_DN, t) };
+}
+
 // Measurement basis unit vector in the XY plane
 function nHat(phi) {
   const p = phi * Math.PI / 180;
@@ -174,6 +191,7 @@ function CorrelationPanel({ counts, phiA, phiB }) {
   const { pp: ePP, pm: ePM, mp: eMP, mm: eMM } = singletProbs(phiA, phiB);
   const corr = (counts.pp + counts.mm - counts.pm - counts.mp) / total;
   const expCorr = -Math.cos((phiA - phiB) * Math.PI / 180);
+  const dPhi = Math.abs(phiA - phiB);
   const n = counts.pp + counts.pm + counts.mp + counts.mm;
   const rows = [
     { label: '▲▼ (+,−)', color: '#55ddaa', count: counts.pm, exp: ePM },
@@ -184,7 +202,26 @@ function CorrelationPanel({ counts, phiA, phiB }) {
   return (
     <div style={{ fontFamily: "'Courier New',monospace", fontSize: 11, color: '#b8d4ff', minWidth: 168 }}>
       <div style={{ fontSize: 10, color: '#7a9ece', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
-        Coincidences <span style={{ color: '#8aaedd' }}>n={n}</span>
+        Bell Correlation + Coincidences <span style={{ color: '#8aaedd' }}>n={n}</span>
+      </div>
+      <div style={{
+        background: 'rgba(20,50,90,0.45)', border: '1px solid rgba(80,140,255,0.2)',
+        borderRadius: 5, padding: '6px 8px', marginBottom: 8, fontSize: 11,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ color: '#7a9ece' }}>Δφ</span>
+          <span>{dPhi}°</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ color: '#7a9ece' }}>C(QM) = −cos(Δφ)</span>
+          <span style={{ color: '#aaddff' }}>{expCorr.toFixed(3)}</span>
+        </div>
+        <div style={{ marginTop: 3, color: '#506090' }}>
+          {dPhi === 0 ? 'Perfect anti-correlation' :
+           dPhi === 90 ? 'Uncorrelated' :
+           dPhi === 180 ? 'Perfect correlation' :
+           'Partial correlation'}
+        </div>
       </div>
       {rows.map(({ label, color, count, exp }) => {
         const pct = Math.round(count / total * 100);
@@ -221,7 +258,7 @@ function CorrelationPanel({ counts, phiA, phiB }) {
 // ── Control Panel ────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
 const VIEWS = ['collapse', 'bohmian'];
-const VIEW_LABELS = { collapse: 'Copenhagen', bohmian: 'Bohmian' };
+const VIEW_LABELS = { collapse: 'Collapse/Copenhagen', bohmian: 'Pilot-Wave' };
 const VIEW_COLORS = { collapse: '#ff9966', bohmian: '#44ddff' };
 const VIEW_DESC = {
   collapse: 'Measurement collapses the wave function. One branch vanishes instantly on both sides.',
@@ -235,9 +272,10 @@ const ControlPanel = React.memo(({
   speed, setSpeed, speedRef,
   running, setRunning,
   showWave, setShowWave,
+  waveBrightRef, setWaveBright,
+  showNLCue, setShowNLCue,
   showParticles, setShowParticles,
   resetCounts,
-  measuredSide, setMeasuredSide,
   counts, phiAVal, phiBVal,
 }) => {
   const vc = VIEW_COLORS[interp];
@@ -258,20 +296,6 @@ const ControlPanel = React.memo(({
         <div style={{ fontSize: 12, color: '#99b8e8', lineHeight: 1.6 }}>{VIEW_DESC[interp]}</div>
       </SL>
 
-      {/* Measured side — which particle's detector is closer */}
-      <SL label="Measured first" tip={"Which particle reaches its detector first.\nThat detector is at distance 7, the other\nis 2× farther (14) — so it arrives later.\nIn Copenhagen: both wave functions collapse\nthe instant the first detector fires.\nIn Bohmian: the other particle's guiding\nfield changes non-locally at that moment."}>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {[['A', 'Left (A)'], ['B', 'Right (B)']].map(([k, label]) => (
-            <button key={k} onClick={() => setMeasuredSide(k)} style={{
-              flex: 1, padding: '5px 0', fontSize: 12, fontFamily: 'monospace',
-              background: measuredSide === k ? 'rgba(80,140,255,0.25)' : 'rgba(10,22,55,0.6)',
-              border: '1px solid ' + (measuredSide === k ? 'rgba(80,140,255,0.7)' : 'rgba(60,100,200,0.25)'),
-              borderRadius: 4, color: measuredSide === k ? '#aaddff' : '#7090b8', cursor: 'pointer',
-            }}>{label}</button>
-          ))}
-        </div>
-      </SL>
-
       {/* Detector A angle */}
       <SL label={'Detector A  φ_A = ' + phiA + '°'} tip={'Measurement axis of detector A\n(left side, particle flying toward −Z)\nφ=0°: measure along +Y\nφ=90°: measure along +X'}>
         <input type="range" min={0} max={180} step={1} defaultValue={phiA}
@@ -287,22 +311,6 @@ const ControlPanel = React.memo(({
           style={{ width: '100%', accentColor: '#ff9966', marginBottom: 5 }} />
         <PB vals={[0, 30, 60, 90, 120, 150]} cur={phiB} onSel={setPhiB} />
       </SL>
-
-      {/* Angular difference readout */}
-      <div style={{
-        background: 'rgba(20,50,90,0.5)', border: '1px solid rgba(80,140,255,0.3)',
-        borderRadius: 6, padding: '7px 10px', fontSize: 12,
-      }}>
-        <div style={{ color: '#7a9ece', marginBottom: 4 }}>Bell correlation</div>
-        <div>Δφ = {Math.abs(phiA - phiB)}°</div>
-        <div>C(QM) = −cos(Δφ) = <b style={{ color: '#aaddff' }}>{(-Math.cos((phiA - phiB) * Math.PI / 180)).toFixed(3)}</b></div>
-        <div style={{ fontSize: 11, color: '#506090', marginTop: 3 }}>
-          {Math.abs(phiA - phiB) === 0 ? 'Perfect anti-correlation' :
-           Math.abs(phiA - phiB) === 90 ? 'Uncorrelated' :
-           Math.abs(phiA - phiB) === 180 ? 'Perfect correlation' :
-           'Partial correlation'}
-        </div>
-      </div>
 
       {/* Speed */}
       <SL label={'Speed ×' + speed.toFixed(1)}>
@@ -331,6 +339,14 @@ const ControlPanel = React.memo(({
           }}>✕ Clear</button>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
+        <SL label="Wave brightness" tip="Controls the opacity/density of the wave packet visualisation">
+          <input type="range" min={0.2} max={4} step={0.05} defaultValue={1}
+            ref={waveBrightRef} onInput={e => setWaveBright(+e.target.value)}
+            style={{ width: '100%', accentColor: '#88ccff' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#506080', marginTop: 2 }}>
+            <span>dim</span><span>default</span><span>bright</span>
+          </div>
+        </SL>
           <button onClick={() => setShowWave(!showWave)} style={{
             flex: 1, padding: '5px 4px', textAlign: 'center',
             background: showWave ? 'rgba(40,80,180,0.5)' : 'rgba(15,30,70,0.5)',
@@ -338,6 +354,13 @@ const ControlPanel = React.memo(({
             borderRadius: 5, color: showWave ? '#c8e8ff' : '#7090b8',
             cursor: 'pointer', fontSize: 12, fontFamily: 'monospace',
           }}>{showWave ? '◉' : '○'} Wave</button>
+          <button onClick={() => setShowNLCue(!showNLCue)} style={{
+            flex: 1, padding: '5px 4px', textAlign: 'center',
+            background: showNLCue ? 'rgba(160,120,30,0.45)' : 'rgba(15,30,70,0.5)',
+            border: '1px solid ' + (showNLCue ? 'rgba(255,220,120,0.7)' : '#334466'),
+            borderRadius: 5, color: showNLCue ? '#ffeaa0' : '#7090b8',
+            cursor: 'pointer', fontSize: 12, fontFamily: 'monospace',
+          }}>{showNLCue ? '◉' : '○'} Non-local cue</button>
           {interp === 'bohmian' && (
             <button onClick={() => setShowParticles(!showParticles)} style={{
               flex: 1, padding: '5px 4px', textAlign: 'center',
@@ -391,13 +414,13 @@ MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head><body>
-<h1>Bohmian Mechanics &mdash; Pilot-Wave Trajectories</h1>
+<h1>Pilot-Wave &mdash; Trajectories</h1>
 <div class="sub">de Broglie&ndash;Bohm interpretation &nbsp;&middot;&nbsp; particles always have definite positions, outcomes emerge from dynamics</div>
 
 <h2>1. The Pilot Wave</h2>
 <p>The singlet state is a real field &mdash; the <em>pilot wave</em> &mdash; that evolves in the two-particle configuration space:</p>
 <div class="eq">$$|\\Psi^-\\rangle = \\frac{1}{\\sqrt{2}}\\bigl(|{+}\\rangle_A|{-}\\rangle_B - |{-}\\rangle_A|{+}\\rangle_B\\bigr)$$</div>
-<p>Each particle has a definite (but unknown) position $\\mathbf{Q}_A(t),\\,\\mathbf{Q}_B(t)$ at every moment. The wave does <em>not</em> collapse &mdash; it guides the particles. Uncertainty is epistemic (we don't know the initial positions), not ontological. This is why the particle dot in the simulation is shown in blue while in flight: the outcome is not yet <em>known</em>, even though the position is definite.</p>
+<p>Each particle has a definite (but unknown) position $\\mathbf{Q}_A(t),\\,\\mathbf{Q}_B(t)$ at every moment. The wave does <em>not</em> collapse &mdash; it guides the particles through the <em>conditional wave function</em> on each side. Uncertainty is epistemic (we don't know the initial positions), not ontological. In the simulation the particle is white before branch selection (entangled packet), then takes the color of the guiding branch once the effective conditional wave has selected a channel.</p>
 
 <h2>2. Guidance Equation</h2>
 <p>Each particle's velocity equals the local probability current divided by the density of the joint wave function:</p>
@@ -408,7 +431,7 @@ MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},
 <div class="step"><span class="nb">Before flight</span> Both particles start at random transverse positions $Q_k^\\perp$ drawn from the Born distribution $|\\Psi(\\mathbf{Q}_A,\\mathbf{Q}_B)|^2$. <strong>Neither particle is pre-assigned to spin-up or spin-down.</strong> Both colored branches (green &#8593; and orange &#8595;) are active on both sides.</div>
 <div class="step"><span class="nb">Branches separate</span> Near the detector the Stern&ndash;Gerlach field pushes the two spin components apart transversely. The guidance equation pushes each particle toward whichever branch it is currently closest to. The outcome is entirely determined by $Q^\\perp$ and the dynamics &mdash; no random event occurs.</div>
 <div class="step"><span class="nb">A reaches its detector</span> $\\mathbf{Q}_A$ crosses the critical surface. A&rsquo;s outcome is read from its position: the branch it occupies determines $+$ or $-$. The joint wave function now has one branch dominant for B: the effective wave for B is solely $|{-}\\rangle_B$ (if $A=+$) or $|{+}\\rangle_B$ (if $A=-$).</div>
-<div class="step"><span class="nb">Non-local update to B</span> B&rsquo;s guiding field changes <em>instantly</em>: the empty branch of $\\Psi$ no longer contributes to B&rsquo;s velocity. Even though B is still in flight and nothing physically traveled to it, the velocity field it follows shifts. <strong>This is the visible kink in B&rsquo;s trajectory</strong> (the cyan trail shifts color at that moment in the simulation).</div>
+<div class="step"><span class="nb">Non-local update to B</span> B&rsquo;s guiding field changes <em>instantly</em>: the empty branch of $\\Psi$ no longer contributes to B&rsquo;s velocity. Even though B is still in flight and nothing physically traveled to it, the velocity field it follows shifts. <strong>This is the visible kink in B&rsquo;s trajectory</strong>; at the same moment, B&rsquo;s particle color updates to match the effective conditional guiding branch.</div>
 <div class="step"><span class="nb">B reaches its detector</span> Guided by the surviving branch, B lands in the strongly correlated position. The observer reads the outcome. The correlation with A is guaranteed by the guidance equation &mdash; no communication needed.</div>
 
 <h2>4. Simulation Guidance (discretized)</h2>
@@ -456,11 +479,11 @@ MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head><body>
-<h1>Copenhagen &mdash; Wavefunction Collapse</h1>
+<h1>Collapse/Copenhagen &mdash; Wavefunction Collapse</h1>
 <div class="sub">Orthodox interpretation &nbsp;&middot;&nbsp; no definite spin value before measurement</div>
 
 <h2>1. Completeness</h2>
-<p>In the Copenhagen interpretation the wave function $|\\Psi\\rangle$ is the <em>complete</em> description of reality. Before measurement, spin has no definite value &mdash; &ldquo;particle A is spin-up&rdquo; is simply not true prior to a measurement. The two coloured branches (green &#8593; and orange &#8595;) you see superimposed on each flying packet are <em>both real</em>; the particle is genuinely in both spin components at once.</p>
+<p>In the Copenhagen interpretation the wave function $|\\Psi\\rangle$ is the <em>complete</em> description of reality. Before measurement, spin has no definite value &mdash; &ldquo;particle A is spin-up&rdquo; is simply not true prior to a measurement. In this visualization the packet is shown white while the two spin components are still fully superposed; near the Stern&ndash;Gerlach magnet it splits into two coloured branches (&#8593;/&#8595;), both of which are physically present until collapse.</p>
 <div class="eq">$$|\\Psi^-\\rangle = \\frac{1}{\\sqrt{2}}\\bigl(|{+}\\rangle_A|{-}\\rangle_B - |{-}\\rangle_A|{+}\\rangle_B\\bigr)$$</div>
 
 <h2>2. Measurement Postulate</h2>
@@ -470,7 +493,7 @@ MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},
 <div class="eq">$$|\\Psi^-\\rangle\\;\\xrightarrow{A\\,\\text{measures }+}\\; |{+}\\rangle_A\\otimes|{-}\\rangle_B$$</div>
 
 <h2>3. Collapse Sequence in the Simulation</h2>
-<div class="step"><span class="nb">Before measurement</span> Both spin components are superimposed on each packet. No outcome exists yet. The simulation shows blue-tinted packets; once the branches separate near the detector, the two coloured components become visible.</div>
+<div class="step"><span class="nb">Before measurement</span> Both spin components are superimposed on each packet. No outcome exists yet. The simulation shows a white packet in this regime; when it reaches the magnet region, the packet splits and the two coloured branches become visible.</div>
 <div class="step"><span class="nb">First detector fires</span> A Born-rule random outcome is drawn. Both wave functions collapse simultaneously: the surviving branch on A and the correlated branch on B are kept, the others vanish &mdash; even though B may be far away. This is the non-local collapse.</div>
 <div class="step"><span class="nb">Second detector fires (~25% later)</span> B is now in a spin eigenstate of its own detector axis. Its outcome is completely determined by the prior collapse; no second random draw is needed.</div>
 
@@ -502,10 +525,12 @@ MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},
 // ── Main App ─────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
 export default function App() {
-  const mountRef   = useRef(null);
-  const phiARef    = useRef(null);
-  const phiBRef    = useRef(null);
-  const speedRef   = useRef(null);
+  const mountRef      = useRef(null);
+  const phiARef       = useRef(null);
+  const phiBRef       = useRef(null);
+  const speedRef      = useRef(null);
+  const waveBrightRef = useRef(null);
+  const nonLocalBannerRef = useRef(null);
 
   // Mutable simulation state (no re-render on every tick)
   const S = useRef({
@@ -513,9 +538,14 @@ export default function App() {
     speed: 1.0, running: true,
     interp: 'collapse',         // 'collapse' | 'bohmian'
     measuredSide: 'A',
-    showWave: true, showParticles: true,
+    showWave: true, showParticles: true, waveBright: 1.0,
+    showNLCue: false,
+    nlFlash: 0,
+    nlFrom: 'A',
     tick: 0, dirty: true,
-    camR: 20, camTheta: 0.3, camPhi: 0.18,
+    // Default camera: negative yaw keeps A on the left and B on the right,
+    // with a slightly wider framing so both detectors are visible on load.
+    camR: 24, camTheta: -0.3, camPhi: 0.18,
     target: new THREE.Vector3(0, 0, 0),
     drag: null,
     detDistA: Z_DET,        // live, draggable
@@ -534,11 +564,16 @@ export default function App() {
   const [interp,       setInterpUI]    = useState('collapse');
   const [measuredSide, setMeasuredSideUI] = useState('A');
   const [showWave,     setShowWaveUI]  = useState(true);
+  const [showNLCue,    setShowNLCueUI] = useState(false);
   const [showParticles,setShowPartUI]  = useState(true);
   const [counts,       setCountsUI]    = useState({ pp: 0, pm: 0, mp: 0, mm: 0 });
   const [activeTab,    setActiveTab]   = useState('sim');
   const [panelW,       setPanelW]      = useState(270);
   const [detDists,     setDetDistsUI]  = useState({ A: Z_DET, B: Z_DET_FAR });
+  const legendARef = useRef(null);
+  const legendBRef = useRef(null);
+  const legendAZRef = useRef(null);
+  const legendBZRef = useRef(null);
 
   const T = useRef(null); // Three.js objects
 
@@ -560,6 +595,8 @@ export default function App() {
   const setInterp  = v => { S.current.interp = v; setInterpUI(v); S.current.dirty = true; };
   const setMeasuredSide = v => { S.current.measuredSide = v; setMeasuredSideUI(v); };
   const setShowWave      = v => { S.current.showWave = v; setShowWaveUI(v); };
+  const setWaveBright   = v => { S.current.waveBright = v; };
+  const setShowNLCue = v => { S.current.showNLCue = v; setShowNLCueUI(v); };
   const setShowParticles = v => { S.current.showParticles = v; setShowPartUI(v); };
   const resetCounts = () => {
     S.current.counts = { pp: 0, pm: 0, mp: 0, mm: 0 };
@@ -617,6 +654,35 @@ export default function App() {
       camera.lookAt(tg);
     }
     updateCam();
+
+    const wPosA = new THREE.Vector3();
+    const wPosB = new THREE.Vector3();
+    function placeLegendX(node, xPx) {
+      if (!node) return;
+      const w = el.clientWidth || 1;
+      const pad = 8;
+      const boxW = node.offsetWidth || 150;
+      const left = clamp(xPx - boxW * 0.5, pad, Math.max(pad, w - boxW - pad));
+      node.style.left = `${left}px`;
+      node.style.right = 'auto';
+    }
+    function updateLegendAnchors() {
+      const aNode = legendARef.current;
+      const bNode = legendBRef.current;
+      if (!aNode && !bNode) return;
+      detA.getWorldPosition(wPosA);
+      detB.getWorldPosition(wPosB);
+      const xA = (wPosA.clone().project(camera).x * 0.5 + 0.5) * (el.clientWidth || 1);
+      const xB = (wPosB.clone().project(camera).x * 0.5 + 0.5) * (el.clientWidth || 1);
+      placeLegendX(aNode, xA);
+      placeLegendX(bNode, xB);
+    }
+    function updateLegendZValues(zA, zB) {
+      const aNode = legendAZRef.current;
+      const bNode = legendBZRef.current;
+      if (aNode) aNode.textContent = zA.toFixed(1);
+      if (bNode) bNode.textContent = `${zB >= 0 ? '+' : ''}${zB.toFixed(1)}`;
+    }
 
     // ── Scene geometry ───────────────────────────────────────────────────────
 
@@ -681,6 +747,23 @@ export default function App() {
     const detA = makeDetector(-Z_DET, 0x44ddff); // left, cyan
     const detB = makeDetector( Z_DET, 0xff9966); // right, orange
 
+    // Non-local update link: brief pulse when first measurement determines the
+    // distant side's effective guiding state.
+    const nlPos = new Float32Array([
+      0, 1.8, -Z_DET,
+      0, 1.8,  Z_DET,
+    ]);
+    const nlGeo = new THREE.BufferGeometry();
+    nlGeo.setAttribute('position', new THREE.BufferAttribute(nlPos, 3));
+    const nlMat = new THREE.LineBasicMaterial({
+      color: 0xffee88,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    const nlLink = new THREE.Line(nlGeo, nlMat);
+    scene.add(nlLink);
+
     // ── Stern-Gerlach magnets ────────────────────────────────────────────────────
     // Each magnet is placed 1.5 units in front of its detector screen and
     // rotated so the green (spin-↑) pole points along n̂(φ). The axis arrow
@@ -709,62 +792,152 @@ export default function App() {
 
     function makeMagnet(yokeColor, poleUpColor, poleDnColor) {
       const grp = new THREE.Group();
-      const W = 1.60;  // pole width (perpendicular to measurement axis)
-      const H = 0.42;  // pole height (along measurement axis)
-      const D = 0.30;  // pole depth (along beam Z)
-      const GAP = 0.62; // gap between pole faces (beam travels through here)
+      const W = 1.60;    // pole width (perpendicular to measurement axis, X)
+      const H = 0.50;    // pole height along measurement axis (Y)
+      const D = 0.42;    // pole depth along beam axis (Z)
+      const GAP = 0.52;  // gap between pole faces (beam travels through here)
       const yOff = GAP / 2 + H / 2;
 
-      const addPole = (color, yPos) => {
-        const geo = new THREE.BoxGeometry(W, H, D);
-        const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.80 }));
+      // Helper: Create tapered pole (wedge shape) using custom BufferGeometry
+      // This represents the pole piece that creates the field gradient
+      const createTaperedPole = (color, yPos) => {
+        // Triangular prism: cross-section (X-Y plane) is a triangle
+        // Apex points UPWARD toward the gap, wide base faces away from gap.
+        // Extended in Z for the depth of the magnet.
+        const verts = [
+          // Back face at -D/2: triangle
+           0,     H/2,  -D/2,  // 0 – apex (toward gap)
+          -W/2,  -H/2,  -D/2,  // 1 – base left
+           W/2,  -H/2,  -D/2,  // 2 – base right
+          // Front face at +D/2: triangle
+           0,     H/2,   D/2,  // 3 – apex
+          -W/2,  -H/2,   D/2,  // 4 – base left
+           W/2,  -H/2,   D/2,  // 5 – base right
+        ];
+
+        const indices = [
+          // Back triangle
+          0, 2, 1,
+          // Front triangle
+          3, 4, 5,
+          // Bottom (wide) face
+          1, 2, 5,  1, 5, 4,
+          // Left slanted face
+          0, 1, 4,  0, 4, 3,
+          // Right slanted face
+          0, 3, 5,  0, 5, 2,
+        ];
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+        geo.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+        geo.computeVertexNormals();
+
+        const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ 
+          color, 
+          transparent: true, 
+          opacity: 0.88,
+          side: THREE.DoubleSide
+        }));
         mesh.position.y = yPos;
         grp.add(mesh);
+
         const edges = new THREE.LineSegments(
           new THREE.EdgesGeometry(geo),
-          new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.7 })
+          new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9, linewidth: 2 })
         );
         edges.position.y = yPos;
         grp.add(edges);
+
+        return mesh;
       };
 
-      const poleUp = addPole(poleUpColor,  yOff);  // spin-↑ pole
-      const poleDn = addPole(poleDnColor, -yOff);  // spin-↓ pole
+      // Upper pole: flat, wide (S pole - uniform field)
+      const flatGeo = new THREE.BoxGeometry(W * 1.05, H, D);
+      const flatMesh = new THREE.Mesh(flatGeo, new THREE.MeshLambertMaterial({ 
+        color: poleUpColor, 
+        transparent: true, 
+        opacity: 0.88 
+      }));
+      flatMesh.position.y = yOff;
+      grp.add(flatMesh);
+      
+      const flatEdges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(flatGeo),
+        new THREE.LineBasicMaterial({ color: poleUpColor, transparent: true, opacity: 0.9, linewidth: 2 })
+      );
+      flatEdges.position.y = yOff;
+      grp.add(flatEdges);
+
+      // Lower pole: tapered to sharp point (N pole - field gradient)
+      createTaperedPole(poleDnColor, -yOff);
 
       // Yoke: two vertical bars on the sides, in the detector’s colour
-      const yokeGeo = new THREE.BoxGeometry(0.13, GAP + H * 2, D * 0.85);
-      const yokeMat = new THREE.MeshLambertMaterial({ color: yokeColor, transparent: true, opacity: 0.45 });
-      [-W / 2 - 0.065, W / 2 + 0.065].forEach(xPos => {
+      const yokeGeo = new THREE.BoxGeometry(0.14, GAP + H * 2.1, D * 0.9);
+      const yokeMat = new THREE.MeshLambertMaterial({ color: yokeColor, transparent: true, opacity: 0.55 });
+      [-W/2 - 0.14, W/2 + 0.14].forEach(xPos => {
         const yoke = new THREE.Mesh(yokeGeo, yokeMat);
         yoke.position.x = xPos;
         grp.add(yoke);
       });
 
-      // Gap indicator ring
-      const gapRingPts = Array.from({ length: 33 }, (_, i) => {
-        const a = i / 32 * Math.PI * 2;
-        return new THREE.Vector3(Math.cos(a) * 0.22, Math.sin(a) * 0.22, 0);
-      });
-      grp.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(gapRingPts),
-        new THREE.LineBasicMaterial({ color: yokeColor, transparent: true, opacity: 0.5 })
-      ));
+      // Magnetic field lines showing gradient (denser lines indicate stronger gradient)
+      const fieldLineColor = new THREE.Color(yokeColor).multiplyScalar(0.65);
+      const lineOpacity = 0.50;
+      for (let i = 0; i < 6; i++) {
+        const y = -GAP * 0.48 + (i / 5) * GAP * 0.96;
+        // Lines get shorter as they approach the tapered pole to show convergence
+        const xExtent = W * 0.52 * (1 - 0.15 * Math.abs((i - 2.5) / 2.5));
+        const linePts = [
+          new THREE.Vector3(-xExtent, y, -D * 0.55),
+          new THREE.Vector3( xExtent, y, -D * 0.55)
+        ];
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(linePts);
+        const line = new THREE.Line(
+          lineGeo,
+          new THREE.LineBasicMaterial({ 
+            color: fieldLineColor, 
+            transparent: true, 
+            opacity: lineOpacity,
+            linewidth: 1
+          })
+        );
+        grp.add(line);
+      }
 
       // Axis arrow — child of the group, always points local +Y (= n̂(φ) in world).
       // Placed above the upper pole so it’s clearly visible.
       const arrow = new THREE.ArrowHelper(
-        new THREE.Vector3(0, 1, 0),  // direction in local space = n̂(φ) in world
-        new THREE.Vector3(0, yOff + H * 0.6, 0),
-        1.1, yokeColor, 0.26, 0.14
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(0, yOff + H * 0.85, 0),
+        1.3, 
+        yokeColor, 
+        0.32, 
+        0.18
       );
       grp.add(arrow);
 
       grp.userData.setPoleColors = (upColor, dnColor) => {
-        grp.children.forEach(child => {
-          if (child.geometry?.type === 'BoxGeometry' && child.position.y > 0) child.material.color.set(upColor);
-          if (child.geometry?.type === 'BoxGeometry' && child.position.y < 0) child.material.color.set(dnColor);
-          if (child.geometry?.type === 'EdgesGeometry' && child.position.y > 0) child.material.color.set(upColor);
-          if (child.geometry?.type === 'EdgesGeometry' && child.position.y < 0) child.material.color.set(dnColor);
+        grp.children.forEach((child) => {
+          // Identify meshes by their material properties
+          if (child.isMesh && child.material?.color) {
+            // Check if it's the tapered pole (has custom BufferGeometry)
+            if (child.geometry?.type === 'BufferGeometry' && child.position.y > 0) {
+              child.material.color.set(upColor);
+            }
+            // Lower flat pole
+            else if (child.geometry?.type === 'BoxGeometry' && child.position.y < -0.1) {
+              child.material.color.set(dnColor);
+            }
+          }
+          // Update edge colors
+          if (child.isLineSegments && child.material?.color) {
+            if (child.position.y > 0 && child.position.y > 0.3) {
+              child.material.color.set(upColor);
+            } else if (child.position.y < -0.1) {
+              child.material.color.set(dnColor);
+            }
+          }
         });
       };
 
@@ -1131,10 +1304,11 @@ export default function App() {
         const newDist = clamp(dragStartDist + sign * dz, 2.0, 20.0);
         if (draggingDet === 'A') s.detDistA = newDist;
         else                     s.detDistB = newDist;
-        // Update measuredSide to track whichever detector is now closer
+        // Automatically derive which detector is first from distance
         s.measuredSide = s.detDistA <= s.detDistB ? 'A' : 'B';
+        setMeasuredSideUI(s.measuredSide);
         s.dirty = true;
-        Tr.setDetDistsUI({ A: s.detDistA, B: s.detDistB });
+        T.current?.setDetDistsUI({ A: s.detDistA, B: s.detDistB });
         return;
       }
       if (!s.drag) return;
@@ -1184,6 +1358,7 @@ export default function App() {
     T.current = {
       scene, camera, renderer,
       detA, detB,
+      nlLink,
       magA, magB,
       slabsA, slabsB,
       bohmA, bohmB,
@@ -1223,6 +1398,7 @@ export default function App() {
         s.collapsed = false;
         s.outcomeA = null;
         s.outcomeB = null;
+        s.nlFlash = 0;
         hitRegistered[0] = hitRegistered[1] = false;
         s.hitFired[0] = s.hitFired[1] = false;
         s.dirty = true;
@@ -1234,6 +1410,8 @@ export default function App() {
 
       if (firstFired && !s.collapsed) {
         s.collapsed = true;
+        s.nlFlash = s.showNLCue ? 1.0 : 0;
+        s.nlFrom = s.measuredSide;
         // Read outcomes from pre-assigned Bohmian trajectories
         s.outcomeA = trajsA[0]?.isUp ? 1 : -1;
         s.outcomeB = trajsB[0]?.isUp ? 1 : -1;
@@ -1261,6 +1439,28 @@ export default function App() {
       Tr.magB.rotation.z = -s.phiB * Math.PI / 180;
       Tr.magA.userData.setPoleColors?.(colorsA.up, colorsA.dn);
       Tr.magB.userData.setPoleColors?.(colorsB.up, colorsB.dn);
+      updateLegendAnchors();
+      updateLegendZValues(-detDistA, detDistB);
+      if (Tr.nlLink) {
+        const fromDetZ = s.nlFrom === 'A' ? -detDistA : detDistB;
+        const remoteWaveZ = s.nlFrom === 'A'
+          ? Math.min(travelDist, detDistB)
+          : -Math.min(travelDist, detDistA);
+        const arr = Tr.nlLink.geometry.attributes.position.array;
+        // Draw from measured detector -> remote wave packet (not detector -> detector).
+        arr[0] = 0; arr[1] = 1.8; arr[2] = fromDetZ;
+        arr[3] = 0; arr[4] = 0.6; arr[5] = remoteWaveZ;
+        Tr.nlLink.geometry.attributes.position.needsUpdate = true;
+        Tr.nlLink.material.opacity = s.showNLCue ? Math.min(0.9, s.nlFlash * 0.8) : 0;
+      }
+      const nlBanner = nonLocalBannerRef.current;
+      if (nlBanner) {
+        const from = s.nlFrom;
+        const to = from === 'A' ? 'B' : 'A';
+        nlBanner.textContent = `NON-LOCAL UPDATE: ${from} measured -> ${to} wave updates instantly`;
+        nlBanner.style.opacity = (s.showNLCue && s.nlFlash > 0.02) ? String(Math.min(0.96, s.nlFlash)) : '0';
+      }
+      if (s.nlFlash > 0) s.nlFlash *= 0.965;
 
       // ── Wave-packet slab update ───────────────────────────────────────────
       const sw = s.showWave;
@@ -1282,7 +1482,7 @@ export default function App() {
       // detDist: total distance from source to this side's detector.
       // Splitting begins when the wave reaches the magnet (MAG_OFFSET in front
       // of the screen), so splitFrac = (detDist - MAG_OFFSET) / detDist.
-      function updateSlabs(slabs, wZ, phiVal, outcome, particleFrac, thisMeasured, ampUp, ampDown, detDist, colors) {
+      function updateSlabs(slabs, wZ, phiVal, outcome, particleFrac, thisMeasured, ampUp, ampDown, detDist, colors, partnerOutcome, partnerColors) {
         const splitFrac = (detDist - MAG_OFFSET) / detDist;
         const postFracP = particleFrac > splitFrac ? (particleFrac - splitFrac) / (1 - splitFrac) : 0;
         const sepP   = postFracP * KICK;
@@ -1295,11 +1495,14 @@ export default function App() {
         let aUp = 1, aDn = 1;
         if (particleFrac >= splitFrac) {
           if (thisMeasured && outcome !== null && s.interp === 'collapse') {
-            // This side has been measured: collapse to the actual outcome branch.
+            // Copenhagen: collapse to the actual outcome branch.
+            isPostVal = outcome === 1 ? 2 : 3;
+          } else if (thisMeasured && outcome !== null && s.interp === 'bohmian') {
+            // Bohmian: wave doesn't collapse but we know which branch the
+            // particle is in — show only that branch so wave matches particle.
             isPostVal = outcome === 1 ? 2 : 3;
           } else {
-            // Still in superposition (either Bohmian, or Copenhagen before this
-            // side's detector fires). Use conditional Born-rule amplitude weights.
+            // Still in superposition before this side's detector fires.
             isPostVal = 1;
             aUp = ampUp;
             aDn = ampDown;
@@ -1310,17 +1513,12 @@ export default function App() {
           const u = mesh.material.uniforms;
           u.uColorUp.value.copy(colors.up);
           u.uColorDn.value.copy(colors.dn);
-          if (s.interp === 'collapse' && collapsed && !thisMeasured) {
-            // Remote packet recolor follows the effective local state on THIS side.
-            // Use the conditional Born weights in the local basis. This gives:
-            //   same axis    -> exact branch color (weight 1/0)
-            //   rotated axis -> intermediate color encoding the new spin state
-            const norm = Math.max(ampUp + ampDown, 1e-6);
-            u.uPreColor.value.setRGB(
-              (colors.up.r * ampUp + colors.dn.r * ampDown) / norm,
-              (colors.up.g * ampUp + colors.dn.g * ampDown) / norm,
-              (colors.up.b * ampUp + colors.dn.b * ampDown) / norm,
-            );
+          if (collapsed && !thisMeasured) {
+            // Both interpretations: once the remote detector fires, the outcome
+            // of THIS particle is determined (by entanglement / Bohmian guidance).
+            // Tint the pre-split wave to the partner's non-selected branch color
+            // so the viewer can read the anti-correlation before the particle arrives.
+            u.uPreColor.value.copy(partnerOutcome === 1 ? partnerColors.dn : partnerColors.up);
           } else {
             u.uPreColor.value.setRGB(1, 1, 1);
           }
@@ -1330,8 +1528,8 @@ export default function App() {
           u.uCDnX.value     = dnCx; u.uCDnY.value = dnCy;
           u.uWz.value       = wZ;
           u.uIsPost.value   = isPostVal;
-          u.uBright.value   = 0.55;
-          u.uAlphaMax.value = 0.32;
+          u.uBright.value   = 0.55 * s.waveBright;
+          u.uAlphaMax.value = Math.min(0.32 * s.waveBright, 0.95);
           u.uAmpUp.value    = aUp;
           u.uAmpDown.value  = aDn;
           mesh.visible      = true;
@@ -1365,19 +1563,37 @@ export default function App() {
         else          { ampUpA = pUp; ampDownA = pDn; }
       }
 
-      updateSlabs(slabsA, wZA, s.phiA, outcomeA, fracA, measuredA, ampUpA, ampDownA, detDistA, colorsA);
-      updateSlabs(slabsB, wZB, s.phiB, outcomeB, fracB, measuredB, ampUpB, ampDownB, detDistB, colorsB);
+      updateSlabs(slabsA, wZA, s.phiA, outcomeA, fracA, measuredA, ampUpA, ampDownA, detDistA, colorsA, outcomeB, colorsB);
+      updateSlabs(slabsB, wZB, s.phiB, outcomeB, fracB, measuredB, ampUpB, ampDownB, detDistB, colorsB, outcomeA, colorsA);
 
       // ── Bohmian particles ─────────────────────────────────────────────────
       const showP = s.showParticles && s.interp === 'bohmian';
 
       [
-        { trajs: trajsA, bohm: bohmA, hitPool: hitsA, tIdx: tIdxA, hitKey: 0, upHex: colorsA.up.getHex(), dnHex: colorsA.dn.getHex() },
-        { trajs: trajsB, bohm: bohmB, hitPool: hitsB, tIdx: tIdxB, hitKey: 1, upHex: colorsB.up.getHex(), dnHex: colorsB.dn.getHex() },
-      ].forEach(({ trajs, bohm, hitPool, tIdx: myTIdx, hitKey, upHex, dnHex }) => {
+        {
+          trajs: trajsA, bohm: bohmA, hitPool: hitsA, tIdx: tIdxA, hitKey: 0,
+          upHex: colorsA.up.getHex(), dnHex: colorsA.dn.getHex(),
+          thisMeasured: measuredA, partnerOutcome: outcomeB,
+          partnerUpHex: colorsB.up.getHex(), partnerDnHex: colorsB.dn.getHex(),
+        },
+        {
+          trajs: trajsB, bohm: bohmB, hitPool: hitsB, tIdx: tIdxB, hitKey: 1,
+          upHex: colorsB.up.getHex(), dnHex: colorsB.dn.getHex(),
+          thisMeasured: measuredB, partnerOutcome: outcomeA,
+          partnerUpHex: colorsA.up.getHex(), partnerDnHex: colorsA.dn.getHex(),
+        },
+      ].forEach(({ trajs, bohm, hitPool, tIdx: myTIdx, hitKey, upHex, dnHex, thisMeasured, partnerOutcome, partnerUpHex, partnerDnHex }) => {
         const { pts, isUp } = trajs[0];
-        const measured = myTIdx >= STEPS - 1;
-        const col = measured ? (isUp ? upHex : dnHex) : 0x4499ff;
+        // Determine the step at which the wave splits inside the magnet so we
+        // can colour the particle as soon as it enters the branch it will follow.
+        const detDist = hitKey === 0 ? detDistA : detDistB;
+        const splitStep = Math.round((detDist - MAG_OFFSET) / detDist * STEPS);
+        const hasSplit = myTIdx >= splitStep;
+        const remoteMeasured = collapsed && !thisMeasured;
+        const remoteCol = partnerOutcome === 1 ? partnerDnHex : partnerUpHex;
+        const col = (hasSplit || thisMeasured)
+          ? (isUp ? upHex : dnHex)
+          : (remoteMeasured ? remoteCol : 0xffffff);
         if (!showP) {
           bohm.dots[0].visible       = false;
           bohm.glows[0].visible      = false;
@@ -1475,8 +1691,8 @@ export default function App() {
           BELL EXPERIMENT
         </span>
         <button className={'tbb' + (activeTab === 'sim' ? ' tba' : '')} onClick={() => setActiveTab('sim')}>Simulation</button>
-        <button className={'tbb' + (activeTab === 'trajectories' ? ' tba' : '')} onClick={() => setActiveTab('trajectories')}>Trajectories</button>
-        <button className={'tbb' + (activeTab === 'collapse' ? ' tba' : '')} onClick={() => setActiveTab('collapse')}>Collapse</button>
+        <button className={'tbb' + (activeTab === 'trajectories' ? ' tba' : '')} onClick={() => setActiveTab('trajectories')}>Pilot-Wave</button>
+        <button className={'tbb' + (activeTab === 'collapse' ? ' tba' : '')} onClick={() => setActiveTab('collapse')}>Collapse/Copenhagen</button>
       </div>
 
       {/* Main area */}
@@ -1490,9 +1706,10 @@ export default function App() {
             speed={speed} setSpeed={setSpeed} speedRef={speedRef}
             running={running} setRunning={setRunning}
             showWave={showWave} setShowWave={setShowWave}
+            waveBrightRef={waveBrightRef} setWaveBright={setWaveBright}
+            showNLCue={showNLCue} setShowNLCue={setShowNLCue}
             showParticles={showParticles} setShowParticles={setShowParticles}
             resetCounts={resetCounts}
-            measuredSide={measuredSide} setMeasuredSide={setMeasuredSide}
             counts={counts}
             phiAVal={phiA} phiBVal={phiB}
           />
@@ -1509,37 +1726,61 @@ export default function App() {
           }} />
 
           {/* Overlay labels */}
-          {activeTab === 'sim' && (
-            <>
-              <div style={{ position: 'absolute', top: 10, left: 12, zIndex: 10,
-                fontFamily: 'monospace', fontSize: 12, color: '#44ddff',
-                background: 'rgba(4,10,30,0.75)', borderRadius: 5, padding: '4px 8px',
-                border: '1px solid ' + (measuredSide === 'A' ? 'rgba(68,221,255,0.8)' : 'rgba(68,221,255,0.3)') }}>
-              ← A  φ_A={phiA}°  z={detDists.A.toFixed(1)}
-                {measuredSide === 'A'
-                  ? <span style={{ marginLeft: 6, color: '#ffee44', fontSize: 10 }}>★ FIRST</span>
-                  : <span style={{ marginLeft: 6, color: '#7090b8', fontSize: 10 }}>SECOND</span>}
+          {activeTab === 'sim' && (() => {
+            const cA = axisColorsCss(phiA);
+            const cB = axisColorsCss(phiB);
+            const Swatch = ({ color }) => (
+              <span style={{
+                display: 'inline-block', width: 9, height: 9, borderRadius: 2,
+                background: color, marginRight: 3, verticalAlign: 'middle',
+              }} />
+            );
+            const SpinRow = ({ up, dn }) => (
+              <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 11, color: '#b8d4ff' }}>
+                <span><Swatch color={up} />↑ spin</span>
+                <span><Swatch color={dn} />↓ spin</span>
+                <span><Swatch color='rgba(255,255,255,0.7)' />⊙ entangled</span>
               </div>
-              <div style={{ position: 'absolute', top: 10, right: 12, zIndex: 10,
-                fontFamily: 'monospace', fontSize: 12, color: '#ff9966',
-                background: 'rgba(4,10,30,0.75)', borderRadius: 5, padding: '4px 8px',
-                border: '1px solid ' + (measuredSide === 'B' ? 'rgba(255,153,102,0.8)' : 'rgba(255,153,102,0.3)') }}>
-                {measuredSide === 'B'
-                  ? <span style={{ marginRight: 6, color: '#ffee44', fontSize: 10 }}>★ FIRST</span>
-                  : <span style={{ marginRight: 6, color: '#7090b8', fontSize: 10 }}>SECOND</span>}
-                B  φ_B={phiB}°  z={detDists.B.toFixed(1)}  →
-              </div>
-              {/* Legend */}
-              <div style={{ position: 'absolute', bottom: 12, left: 12, zIndex: 10,
-                fontFamily: 'monospace', fontSize: 11, color: '#b8d4ff',
-                background: 'rgba(4,10,30,0.80)', borderRadius: 6, padding: '6px 10px',
-                border: '1px solid rgba(80,140,255,0.25)' }}>
-                <div><span style={{ color: '#55aaff' }}>■</span> superposition (entangled)</div>
-                <div><span style={{ color: '#22ee66' }}>■</span> spin ↑ branch</div>
-                <div><span style={{ color: '#ff5522' }}>■</span> spin ↓ branch</div>
-              </div>
-            </>
-          )}
+            );
+            return (
+              <>
+                <div ref={nonLocalBannerRef} style={{
+                  position: 'absolute', top: 46, left: '50%', transform: 'translateX(-50%)',
+                  zIndex: 11, opacity: 0, pointerEvents: 'none',
+                  fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.03em',
+                  color: '#ffe688', background: 'rgba(35,25,6,0.86)',
+                  border: '1px solid rgba(255,230,136,0.55)', borderRadius: 5,
+                  padding: '4px 10px', boxShadow: '0 0 18px rgba(255,230,136,0.22)',
+                }}>
+                  NON-LOCAL UPDATE
+                </div>
+                <div ref={legendARef} style={{ position: 'absolute', top: 10, left: 12, zIndex: 10,
+                  fontFamily: 'monospace', fontSize: 12, color: '#44ddff',
+                  background: 'rgba(4,10,30,0.80)', borderRadius: 6, padding: '5px 9px',
+                  border: '1px solid ' + (measuredSide === 'A' ? 'rgba(68,221,255,0.8)' : 'rgba(68,221,255,0.3)') }}>
+                  <div>
+                    ← A  φ_A={phiA}°  z=<span ref={legendAZRef}>{(-detDists.A).toFixed(1)}</span>
+                    {measuredSide === 'A'
+                      ? <span style={{ marginLeft: 6, color: '#ffee44', fontSize: 10 }}>★ FIRST</span>
+                      : <span style={{ marginLeft: 6, color: '#7090b8', fontSize: 10 }}>SECOND</span>}
+                  </div>
+                  <SpinRow up={cA.up} dn={cA.dn} />
+                </div>
+                <div ref={legendBRef} style={{ position: 'absolute', top: 10, left: 220, zIndex: 10,
+                  fontFamily: 'monospace', fontSize: 12, color: '#ff9966',
+                  background: 'rgba(4,10,30,0.80)', borderRadius: 6, padding: '5px 9px',
+                  border: '1px solid ' + (measuredSide === 'B' ? 'rgba(255,153,102,0.8)' : 'rgba(255,153,102,0.3)') }}>
+                  <div>
+                    {measuredSide === 'B'
+                      ? <span style={{ marginRight: 6, color: '#ffee44', fontSize: 10 }}>★ FIRST</span>
+                      : <span style={{ marginRight: 6, color: '#7090b8', fontSize: 10 }}>SECOND</span>}
+                    B  φ_B={phiB}°  z=<span ref={legendBZRef}>{detDists.B >= 0 ? '+' : ''}{detDists.B.toFixed(1)}</span>  →
+                  </div>
+                  <SpinRow up={cB.up} dn={cB.dn} />
+                </div>
+              </>
+            );
+          })()}
 
           {(activeTab === 'trajectories' || activeTab === 'collapse') && (
             <div style={{ position: 'absolute', inset: 0, overflowY: 'auto' }}>
@@ -1547,7 +1788,7 @@ export default function App() {
                 key={activeTab}
                 srcDoc={activeTab === 'trajectories' ? trajectoryHtml : collapseHtml}
                 style={{ width: '100%', height: '100%', border: 'none' }}
-                title={activeTab === 'trajectories' ? 'Trajectories' : 'Collapse'}
+                title={activeTab === 'trajectories' ? 'Pilot-Wave' : 'Collapse/Copenhagen'}
               />
             </div>
           )}
