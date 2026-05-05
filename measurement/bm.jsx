@@ -548,6 +548,8 @@ const SimPanel = React.memo(({
   lam, setLam, lamRef,
   xPointer, setXPointer, xPointerRef,
   sigX, setSigX, sigXRef,
+  sigY, setSigY, sigYRef,
+  regime, setRegime,
   speed, setSpeed, speedRef,
   showWave, setShowWave,
   showTraj, setShowTraj,
@@ -620,13 +622,51 @@ const SimPanel = React.memo(({
             <span>near</span><span>far</span></div>
         </SL>
 
-        <SL label={`σ = ${sigX.toFixed(2)}`}
-          tip={"Gaussian wavepacket width\n(same for particle and initial pointer)"}>
+        <SL label={`σ_x = ${sigX.toFixed(2)}`}
+          tip={"Particle wavepacket width (Gaussian σ in x).\nAlso sets the initial pointer width if not overridden."}>
           <input type="range" min={0.2} max={2.0} step={0.05} defaultValue={sigX}
             ref={sigXRef} onInput={e => setSigX(+e.target.value)}
             style={{ width:"100%", accentColor:"#cc88ff" }} />
           <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
             <span>narrow</span><span>wide</span></div>
+        </SL>
+
+        <SL label={`σ_pointer = ${sigY.toFixed(2)}`}
+          tip={"Pointer wavepacket width (Gaussian σ in y).\nSmall σ_pointer + large coupling → strong measurement: T and R branches clearly resolved.\nLarge σ_pointer + small coupling → weak measurement: branches overlap, outcome uncertain."}>
+          <input type="range" min={0.1} max={2.5} step={0.05} defaultValue={sigY}
+            ref={sigYRef} onInput={e => setSigY(+e.target.value)}
+            disabled={!detectorOn}
+            style={{ width:"100%", accentColor:"#ff88cc", opacity: detectorOn ? 1 : 0.35 }} />
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
+            <span>narrow</span><span>wide</span></div>
+        </SL>
+
+        <SL label="Measurement regime"
+          tip={"Presets for weak and strong measurement.\n\nStrong: high coupling + narrow pointer → T and R branches fully resolved. The detector always gives the right answer.\n\nWeak: low coupling + wide pointer → T and R pointer states overlap. The detector reading is ambiguous — sometimes the wrong branch is indicated."}>
+          <div style={{ display:"flex", gap:6 }}>
+            {[{id:"weak", label:"≈ Weak", onClick:() => { setLam(0.6); setSigY(0.75); setRegime("weak"); },
+               col:"#ffaa44", colBorder:"#cc7722", bgOff:"rgba(80,40,10,0.35)", bgOn:"rgba(160,80,10,0.65)"},
+              {id:"strong", label:"⬛ Strong", onClick:() => { setLam(3.0); setSigY(0.3); setRegime("strong"); },
+               col:"#44ee88", colBorder:"#228844", bgOff:"rgba(10,60,40,0.35)", bgOn:"rgba(10,120,60,0.65)"},
+            ].map(({id, label, onClick, col, colBorder, bgOff, bgOn}) => {
+              const active = regime === id;
+              return (
+                <button key={id} onClick={onClick} style={{
+                  flex:1, padding:"5px 0",
+                  background: active ? bgOn : bgOff,
+                  border: `2px solid ${active ? col : colBorder}`,
+                  borderRadius:5, color: active ? col : col+"99",
+                  cursor:"pointer", fontSize:11,
+                  fontFamily:"'JetBrains Mono','Courier New',monospace",
+                  fontWeight: active ? 700 : 400,
+                  boxShadow: active ? `0 0 8px ${col}55` : "none",
+                  transition:"all 0.15s",
+                }}>
+                  {active ? "● " : "○ "}{label}
+                </button>
+              );
+            })}
+          </div>
         </SL>
 
         {/* Outcome bar */}
@@ -1218,7 +1258,7 @@ function MathPanel({ interp }) {
 
       {sec("Initial state")}
       {txt("Particle Gaussian wavepacket approaching barrier, pointer at rest:")}
-      {eq("Ψ₀(x,y) = ψ₀(x) · χ₀(y)\n\nψ₀(x) = exp[-(x-x₀)²/4σ²] · exp[ik₀x]\nχ₀(y) = exp[-y²/4σ²]")}
+      {eq("Ψ₀(x,y) = ψ₀(x) · χ₀(y)\n\nψ₀(x) = exp[-(x-x₀)²/4σₓ²] · exp[ik₀x]\nχ₀(y) = exp[-y²/4σ_p²]\n\nσₓ     — particle wavepacket width (σ_x slider)\nσ_p    — pointer wavepacket width (σ_pointer slider)")}
 
       {sec("After barrier scattering")}
       {txt("The barrier splits the particle into transmitted (T) and reflected (R) branches.\nEach branch couples to the pointer via H_int = λ (Π_T - Π_R) P_y:")}
@@ -1258,6 +1298,11 @@ function MathPanel({ interp }) {
         {txt("For the two-branch state with non-overlapping lobes, whichever branch contains (X,Y) acts as the effective wavefunction — the other branch is 'empty'.")}
         {eq("ψ_cond(x,t) = Ψ(x, Y(t), t)  [conditional wavefunction]")}
       </>)}
+
+      {sec("Measurement strength")}
+      {txt("The quality of a measurement depends on whether the pointer states for T and R can be distinguished. Define the separation-to-width ratio:")}
+      {eq("Δy = 2λt*          — centre-to-centre separation at time t*\nσ_p             — pointer wavepacket width\n\nStrong:  Δy ≫ σ_p  →  ⟨χ_T|χ_R⟩ ≈ 0,  outcome unambiguous\nWeak:    Δy ≲ σ_p  →  ⟨χ_T|χ_R⟩ > 0,  pointer states overlap")}
+      {txt("In the weak regime the pointer reading is statistically biased toward the mean position but cannot certify which branch the particle is on. Use the Weak / Strong preset buttons to explore both limits.")}
 
       {sec("Animation")}
       {txt("Units: ℏ = m = 1. Velocity v₀ = k₀. The simulation rescales physical time to fit the canvas. The barrier occupies |x| < 0.5.")}
@@ -1345,7 +1390,7 @@ export default function App() {
   const mountRef  = useRef(null);
   const tTargetRef = useRef(null), lamRef = useRef(null);
   const xPointerRef = useRef(null);
-  const sigXRef = useRef(null), speedRef = useRef(null);
+  const sigXRef = useRef(null), sigYRef = useRef(null), speedRef = useRef(null);
   const T = useRef(null);
   const xCanvasRef = useRef(null);
   const yCanvasRef = useRef(null);
@@ -1378,7 +1423,7 @@ export default function App() {
 
   const S = useRef({
     interp:"cpn",
-    k0:4.0, V0:invertT(0.5,4.0), tTarget:0.5, lam:1.5, sigX:0.5, sigY:0.3,
+    k0:4.0, V0:invertT(0.5,4.0), tTarget:0.5, lam:3.0, sigX:0.5, sigY:0.3,
     xPointer: 3.0,
     speed:0.5,
     showWave:true, showTraj:true, showProj:false, running:true,
@@ -1399,9 +1444,11 @@ export default function App() {
 
   const [interp,    setInterpUI]    = useState("cpn");
   const [tTarget,   setTTargetUI]   = useState(0.5);
-  const [lam,       setLamUI]       = useState(1.5);
+  const [lam,       setLamUI]       = useState(3.0);
   const [xPointer,  setXPointerUI]  = useState(3.0);
   const [sigX,     setSigXUI]     = useState(0.5);
+  const [sigY,     setSigYUI]     = useState(0.3);
+  const [regime,   setRegime]     = useState("strong"); // "weak" | "strong" | null
   const [speed,    setSpeedUI]    = useState(0.5);
   const [showWave, setShowWaveUI] = useState(true);
   const [showTraj, setShowTrajUI] = useState(true);
@@ -1429,9 +1476,10 @@ export default function App() {
     setTpUI(v); setRpUI(1 - v);
     if (tTargetRef.current) tTargetRef.current.value = Math.round(v * 100);
   };
-  const setLam = v => { S.current.lam = v; S.current.dirty=true; setLamUI(v); if(lamRef.current) lamRef.current.value=v; };
+  const setLam = v => { S.current.lam = v; S.current.dirty=true; setLamUI(v); if(lamRef.current) lamRef.current.value=v; setRegime(null); };
   const setXPointer = v => { S.current.xPointer = v; setXPointerUI(v); if(xPointerRef.current) xPointerRef.current.value=v; };
-  const setSigX= v => { S.current.sigX=v; S.current.sigY=v*1.2; S.current.dirty=true; setSigXUI(v); if(sigXRef.current) sigXRef.current.value=v; };
+  const setSigX= v => { S.current.sigX=v; S.current.dirty=true; setSigXUI(v); if(sigXRef.current) sigXRef.current.value=v; setRegime(null); };
+  const setSigY= v => { S.current.sigY=v; S.current.dirty=true; setSigYUI(v); if(sigYRef.current) sigYRef.current.value=v; setRegime(null); };
   const setSpeed= v => { S.current.speed=v; setSpeedUI(v); if(speedRef.current) speedRef.current.value=v; };
   const setShowWave = v => { S.current.showWave=v; setShowWaveUI(v); };
   const setShowTraj = v => { S.current.showTraj=v; setShowTrajUI(v); };
@@ -1799,9 +1847,9 @@ export default function App() {
       }
 
       // ── Copenhagen: collapse logic ─────────────────────────────────────────
-      // Collapse is tied to measurement: as soon as the transmitted wave reaches
-      // the detector position, select an outcome and fade the other branch out.
-      if (s.interp === "cpn" && s.detectorOn) {
+      // Collapse requires both detector on AND non-zero coupling (effLam > 0).
+      // λ=0 means no interaction — same as no detector.
+      if (s.interp === "cpn" && s.detectorOn && effLam > 0) {
         // New cycle: restore pre-collapse superposition so both branches are visible
         // again until the transmitted branch reaches the detector.
         if (tFrac < 0.02 && s.colTriggered) {
@@ -2019,7 +2067,7 @@ export default function App() {
 
         // Needle fraction: 0 = R side (rest/no-deflection), 1 = T side (full deflection)
         // Gate on dtPShown: before the wave reaches the detector the pointer is at rest.
-        const pointerHit = dtPShown > 0.02;
+        const pointerHit = dtPShown > 0.02 && effLam > 0;
         const ySpan  = Math.max(yT - yRFixed, 0.001);
         // PW: track Bohmian particle Y relative to current T-blob span.
         // Guard so division by near-zero ySpan (before hit) doesn't swing the needle.
@@ -2029,7 +2077,11 @@ export default function App() {
         // Gauge-specific deflection fraction: normalize by the actual time available
         // between pointer hit and cycle end, so the needle always reaches 1 before reset.
         const gWindow = Math.max(edgeX - s.xPointer, 0.3) / s.k0;
-        const gFrac = clamp(dtPShown / gWindow, 0, 1);
+        const LAM_MAX = 3.0;
+        // Scale deflection by coupling strength: full coupling → full deflection,
+        // 50% coupling → needle only goes halfway, 0 → stays at rest.
+        const lamScale = effLam / LAM_MAX;
+        const gFrac = (effLam > 0) ? clamp(dtPShown / gWindow, 0, 1) * lamScale : 0;
         // Pre-collapse mean fraction: Tprob * gFrac
         const meanFrac = Tprob * gFrac;
 
@@ -2216,6 +2268,7 @@ export default function App() {
               "In the Pilot-Wave interpretation — also called Bohmian mechanics — the wavefunction never collapses either. Both branches persist, but the particle follows a single definite trajectory, guided by the wave. The white dot traces that path. It enters one branch and stays there, guided deterministically by its initial position. The other branch becomes empty: it still exists mathematically, but carries no particle and has no further physical effect. This is the empty wave.",
               "The side panels show the conditional wavefunction: a slice of the full two-dimensional state at the particle's actual position. Unlike the global projection — which always shows two peaks — the conditional wavefunction has a single peak, localised on the occupied branch. This is the effective wavefunction the particle actually rides.",
               "All three interpretations give identical experimental predictions. The difference is not in what we measure — it is in what we believe is really happening.",
+              "Not every measurement is equally decisive. A strong measurement uses a narrow pointer wavepacket and a large coupling so that the pointer states corresponding to transmission and reflection end up well separated — the device always gives the right answer. A weak measurement uses a wide pointer wavepacket and a small coupling: the two pointer states overlap significantly, and the device reading is ambiguous. The pointer still shifts slightly in the direction of the more probable outcome, but it cannot reliably identify which branch the particle actually took. This simulation lets you explore both regimes using the σ_pointer and Coupling sliders, or the Weak / Strong preset buttons.",
             ].map((para, i) => (
               <p key={i} style={{
                 marginBottom:"1.2em",
@@ -2250,6 +2303,8 @@ export default function App() {
           lam={lam} setLam={setLam} lamRef={lamRef}
           xPointer={xPointer} setXPointer={setXPointer} xPointerRef={xPointerRef}
           sigX={sigX} setSigX={setSigX} sigXRef={sigXRef}
+          sigY={sigY} setSigY={setSigY} sigYRef={sigYRef}
+          regime={regime} setRegime={setRegime}
           speed={speed} setSpeed={setSpeed} speedRef={speedRef}
           showWave={showWave} setShowWave={setShowWave}
           showTraj={showTraj} setShowTraj={setShowTraj}
