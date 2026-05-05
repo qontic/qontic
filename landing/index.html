@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Q-Ontic Lab — Interactive Quantum Simulations</title>
+  <meta name="description" content="Q-Ontic Lab: interactive quantum simulations for comparative exploration of Copenhagen, Bohmian pilot-wave, and Many-Worlds interpretations. Free browser-based tools for research, teaching, and outreach." />
+  <meta name="keywords" content="quantum simulation, quantum mechanics, Copenhagen interpretation, Bohmian mechanics, pilot-wave theory, Many-Worlds, double-slit, Stern-Gerlach, hydrogen atom, Bell inequality, quantum measurement, interactive education" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <link rel="canonical" href="http://qonticlab.rice.edu/" />
+  <meta property="og:site_name" content="Q-Ontic Lab" />
+  <meta property="og:title" content="Q-Ontic Lab — Interactive Quantum Simulations" />
+  <meta property="og:description" content="Browser-based quantum simulations comparing Copenhagen, Bohmian, and Many-Worlds interpretations. Free tools for research, teaching, and outreach." />
+  <meta property="og:url" content="http://qonticlab.rice.edu/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Q-Ontic Lab — Interactive Quantum Simulations" />
+  <meta name="twitter:description" content="Browser-based quantum simulations comparing Copenhagen, Bohmian, and Many-Worlds interpretations." />
+
+  <!-- Structured data: site as a collection of educational apps -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Q-Ontic Lab",
+    "url": "http://qonticlab.rice.edu/",
+    "description": "Interactive quantum simulations for comparative exploration of interpretations of quantum mechanics.",
+    "author": {
+      "@type": "Person",
+      "email": "yepes@rice.edu"
+    }
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛</text></svg>" />
+  <link rel="stylesheet" href="css/main-style.css" />
+
+  <style>
+    /* ── Base (mirrors css/main-style.css for standalone use) ── */
+    body { font-family: "Segoe UI", sans-serif; margin: 0; padding: 0; background: #f9f9f9; color: #333; }
+    header { background: #003366; color: white; padding: 2rem; text-align: center; }
+    header h1 { margin: 0; font-size: 2.5rem; }
+    .subtitle { font-size: 1.2rem; margin-top: 0.5rem; }
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+    section { margin-bottom: 2.5rem; }
+    h2 { color: #003366; font-size: 1.5rem; margin-bottom: 0.5rem; }
+    ul { padding-left: 1.2rem; }
+    .button { display: inline-block; margin-top: 0.5rem; padding: 0.6rem 1rem; background: #0055aa; color: white; text-decoration: none; border-radius: 4px; }
+    .button:hover { background: #003f7f; }
+    footer { background: #eee; padding: 1.5rem; text-align: center; font-size: 0.9rem; color: #555; }
+    footer a { color: #0055aa; }
+  </style>
+
+  <style>
+    /* ── Layout ── */
+    main { max-width: 1100px; }
+
+    /* ── Search bar ── */
+    .search-wrap {
+      margin: 0 0 1.5rem;
+    }
+    #search {
+      width: 100%;
+      padding: 0.65rem 1rem;
+      font-size: 1rem;
+      border: 1px solid #bcc8de;
+      border-radius: 6px;
+      box-sizing: border-box;
+      background: #fff;
+      color: #222;
+    }
+    #search:focus { outline: 2px solid #0055aa; border-color: #0055aa; }
+
+    /* ── App grid ── */
+    .sim-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+
+    /* ── Cards ── */
+    .sim-card {
+      background: #fff;
+      border: 1px solid #dde3ee;
+      border-radius: 8px;
+      padding: 1.2rem 1.4rem 1rem;
+      box-shadow: 0 1px 4px rgba(0,0,51,0.07);
+      display: flex;
+      flex-direction: column;
+    }
+    .sim-card h3 { margin: 0 0 0.35rem; color: #003366; font-size: 1.05rem; }
+    .sim-card p  { margin: 0 0 0.8rem; font-size: 0.9rem; line-height: 1.55; flex: 1; }
+
+    /* Planned cards muted */
+    .sim-card.planned {
+      opacity: 0.6;
+      background: #f4f5f8;
+    }
+
+    /* ── Tags ── */
+    .tags { margin-bottom: 0.5rem; }
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      padding: 1px 7px;
+      border-radius: 3px;
+      margin: 0 3px 4px 0;
+      font-weight: 600;
+    }
+    .tag-live    { background: #d4edda; color: #155724; }
+    .tag-dev     { background: #fff3cd; color: #856404; }
+    .tag-planned { background: #e2e3e5; color: #495057; }
+    .tag-topic   { background: #e8ecf7; color: #003366; }
+
+    /* ── No-results message ── */
+    #no-results {
+      display: none;
+      color: #666;
+      font-style: italic;
+      grid-column: 1 / -1;
+    }
+
+    /* ── Section headings ── */
+    .section-heading {
+      color: #003366;
+      font-size: 1.4rem;
+      margin: 2rem 0 0.75rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 2px solid #dde3ee;
+    }
+
+    /* ── Hidden by search ── */
+    .sim-card[hidden] { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Q-Ontic Lab</h1>
+  <p class="subtitle">Interactive quantum simulations for representational comparison</p>
+</header>
+
+<main>
+
+  <section class="intro">
+    <p>
+      The Q-Ontic Lab develops interactive quantum simulations designed to support
+      comparative exploration of different representational frameworks in quantum
+      mechanics. Rather than endorsing a single interpretation, the Lab focuses on
+      how alternative visual and conceptual representations of empirically
+      equivalent dynamics shape explanation, intuition, and reasoning. The tools
+      are intended for research, teaching, and outreach.
+    </p>
+  </section>
+
+  <div class="search-wrap">
+    <input id="search" type="search" placeholder="Search simulations…" aria-label="Search simulations" autocomplete="off" />
+  </div>
+
+  <!-- Live apps — rendered from apps.json by JS below; also inlined for SEO -->
+  <h2 class="section-heading" id="heading-live">Simulations</h2>
+  <div class="sim-grid" id="grid-live">
+    <p id="no-results">No simulations match your search.</p>
+  </div>
+
+  <h2 class="section-heading" id="heading-dev" style="display:none">In Development</h2>
+  <div class="sim-grid" id="grid-dev"></div>
+
+</main>
+
+<footer>
+  <p>The Q-Ontic Lab supports research, teaching, and outreach on quantum mechanics through interactive visualization and representational comparison.</p>
+  <p><a href="collaborators.html">Meet the team</a> &nbsp;·&nbsp; Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a></p>
+</footer>
+
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZWF6YQM0YV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-ZWF6YQM0YV');
+  gtag('event', 'page_view', {
+    page_title: document.title,
+    page_location: window.location.href,
+    page_path: window.location.pathname
+  });
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function statusTag(status) {
+    if (status === 'live')    return '<span class="tag tag-live">Live</span>';
+    if (status === 'dev')     return '<span class="tag tag-dev">In development</span>';
+    if (status === 'planned') return '<span class="tag tag-planned">Planned</span>';
+    return '';
+  }
+
+  function topicTags(tags) {
+    return tags.map(t => `<span class="tag tag-topic">${t}</span>`).join('');
+  }
+
+  function buildCard(app) {
+    const isPlanned = app.status === 'planned' || !app.url;
+    const launchBtn = isPlanned
+      ? ''
+      : `<a class="button" href="${app.url}" data-slug="${app.slug}">Launch</a>`;
+
+    return `
+      <div class="sim-card ${isPlanned ? 'planned' : ''}" data-slug="${app.slug}"
+           data-search="${[app.title, ...app.tags, app.description].join(' ').toLowerCase()}">
+        <h3>${app.title}</h3>
+        <div class="tags">${statusTag(app.status)}${topicTags(app.tags)}</div>
+        <p>${app.description}</p>
+        ${launchBtn}
+      </div>`;
+  }
+
+  function injectStructuredData(apps) {
+    const liveApps = apps.filter(a => a.status === 'live' && a.url);
+    const items = liveApps.map((a, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: 'http://qonticlab.rice.edu/' + a.url,
+      name: a.title
+    }));
+    const ld = {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: 'Q-Ontic Lab Simulations',
+      description: 'Interactive quantum simulations comparing Copenhagen, Bohmian, and Many-Worlds interpretations.',
+      numberOfItems: items.length,
+      itemListElement: items
+    };
+    const s = document.createElement('script');
+    s.type = 'application/ld+json';
+    s.textContent = JSON.stringify(ld);
+    document.head.appendChild(s);
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  function render(apps) {
+    const gridLive    = document.getElementById('grid-live');
+    const gridDev     = document.getElementById('grid-dev');
+    const gridPlanned = document.getElementById('grid-planned');
+    const headingDev  = document.getElementById('heading-dev');
+    const noResults   = document.getElementById('no-results');
+
+    const live    = apps.filter(a => a.status === 'live');
+    const dev     = apps.filter(a => a.status === 'dev');
+    const planned = apps.filter(a => a.status === 'planned');
+
+    // Keep the no-results placeholder inside grid-live
+    gridLive.innerHTML = noResults.outerHTML + live.map(buildCard).join('');
+    gridDev.innerHTML     = dev.map(buildCard).join('');
+    gridPlanned.innerHTML = planned.map(buildCard).join('');
+
+    if (dev.length > 0) headingDev.style.display = '';
+
+    injectStructuredData(apps);
+
+    // ── GA launch tracking ──────────────────────────────────────────────────
+    document.querySelectorAll('a.button[data-slug]').forEach(link => {
+      link.addEventListener('click', function () {
+        gtag('event', 'app_launch', {
+          app_name: this.closest('.sim-card').querySelector('h3').textContent.trim(),
+          app_slug: this.dataset.slug
+        });
+      });
+    });
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+
+  function applySearch(query) {
+    const q = query.trim().toLowerCase();
+    const allCards = document.querySelectorAll('.sim-card');
+    let anyVisible = false;
+
+    allCards.forEach(card => {
+      const match = !q || card.dataset.search.includes(q);
+      card.hidden = !match;
+      if (match && !card.classList.contains('planned')) anyVisible = true;
+    });
+
+    const noResults = document.getElementById('no-results');
+    noResults.style.display = (q && !anyVisible) ? 'block' : 'none';
+
+    // Hide/show section headings when all cards in a section are hidden
+    ['live', 'dev', 'planned'].forEach(section => {
+      const grid    = document.getElementById('grid-' + section);
+      const heading = document.getElementById('heading-' + section);
+      if (!grid || !heading) return;
+      const visible = [...grid.querySelectorAll('.sim-card')].some(c => !c.hidden);
+      heading.style.display = visible ? '' : 'none';
+      grid.style.display    = visible ? '' : 'none';
+    });
+  }
+
+  // ── Bootstrap ──────────────────────────────────────────────────────────────
+
+  // App data is inlined here so the page works on file:// and so
+  // search engines see all cards without executing fetch().
+  // To add or update an app: edit APPS below AND apps.json (kept in sync).
+  const APPS = [
+    {
+      title: "Double-Slit Experiment \u2014 Analytical",
+      slug: "double-slit-analytical",
+      status: "live",
+      url: "qsf-v1.html",
+      tags: ["Wave interference", "Born rule"],
+      description: "Explore the double-slit experiment with an analytically computed wavefunction. Visualise Copenhagen collapse, Bohmian pilot-wave trajectories, and Many-Worlds branching side by side."
+    },
+    {
+      title: "Double-Slit Experiment \u2014 Numerical",
+      slug: "double-slit-numerical",
+      status: "live",
+      url: "2slit-wavepacket/",
+      tags: ["Wave packets", "GPU simulation"],
+      description: "Real-time GPU simulation of a Gaussian wave packet propagating through a double slit. Full numerical integration of the time-dependent Schr\u00f6dinger equation on the browser GPU."
+    },
+    {
+      title: "Hydrogen Atom",
+      slug: "hydrogen-atom",
+      status: "live",
+      url: "hydrogen-atom/hydrogen-3d.html",
+      tags: ["Orbitals", "3D"],
+      description: "Interactive 3D visualisation of hydrogen atomic orbitals. Explore the probability density |\u03c8\u2099\u2097\u2098|\u00b2 for any principal quantum number n, angular momentum l, and magnetic quantum number m."
+    },
+    {
+      title: "Stern-Gerlach Experiment \u2014 3D",
+      slug: "stern-gerlach",
+      status: "live",
+      url: "stern-gerlach/",
+      tags: ["Spin-\u00bd", "Measurement", "3D"],
+      description: "Full 3D simulation of a spin-\u00bd particle traversing an inhomogeneous magnetic field. Three interpretations: Copenhagen collapse, Bohmian pilot-wave trajectories, and Many-Worlds branching. Live Born-rule histogram with statistical errors."
+    },
+    {
+      title: "Free Particle \u2014 Gaussian Wave Packet",
+      slug: "free-particle",
+      status: "live",
+      url: "free-particle/free-particle.html",
+      tags: ["Wave packets", "Detector", "Interpretations"],
+      description: "Animated 2D Gaussian wave packet freely propagating and detected at a screen. Compare Copenhagen collapse, Bohmian pilot-wave trajectories, and Many-Worlds branching. Live Born-rule statistics with wave-function\u2013predicted expected counts."
+    },
+    {
+      title: "Quantum Measurement with Detector",
+      slug: "measurement",
+      status: "live",
+      url: "measurement/",
+      tags: ["Measurement", "Detector coupling", "Interpretations"],
+      description: "Detector-coupled tunneling simulation comparing Collapse/Copenhagen, Pilot-Wave, and Many-Worlds pictures, with explicit detector back-action and outcome statistics."
+    },
+    {
+      title: "Bell Experiment \u2014 Entanglement",
+      slug: "bell-experiment",
+      status: "live",
+      url: "bell-experiment/",
+      tags: ["Entanglement", "Non-locality", "Spin-\u00bd"],
+      description: "Interactive Bell-pair simulation with angle-dependent correlations, detector-distance timing, and side-by-side Collapse/Copenhagen and Pilot-Wave visualizations, including non-local wave updates."
+    }
+  ];
+
+  render(APPS);
+
+  const searchInput = document.getElementById('search');
+  searchInput.addEventListener('input', () => applySearch(searchInput.value));
+
+}());
+</script>
+
+</body>
+</html>

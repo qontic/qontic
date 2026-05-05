@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Collaborators — Q-Ontic Lab</title>
+  <meta name="description" content="The Q-Ontic Lab team: physicists and mathematicians from Rice University, Technion, UAB, Rutgers, and UCLouvain collaborating on interactive quantum simulations and foundations of quantum mechanics." />
+  <meta name="keywords" content="Q-Ontic Lab, quantum foundations, Bohmian mechanics, quantum simulation, collaborators, Pablo Yepes, Dustin Lazarovici, Xavier Oriols, Shadi Tahvildar-Zadeh, Jean Bricmont, Evelyn Tang, Jared Stenson" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="http://qonticlab.rice.edu/collaborators.html" />
+  <meta property="og:site_name" content="Q-Ontic Lab" />
+  <meta property="og:title" content="Collaborators — Q-Ontic Lab" />
+  <meta property="og:description" content="International team of physicists and mathematicians advancing quantum representational frameworks through interactive simulations." />
+  <meta property="og:url" content="http://qonticlab.rice.edu/collaborators.html" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Collaborators — Q-Ontic Lab" />
+  <meta name="twitter:description" content="International team of physicists and mathematicians advancing quantum representational frameworks." />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Q-Ontic Lab Collaborators",
+    "url": "http://qonticlab.rice.edu/collaborators.html",
+    "description": "The international team behind Q-Ontic Lab.",
+    "isPartOf": { "@type": "WebSite", "url": "http://qonticlab.rice.edu/" },
+    "about": [
+      { "@type": "Person", "name": "Pablo Yepes",            "affiliation": "Rice University",                              "email": "yepes@rice.edu" },
+      { "@type": "Person", "name": "Dustin Lazarovici",      "affiliation": "Technion – Israel Institute of Technology",    "url": "https://dustinlazarovici.com/" },
+      { "@type": "Person", "name": "Xavier Oriols",          "affiliation": "Universitat Autònoma de Barcelona",            "url": "http://europe.uab.es/xoriols/FrontPage.html" },
+      { "@type": "Person", "name": "Jared Stenson",          "affiliation": "Rice University",                              "url": "https://profiles.rice.edu/faculty/jared-stenson" },
+      { "@type": "Person", "name": "Shadi Tahvildar-Zadeh",  "affiliation": "Rutgers University",                          "url": "http://sites.math.rutgers.edu/~shadit" },
+      { "@type": "Person", "name": "Evelyn Tang",            "affiliation": "Rice University",                              "url": "https://etang.rice.edu/" },
+      { "@type": "Person", "name": "Jean Bricmont",          "affiliation": "Université catholique de Louvain",             "url": "https://uclouvain.be/fr/repertoires/jean.bricmont" }
+    ]
+  }
+  </script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛</text></svg>" />
+  <link rel="stylesheet" href="css/main-style.css" />
+  <style>
+    /* ── Base fallback (mirrors css/main-style.css) ── */
+    body { font-family: "Segoe UI", sans-serif; margin: 0; padding: 0; background: #f9f9f9; color: #333; }
+    header { background: #003366; color: white; padding: 2rem; text-align: center; }
+    header h1 { margin: 0; font-size: 2.5rem; }
+    .subtitle { font-size: 1.2rem; margin-top: 0.5rem; }
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+    section { margin-bottom: 2.5rem; }
+    h2 { color: #003366; font-size: 1.5rem; margin-bottom: 0.5rem; }
+    ul { padding-left: 1.2rem; }
+    footer { background: #eee; padding: 1.5rem; text-align: center; font-size: 0.9rem; color: #555; }
+    footer a { color: #0055aa; }
+
+    /* ── Collaborator grid ── */
+    .collab-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 2rem;
+      margin: 1.5rem 0;
+    }
+    .collab-card {
+      background: #fff;
+      border: 1px solid #dde3ee;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,51,0.09);
+      transition: box-shadow 0.25s, transform 0.25s;
+      display: flex;
+      flex-direction: column;
+    }
+    .collab-card:hover {
+      box-shadow: 0 8px 20px rgba(0,0,51,0.14);
+      transform: translateY(-3px);
+    }
+
+    /* ── Photo ── */
+    .photo-container {
+      width: 100%;
+      height: 260px;
+      background: linear-gradient(135deg, #e8ecf7 0%, #dde3ee 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .photo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center top;
+    }
+
+    /* ── Card body ── */
+    .collab-content { padding: 1.4rem 1.6rem; flex: 1; display: flex; flex-direction: column; }
+    .collab-card h3 { margin: 0 0 0.2rem; color: #003366; font-size: 1.1rem; font-weight: 700; }
+    .title        { color: #0066cc; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .affiliation  { font-size: 0.88rem; margin-bottom: 0.8rem; line-height: 1.4; }
+    .affiliation-main     { font-weight: 600; color: #003366; }
+    .affiliation-location { color: #777; font-size: 0.82rem; margin-top: 0.15rem; }
+    .affiliation a { color: #0066cc; }
+
+    .bio {
+      color: #555;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      margin: 0.6rem 0;
+      border-left: 3px solid #0066cc;
+      padding-left: 0.75rem;
+      flex: 1;
+    }
+    .research-focus { color: #555; font-size: 0.84rem; margin: 0.6rem 0; }
+    .research-focus strong { color: #003366; display: block; margin-bottom: 0.2rem; }
+
+    /* ── Links ── */
+    .links { margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid #e8ecf7; overflow-wrap: anywhere; }
+    .link-item { display: inline-block; margin: 0 0.5rem 0.5rem 0; }
+    .link-item a {
+      display: inline-block;
+      padding: 0.35rem 0.8rem;
+      background: #f0f4fa;
+      color: #0066cc;
+      text-decoration: none;
+      border-radius: 5px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .link-item a:hover { background: #dce8f5; }
+
+    /* ── Navigation ── */
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      color: #0066cc;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    /* ── Focus section ── */
+    .focus-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .focus-item {
+      background: #fff;
+      border: 1px solid #dde3ee;
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+    }
+    .focus-item strong { color: #003366; display: block; margin-bottom: 0.3rem; font-size: 0.95rem; }
+    .focus-item span   { font-size: 0.87rem; color: #555; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Q-Ontic Lab Collaborators</h1>
+  <p class="subtitle">International team advancing quantum representational frameworks</p>
+</header>
+
+<main>
+  <a href="index.html" class="back-link">← Back to Lab Home</a>
+
+  <section class="intro">
+    <p>
+      The Q-Ontic Lab brings together physicists and mathematicians from premier institutions
+      across the globe. Our collaboration combines expertise in quantum foundations, numerical
+      computation, mathematical physics, and physics education to develop interactive simulations
+      that enable comparative exploration of quantum mechanics' interpretative frameworks.
+    </p>
+  </section>
+
+  <section>
+    <h2>Core Team</h2>
+    <div class="collab-grid">
+
+      <!-- JEAN BRICMONT -->
+      <div class="collab-card">
+        <div class="photo-container">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/0/02/Jean_Bricmont_Paris_2010.jpg" alt="Jean Bricmont" loading="lazy" referrerpolicy="no-referrer" />
+        </div>
+        <div class="collab-content">
+          <h3>Jean Bricmont</h3>
+          <div class="title">Emeritus Professor of Physics</div>
+          <div class="affiliation">
+            <div class="affiliation-main">Université catholique de Louvain (UCLouvain)</div>
+            <div class="affiliation-location">Louvain-la-Neuve, Belgium</div>
+          </div>
+          <div class="bio">
+            Renowned mathematical physicist and philosopher of science. Pioneer in rigorous
+            approaches to quantum mechanics and Bohmian mechanics. Author of influential works
+            on quantum foundations and the philosophy of physics.
+          </div>
+          <div class="research-focus">
+            <strong>Research Areas</strong>
+            Quantum mechanics, Bohmian mechanics, quantum foundations, philosophy of science, statistical mechanics
+          </div>
+          <div class="links">
+            <div class="link-item"><a href="https://en.wikipedia.org/wiki/Jean_Bricmont" target="_blank" rel="noopener">🔗 Profile</a></div>
+            <div class="link-item"><a href="https://uclouvain.be/fr/repertoires/jean.bricmont" target="_blank" rel="noopener">🌐 UCLouvain</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DUSTIN LAZAROVICI -->
+      <div class="collab-card">
+        <div class="photo-container">
+          <img src="https://cris.technion.ac.il/files-asset/108054950/Photo_DL_square.jpg?w=600&f=webp" alt="Dustin Lazarovici" loading="lazy" referrerpolicy="no-referrer" />
+        </div>
+        <div class="collab-content">
+          <h3>Dustin Lazarovici</h3>
+          <div class="title">Assistant Professor</div>
+          <div class="affiliation">
+            <div class="affiliation-main">Technion – Israel Institute of Technology</div>
+            <div class="affiliation-location">Haifa, Israel</div>
+            <div class="affiliation-location"><a href="mailto:dustin@technion.ac.il">dustin@technion.ac.il</a></div>
+          </div>
+          <div class="bio">
+            Mathematical physicist specializing in quantum foundations, Bohmian mechanics, and
+            interpretational frameworks of quantum mechanics. Expertise in rigorous mathematical
+            formulations of quantum theory.
+          </div>
+          <div class="research-focus">
+            <strong>Research Areas</strong>
+            Bohmian mechanics, quantum foundations, interpretations of quantum mechanics, mathematical physics
+          </div>
+          <div class="links">
+            <div class="link-item"><a href="https://cris.technion.ac.il/en/persons/dustin-lazarovici/" target="_blank" rel="noopener">🔗 Faculty Profile</a></div>
+            <div class="link-item"><a href="https://dustinlazarovici.com/" target="_blank" rel="noopener">🌐 Website</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- XAVIER ORIOLS -->
+      <div class="collab-card">
+        <div class="photo-container">
+          <img src="https://www.fetzer-franklin-fund.org/wp-content/uploads/2015/06/OriolsSMALL.jpg" alt="Xavier Oriols" loading="lazy" referrerpolicy="no-referrer" />
+        </div>
+        <div class="collab-content">
+          <h3>Xavier Oriols</h3>
+          <div class="title">Professor of Electronic Engineering</div>
+          <div class="affiliation">
+            <div class="affiliation-main">Universitat Autònoma de Barcelona (UAB)</div>
+            <div class="affiliation-location">Bellaterra, Barcelona, Spain</div>
+          </div>
+          <div class="bio">
+            Expert in quantum simulation techniques, stochastic approaches to quantum mechanics,
+            and computational methods for nanoelectronics. Develops novel simulation strategies
+            bridging quantum mechanics and classical computation.
+          </div>
+          <div class="research-focus">
+            <strong>Research Areas</strong>
+            Quantum simulation, stochastic interpretations, nanoelectronics, quantum–classical interfaces
+          </div>
+          <div class="links">
+            <div class="link-item"><a href="https://portalrecerca.uab.cat/en/persons/xavier-oriols-pladevall-7/" target="_blank" rel="noopener">🔗 Faculty Profile</a></div>
+            <div class="link-item"><a href="http://europe.uab.es/xoriols/FrontPage.html" target="_blank" rel="noopener">🌐 Website</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- JARED STENSON -->
+      <div class="collab-card">
+        <div class="photo-container">
+          <img src="https://profiles.rice.edu/sites/g/files/bxs3881/files/2020-07/Stenson.jpg" alt="Jared Stenson" loading="lazy" referrerpolicy="no-referrer" />
+        </div>
+        <div class="collab-content">
+          <h3>Jared Stenson</h3>
+          <div class="title">Teaching Assistant Professor of Physics</div>
+          <div class="affiliation">
+            <div class="affiliation-main">Rice University</div>
+            <div class="affiliation-location">Houston, Texas, USA</div>
+          </div>
+          <div class="bio">
+            Contributing to physics education and collaborative activities in the Q-Ontic Lab,
+            with a focus on computational pedagogy and interactive learning tools.
+          </div>
+          <div class="research-focus">
+            <strong>Focus</strong>
+            Physics education, computational pedagogy, interactive learning
+          </div>
+          <div class="links">
+            <div class="link-item"><a href="https://profiles.rice.edu/faculty/jared-stenson" target="_blank" rel="noopener">🔗 Faculty Profile</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SHADI TAHVILDAR-ZADEH -->
+      <div class="collab-card">
+        <div class="photo-container">
+          <img src="https://www.math.rutgers.edu/images/people/profileimg/773_5b639248dc910.jpg" alt="Shadi Tahvildar-Zadeh" loading="lazy" referrerpolicy="no-referrer" />
+        </div>
+        <div class="collab-content">
+          <h3>Shadi Tahvildar-Zadeh</h3>
+          <div class="title">Professor of Mathematics</div>
+          <div class="affiliation">
+            <div class="affiliation-main">Rutgers University</div>
+            <div class="affiliation-location">Piscataway, New Jersey, USA</div>
+          </div>
+          <div class="bio">
+            Mathematical physicist with broad expertise in partial differential equations,
+            quantum field theory, and gravitational theory. Provides rigorous mathematical
+            foundations for quantum mechanics and field theories.
+          </div>
+          <div class="research-focus">
+            <strong>Research Areas</strong>
+            Mathematical physics, quantum field theory, PDEs, gravitational theory
+          </div>
+          <div class="links">
+            <div class="link-item"><a href="https://www.math.rutgers.edu/people/department-directory/detail/344-department-directory/1808-tahvildar-zadeh-shadi" target="_blank" rel="noopener">🔗 Faculty Profile</a></div>
+            <div class="link-item"><a href="http://sites.math.rutgers.edu/~shadit" target="_blank" rel="noopener">🌐 Website</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EVELYN TANG -->
+      <div class="collab-card">
+        <div class="photo-container">
+          <img src="https://profiles.rice.edu/sites/g/files/bxs3881/files/2025-08/EvelynTang.jpg" alt="Evelyn Tang" loading="lazy" referrerpolicy="no-referrer" />
+        </div>
+        <div class="collab-content">
+          <h3>Evelyn Tang</h3>
+          <div class="title">Assistant Professor of Physics</div>
+          <div class="affiliation">
+            <div class="affiliation-main">Rice University</div>
+            <div class="affiliation-location">Houston, Texas, USA</div>
+          </div>
+          <div class="bio">
+            Theoretical physicist studying living and active matter systems, emergent dynamics,
+            and out-of-equilibrium phenomena. PhD from MIT (2015), postdoctoral experience at
+            Max Planck Institute and University of Pennsylvania.
+          </div>
+          <div class="research-focus">
+            <strong>Awards</strong>
+            NSF CAREER Award · IUPAP Interdisciplinary Early Career Prize · Simons–Berkeley Fellowship
+          </div>
+          <div class="links">
+            <div class="link-item"><a href="https://profiles.rice.edu/faculty/evelyn-tang" target="_blank" rel="noopener">🔗 Faculty Profile</a></div>
+            <div class="link-item"><a href="https://etang.rice.edu/" target="_blank" rel="noopener">🌐 Research Group</a></div>
+            <div class="link-item"><a href="https://scholar.google.com/citations?user=CQbaZpMAAAAJ" target="_blank" rel="noopener">📚 Scholar</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PABLO YEPES -->
+      <div class="collab-card">
+        <div class="photo-container">
+          <img src="images/pablo-yepes.png" alt="Pablo Yepes" loading="lazy" />
+        </div>
+        <div class="collab-content">
+          <h3>Pablo Yepes</h3>
+          <div class="title">Research Professor</div>
+          <div class="affiliation">
+            <div class="affiliation-main">Rice University</div>
+            <div class="affiliation-location">Houston, Texas, USA</div>
+          </div>
+          <div class="bio">
+            Long-standing interest in the foundations of physics with ample experience in
+            computational simulations. Principal developer of the Q-Ontic Lab.
+          </div>
+          <div class="research-focus">
+            <strong>Research Interests</strong>
+            Nuclear physics, medical physics, high-performance scientific computing, physics foundations
+          </div>
+          <div class="links">
+            <div class="link-item"><a href="mailto:yepes@rice.edu">✉️ Email</a></div>
+            <div class="link-item"><a href="https://profiles.rice.edu/faculty/pablo-p-yepes" target="_blank" rel="noopener">🔗 Faculty Profile</a></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Collaboration Focus</h2>
+    <p>Our international team unites expertise across multiple disciplines and institutions:</p>
+    <div class="focus-grid">
+      <div class="focus-item"><strong>Quantum Foundations</strong><span>Rigorous analysis of Copenhagen, Bohmian, and Many-Worlds interpretations</span></div>
+      <div class="focus-item"><strong>Computational Methods</strong><span>GPU-accelerated simulations and real-time numerical integration</span></div>
+      <div class="focus-item"><strong>Visualization Design</strong><span>Interactive tools for intuitive quantum understanding</span></div>
+      <div class="focus-item"><strong>Mathematical Frameworks</strong><span>Rigorous formulations of quantum mechanics and interpretive theories</span></div>
+      <div class="focus-item"><strong>Physics Pedagogy</strong><span>Novel approaches to teaching quantum mechanics through representational comparison</span></div>
+      <div class="focus-item"><strong>Quantum Simulation</strong><span>Stochastic and deterministic approaches to quantum computation</span></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>The Q-Ontic Lab builds bridges between quantum theory and human understanding through collaborative research and interactive visualization.</p>
+  <p>Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a></p>
+  <p style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(0,0,0,0.1)"><a href="index.html">← Back to Lab Home</a></p>
+</footer>
+
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZWF6YQM0YV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-ZWF6YQM0YV');
+  gtag('event', 'page_view', {
+    page_title: document.title,
+    page_location: window.location.href,
+    page_path: window.location.pathname
+  });
+</script>
+
+</body>
+</html>

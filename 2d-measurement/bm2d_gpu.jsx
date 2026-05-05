@@ -414,6 +414,8 @@ export default function App() {
   const [np,            setNp]            = useState(NP);
   const [timeFs,        setTimeFs]        = useState(0);
   const [norm,          setNorm]          = useState(1);
+  const [activeTab,     setActiveTab]     = useState('canvas');
+  const [panelFontSize, setPanelFontSize] = useState(13);
 
   useEffect(() => { cmdRef.current.running    = running;    }, [running]);
   useEffect(() => { cmdRef.current.detectorOn = detectorOn; }, [detectorOn]);
@@ -441,12 +443,22 @@ export default function App() {
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     el.appendChild(canvas);
 
+    // Size the canvas. CRITICAL: assigning canvas.width or canvas.height
+    // (even to the same value) resets the entire WebGL context and destroys
+    // all FBOs/textures.  Guard against:
+    //   1. display:none  → el.clientWidth=0  → skip (tab switched away)
+    //   2. no real size change               → skip (avoids needless reset)
     function resize() {
-      canvas.width  = el.clientWidth  || window.innerWidth;
-      canvas.height = el.clientHeight || window.innerHeight;
+      if (!el.clientWidth || !el.clientHeight) return;
+      if (canvas.width === el.clientWidth && canvas.height === el.clientHeight) return;
+      canvas.width  = el.clientWidth;
+      canvas.height = el.clientHeight;
     }
+    // useEffect fires after the browser has painted, so layout is committed
+    // and el.clientWidth/Height are already correct here.
     resize();
-    const ro = new ResizeObserver(resize); ro.observe(el);
+    const ro = new ResizeObserver(resize);
+    ro.observe(el);
 
     const gl = canvas.getContext('webgl2');
     if (!gl) { el.textContent='WebGL2 not available'; return; }
@@ -615,7 +627,186 @@ export default function App() {
   return (
     <div style={{display:'flex',width:'100vw',height:'100vh',background:'#040a1c',
       overflow:'hidden',fontFamily:"'JetBrains Mono','Courier New',monospace",color:'#e0ecff'}}>
-      <div ref={mountRef} style={{flex:1,position:'relative',minWidth:0,overflow:'hidden'}}/>
+
+      {/* Left column: tabbed area */}
+      <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+
+        {/* Tab bar */}
+        <div style={{display:'flex',alignItems:'center',borderBottom:'1px solid rgba(40,80,180,.4)',
+          background:'rgba(4,10,30,.98)',flexShrink:0}}>
+          {[['canvas','Simulation'],['math','Math'],['physics','Physics']].map(([t,label])=>(
+            <button key={t} onClick={()=>setActiveTab(t)} style={{
+              padding:'8px 22px',cursor:'pointer',fontSize:12,fontWeight:700,
+              fontFamily:"'JetBrains Mono','Courier New',monospace",
+              textTransform:'uppercase',letterSpacing:'0.06em',
+              background:activeTab===t?'rgba(30,60,150,.55)':'transparent',
+              border:'none',borderBottom:activeTab===t?'2px solid #5599ff':'2px solid transparent',
+              color:activeTab===t?'#c8e8ff':'#445577',transition:'color .15s',
+            }}>{label}</button>
+          ))}
+          {/* Font-size control — shown only for text tabs */}
+          {(activeTab==='math'||activeTab==='physics') && (
+            <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,
+              paddingRight:12,userSelect:'none'}}>
+              <span style={{fontSize:10,color:'#445577',letterSpacing:'0.04em'}}>FONT</span>
+              <button onClick={()=>setPanelFontSize(s=>Math.max(10,s-1))} style={{
+                width:22,height:22,cursor:'pointer',background:'rgba(40,80,180,.2)',
+                border:'1px solid rgba(40,80,180,.4)',borderRadius:3,
+                color:'#7ab8ff',fontSize:14,lineHeight:1,display:'flex',alignItems:'center',
+                justifyContent:'center',padding:0,
+              }}>−</button>
+              <span style={{fontSize:11,color:'#c8e8ff',minWidth:22,textAlign:'center'}}>{panelFontSize}</span>
+              <button onClick={()=>setPanelFontSize(s=>Math.min(22,s+1))} style={{
+                width:22,height:22,cursor:'pointer',background:'rgba(40,80,180,.2)',
+                border:'1px solid rgba(40,80,180,.4)',borderRadius:3,
+                color:'#7ab8ff',fontSize:14,lineHeight:1,display:'flex',alignItems:'center',
+                justifyContent:'center',padding:0,
+              }}>+</button>
+            </div>
+          )}
+        </div>
+
+        {/* Canvas — always mounted, hidden when not active so the loop keeps running */}
+        <div ref={mountRef} style={{flex:1,position:'relative',minWidth:0,overflow:'hidden',
+          display:activeTab==='canvas'?'block':'none'}}/>
+
+        {/* Math panel */}
+        {activeTab==='math' && (
+          <div style={{flex:1,overflowY:'auto',padding:'20px 28px',
+            display:'flex',flexDirection:'column',gap:18,
+            fontSize:panelFontSize,color:'#c8d8f0',lineHeight:1.8,
+            fontFamily:"'JetBrains Mono','Courier New',monospace"}}>
+            <div style={{fontSize:14,color:'#5599ff',fontWeight:700,
+              borderBottom:'1px solid rgba(40,80,180,.35)',paddingBottom:6}}>Mathematics</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'20px 40px'}}>
+              <MathSection title="Schrödinger Equation">
+                The full 2D system (particle x + pointer y) evolves under:
+                <Eq>iℏ ∂ψ/∂t = Ĥ ψ</Eq>
+                <Eq>Ĥ = −ℏ²∇²/2m + V(x,y) + λ₂ Q̂(x) p̂_y</Eq>
+                V(x,y) is the barrier potential. Q̂(x) = 1 inside the
+                detector window, 0 elsewhere. The last term couples particle
+                position to pointer momentum — this is the measurement
+                interaction.
+              </MathSection>
+
+              <MathSection title="Split-Operator Method (Trotter–Suzuki)">
+                Each time step Δt is factored to 2nd order:
+                <Eq>{"e^{−iĤΔt/ℏ} ≈ e^{−iV̂Δt/2ℏ} · e^{−iŴΔt/2ℏ} · e^{−iT̂Δt/ℏ} · e^{−iŴΔt/2ℏ} · e^{−iV̂Δt/2ℏ}"}</Eq>
+                Error is O(Δt³) per step, O(Δt²) globally.
+                Δt = {(DT/1e-15).toFixed(2)} fs, N = {N}×{N} grid,
+                L_x = L_y = {(LX/1e-9).toFixed(0)} nm.
+              </MathSection>
+
+              <MathSection title="Kinetic Propagator (FFT)">
+                The kinetic step T̂ is diagonal in momentum space:
+                <Eq>T̃(k_x,k_y) = exp(−iℏ(k_x²+k_y²)Δt / 2m)</Eq>
+                Applied as: FFT2D → pointwise × T̃ → IFFT2D.
+                Uses a 2D Stockham DIT FFT in GLSL ES 3.0, running
+                entirely on the GPU via WebGL2 framebuffer ping-pong.
+              </MathSection>
+
+              <MathSection title="Measurement Coupling (Ŵ step)">
+                Ĥ_meas = λ₂ Q̂(x) p̂_y shifts the pointer in position space:
+                <Eq>ψ(x,y) → ψ(x, y − λ₂ Q(x) Δt/2)</Eq>
+                Equivalently, in k_y space it is a pure phase:
+                <Eq>{"ψ̃(x,k_y) → e^{−iλ₂ Q(x) k_y Δt/2} ψ̃(x,k_y)"}</Eq>
+                λ₂ = 10⁵ m/s is the measurement coupling strength.
+              </MathSection>
+
+              <MathSection title="Bohmian Guiding Equations">
+                Particle positions follow the de Broglie–Bohm velocity field:
+                <Eq>ẋ = (ℏ/m) Im(∂_x ψ / ψ)</Eq>
+                <Eq>ẏ = (ℏ/m) Im(∂_y ψ / ψ) − λ₂ Q(x)</Eq>
+                The −λ₂ Q(x) term is the direct back-action: while the
+                particle is inside the detector, the pointer coordinate is
+                dragged downward at speed λ₂. Spatial gradients are computed
+                with centred finite differences on the GPU readback buffer.
+              </MathSection>
+
+              <MathSection title="Color Scale">
+                The inferno colormap is applied to:
+                <Eq>c = √(ρ · S),   S ≈ {RHO_SCALE}</Eq>
+                where ρ = |ψ|². The square-root compresses dynamic range
+                so both the dense initial packet and the dilute
+                transmitted/reflected tails remain visible simultaneously.
+              </MathSection>
+            </div>
+          </div>
+        )}
+
+        {/* Physics panel */}
+        {activeTab==='physics' && (
+          <div style={{flex:1,overflowY:'auto',padding:'20px 28px',
+            display:'flex',flexDirection:'column',gap:18,
+            fontSize:panelFontSize,color:'#c8d8f0',lineHeight:1.8,
+            fontFamily:"'JetBrains Mono','Courier New',monospace"}}>
+            <div style={{fontSize:14,color:'#5599ff',fontWeight:700,
+              borderBottom:'1px solid rgba(40,80,180,.35)',paddingBottom:6}}>Physics & Interest</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'20px 40px'}}>
+              <MathSection title="What Is Being Simulated">
+                A <Hi>2D quantum system</Hi> where x is the particle
+                coordinate and y is a measurement pointer (ancilla degree
+                of freedom). The two are coupled: the pointer accumulates
+                a momentum kick proportional to the time the particle
+                spends inside the detector region. Reading the final
+                y-displacement tells us where the particle was — without
+                any explicit wavefunction collapse.
+              </MathSection>
+
+              <MathSection title="Tunneling Through the Barrier">
+                The wavepacket has kinetic energy KE ≈ 18 meV along x.
+                The barrier V₀ (default 30 meV) is above the classical
+                threshold, yet a fraction of the wave penetrates via the
+                evanescent tail — this is <Hi>quantum tunneling</Hi>.
+                Raise V₀ above ~50 meV to nearly suppress transmission;
+                lower it below ~10 meV for a nearly transparent barrier.
+              </MathSection>
+
+              <MathSection title="Quantum Measurement">
+                With the <Hi>Detector on</Hi>, the wavefunction shears
+                in y over time: one lobe = "particle transmitted through
+                detector region"; the other = "particle reflected".
+                This is a <Hi>continuous weak measurement</Hi> — the
+                pointer shifts gradually, not via a sudden collapse.
+                The integrated charge Q is exactly the observable measured
+                in single-electron counting experiments.
+              </MathSection>
+
+              <MathSection title="Bohmian (Pilot-Wave) Mechanics">
+                Cyan dots are <Hi>Bohmian trajectories</Hi>: each particle
+                has a definite position at all times, guided deterministically
+                by the wavefunction. No collapse postulate is needed —
+                trajectories that reach the far side are "detected"; those
+                that turn back are not. Trajectories never cross (the
+                velocity field is single-valued) and their ensemble
+                distribution reproduces |ψ|² exactly.
+              </MathSection>
+
+              <MathSection title="Wave–Particle Duality">
+                Both aspects are shown simultaneously:
+                <br/>• The <Hi>wave</Hi> (inferno heatmap) diffracts,
+                interferes, and tunnels — classically impossible.
+                <br/>• The <Hi>particle</Hi> (Bohmian dot) follows a
+                smooth, continuous trajectory guided by the wave.
+                <br/>In the Bohmian picture this is not a paradox: the
+                wave is real and physical, and the particle rides it.
+              </MathSection>
+
+              <MathSection title="Parameters to Explore">
+                <Hi>Barrier V₀</Hi>: 10 meV → mostly transmitted;
+                80 meV → mostly reflected. Watch the transmitted fraction
+                change in real time.
+                <br/><Hi>Detector on/off</Hi>: off = y stays Gaussian;
+                on = wavepacket shears, pointer encodes which-path info.
+                <br/><Hi>Speed ×n</Hi>: each frame advances n×{32}
+                steps = n×{(32*DT/1e-15).toFixed(1)} fs of physics time.
+              </MathSection>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Right sidebar: simulation controls */}
       <div style={{width:220,flexShrink:0,borderLeft:'1px solid rgba(40,80,180,.35)',
         background:'rgba(4,10,30,.95)',overflowY:'auto',padding:'12px 10px',
         display:'flex',flexDirection:'column',gap:10}}>
@@ -687,6 +878,30 @@ function Btn({on,click,label}){
     border:'1px solid '+(on?'#5588cc':'#334466'),
     color:on?'#c8e8ff':'#7090b8',textAlign:'left',
   }}>{on?'◉':'○'} {label}</button>;
+}
+
+function MathSection({title,children}){
+  return (
+    <div>
+      <div style={{color:'#7ab8ff',fontWeight:700,marginBottom:4}}>{title}</div>
+      <div style={{color:'#a8c4e0',lineHeight:1.8}}>{children}</div>
+    </div>
+  );
+}
+
+function Eq({children}){
+  return (
+    <div style={{margin:'5px 0',padding:'4px 8px',background:'rgba(20,40,100,.5)',
+      borderLeft:'2px solid #3355aa',borderRadius:2,color:'#d0e8ff',
+      fontFamily:"'JetBrains Mono','Courier New',monospace",
+      letterSpacing:'0.02em',whiteSpace:'pre-wrap'}}>
+      {children}
+    </div>
+  );
+}
+
+function Hi({children}){
+  return <span style={{color:'#7addff',fontWeight:700}}>{children}</span>;
 }
 
 const container = document.getElementById('root');

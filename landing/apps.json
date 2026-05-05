@@ -1,0 +1,90 @@
+[
+  {
+    "title": "Double-Slit Experiment — Analytical",
+    "slug": "double-slit-analytical",
+    "status": "live",
+    "url": "qsf-v1.html",
+    "tags": ["Wave interference", "Born rule"],
+    "description": "Explore the double-slit experiment with an analytically computed wavefunction. Visualise Copenhagen collapse, Bohmian pilot-wave trajectories, and Many-Worlds branching side by side."
+  },
+  {
+    "title": "Double-Slit Experiment — Numerical",
+    "slug": "double-slit-numerical",
+    "status": "live",
+    "url": "2slit-wavepacket/",
+    "tags": ["Wave packets", "GPU simulation"],
+    "description": "Real-time GPU simulation of a Gaussian wave packet propagating through a double slit. Full numerical integration of the time-dependent Schrödinger equation on the browser GPU."
+  },
+  {
+    "title": "Hydrogen Atom",
+    "slug": "hydrogen-atom",
+    "status": "live",
+    "url": "hydrogen-atom/hydrogen-3d.html",
+    "tags": ["Orbitals", "3D"],
+    "description": "Interactive 3D visualisation of hydrogen atomic orbitals. Explore the probability density |ψ_nlm|² for any principal quantum number n, angular momentum l, and magnetic quantum number m."
+  },
+  {
+    "title": "Stern-Gerlach Experiment — 3D",
+    "slug": "stern-gerlach",
+    "status": "live",
+    "url": "stern-gerlach/",
+    "tags": ["Spin-½", "Measurement", "3D"],
+    "description": "Full 3D simulation of a spin-½ particle traversing an inhomogeneous magnetic field. Three interpretations: Copenhagen collapse, Bohmian pilot-wave trajectories, and Many-Worlds branching. Live Born-rule histogram with statistical errors."
+  },
+  {
+    "title": "Free Particle — Gaussian Wave Packet",
+    "slug": "free-particle",
+    "status": "live",
+    "url": "free-particle/free-particle.html",
+    "tags": ["Wave packets", "Detector", "Interpretations"],
+    "description": "Animated 2D Gaussian wave packet freely propagating and detected at a screen. Compare Copenhagen collapse, Bohmian pilot-wave trajectories, and Many-Worlds branching. Live Born-rule statistics with wave-function–predicted expected counts."
+  },
+  {
+    "title": "Quantum Measurement with Detector",
+    "slug": "measurement",
+    "status": "live",
+    "url": "measurement/",
+    "tags": ["Measurement", "Detector coupling", "Interpretations"],
+    "description": "Detector-coupled tunneling simulation comparing Collapse/Copenhagen, Pilot-Wave, and Many-Worlds pictures, with explicit detector back-action and outcome statistics."
+  },
+  {
+    "title": "Bell Experiment — Entanglement",
+    "slug": "bell-experiment",
+    "status": "live",
+    "url": "bell-experiment/",
+    "tags": ["Entanglement", "Non-locality", "Spin-½"],
+    "description": "Interactive Bell-pair simulation with angle-dependent correlations, detector-distance timing, and side-by-side Collapse/Copenhagen and Pilot-Wave visualizations, including non-local wave updates."
+  },
+  {
+    "title": "Measurement and Decoherence",
+    "slug": "measurement-decoherence",
+    "status": "planned",
+    "url": null,
+    "tags": ["Measurement", "Decoherence"],
+    "description": "Simulation of quantum measurement coupled to an environment, illustrating the emergence of classicality through decoherence."
+  },
+  {
+    "title": "Simple Molecules",
+    "slug": "simple-molecules",
+    "status": "planned",
+    "url": null,
+    "tags": ["Molecules", "Orbitals"],
+    "description": "Interactive molecular orbital visualisations for simple molecules such as H₂, LiH, and BeH₂."
+  },
+  {
+    "title": "Scattering and Non-Asymptotic Dynamics",
+    "slug": "scattering",
+    "status": "planned",
+    "url": null,
+    "tags": ["Scattering"],
+    "description": "Simulation of quantum scattering processes with emphasis on non-asymptotic, finite-time dynamics."
+  },
+  {
+    "title": "Quantum Potential Landscapes",
+    "slug": "quantum-potential",
+    "status": "planned",
+    "url": null,
+    "tags": ["Pilot-wave", "Quantum potential"],
+    "description": "Visualisation of the Bohmian quantum potential and its role in guiding particle trajectories through complex geometries."
+  }
+]
