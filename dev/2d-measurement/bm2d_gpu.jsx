@@ -443,19 +443,15 @@ export default function App() {
     canvas.style.cssText = 'width:100%;height:100%;display:block;';
     el.appendChild(canvas);
 
-    // Size the canvas. CRITICAL: assigning canvas.width or canvas.height
-    // (even to the same value) resets the entire WebGL context and destroys
-    // all FBOs/textures.  Guard against:
-    //   1. display:none  → el.clientWidth=0  → skip (tab switched away)
-    //   2. no real size change               → skip (avoids needless reset)
+    // Size the canvas backing buffer.
+    // Guard: skip when the div is collapsed to height:0 (non-canvas tab active),
+    // and skip when nothing actually changed (avoids clearing the drawing buffer).
     function resize() {
       if (!el.clientWidth || !el.clientHeight) return;
       if (canvas.width === el.clientWidth && canvas.height === el.clientHeight) return;
       canvas.width  = el.clientWidth;
       canvas.height = el.clientHeight;
     }
-    // useEffect fires after the browser has painted, so layout is committed
-    // and el.clientWidth/Height are already correct here.
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(el);
@@ -666,9 +662,15 @@ export default function App() {
           )}
         </div>
 
-        {/* Canvas — always mounted, hidden when not active so the loop keeps running */}
-        <div ref={mountRef} style={{flex:1,position:'relative',minWidth:0,overflow:'hidden',
-          display:activeTab==='canvas'?'block':'none'}}/>
+        {/* Canvas — always in DOM.  When another tab is active we collapse to
+            height:0 (NOT display:none) so el.clientWidth stays non-zero and
+            the WebGL context / FBO textures are never disturbed. */}
+        <div ref={mountRef} style={{
+          flex:    activeTab==='canvas' ? 1 : 'none',
+          height:  activeTab==='canvas' ? undefined : 0,
+          minHeight: 0,
+          position:'relative', minWidth:0, overflow:'hidden',
+        }}/>
 
         {/* Math panel */}
         {activeTab==='math' && (

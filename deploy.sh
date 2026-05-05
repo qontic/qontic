@@ -6,8 +6,7 @@
 #   ./deploy.sh --no-commit — skip git commit/push, just deploy
 set -e
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-LANDING_DIR="$REPO_ROOT/landing"
+REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
 REMOTE_HOST="bonner-gpu.rice.edu"
 PROD_PATH="/var/www/html/bonner-gpu/bm"
 DEV_PATH="/var/www/html/bonner-gpu/bm/dev"
@@ -23,19 +22,19 @@ fi
 # ── 2. Deploy to production (/bm/) ────────────────────────────────────────
 echo "→ Deploying to production: $REMOTE_HOST:$PROD_PATH/"
 rsync -az --info=progress2 \
-  "$LANDING_DIR/index.html" \
-  "$LANDING_DIR/apps.json" \
-  "$LANDING_DIR/collaborators.html" \
-  "$LANDING_DIR/images/" \
+  "$REPO_ROOT/index.html" \
+  "$REPO_ROOT/apps.json" \
+  "$REPO_ROOT/collaborators.html" \
+  "$REPO_ROOT/images/" \
   "$REMOTE_HOST:$PROD_PATH/"
 
 # ── 3. Deploy to dev (/bm/dev/) ───────────────────────────────────────────
 echo "→ Deploying to dev: $REMOTE_HOST:$DEV_PATH/"
 rsync -az --info=progress2 \
-  "$LANDING_DIR/index.html" \
-  "$LANDING_DIR/apps.json" \
-  "$LANDING_DIR/collaborators.html" \
-  "$LANDING_DIR/images/" \
+  "$REPO_ROOT/index.html" \
+  "$REPO_ROOT/apps.json" \
+  "$REPO_ROOT/collaborators.html" \
+  "$REPO_ROOT/images/" \
   "$REMOTE_HOST:$DEV_PATH/"
 
 echo ""
