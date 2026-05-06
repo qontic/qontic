@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Q-Ontic Lab — Preview</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    body { font-family: "Segoe UI", sans-serif; margin: 0; padding: 0; background: #f9f9f9; color: #333; }
+    header { background: #003366; color: white; padding: 2rem; text-align: center; }
+    header h1 { margin: 0; font-size: 2.2rem; }
+    .subtitle { font-size: 1.1rem; margin-top: 0.4rem; opacity: 0.85; }
+
+    .preview-banner {
+      background: #fff3cd;
+      border-bottom: 2px solid #ffc107;
+      color: #856404;
+      text-align: center;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .preview-banner a { color: #856404; }
+
+    main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+
+    .sim-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.5rem;
+    }
+    .sim-card {
+      background: #fff;
+      border: 1px solid #dde3ee;
+      border-radius: 8px;
+      padding: 1.2rem 1.4rem 1rem;
+      box-shadow: 0 1px 4px rgba(0,0,51,0.07);
+      display: flex;
+      flex-direction: column;
+    }
+    .sim-card h3 { margin: 0 0 0.35rem; color: #003366; font-size: 1.05rem; }
+    .sim-card p  { margin: 0 0 0.8rem; font-size: 0.9rem; line-height: 1.55; flex: 1; }
+
+    .tags { margin-bottom: 0.5rem; }
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      padding: 1px 7px;
+      border-radius: 3px;
+      margin: 0 3px 4px 0;
+      font-weight: 600;
+    }
+    .tag-dev   { background: #fff3cd; color: #856404; }
+    .tag-topic { background: #e8ecf7; color: #003366; }
+
+    .button {
+      display: inline-block;
+      margin-top: 0.4rem;
+      padding: 0.55rem 1rem;
+      background: #0055aa;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .button:hover { background: #003f7f; }
+
+    footer {
+      background: #eee;
+      padding: 1.5rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 3rem;
+    }
+    footer a { color: #0055aa; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Q-Ontic Lab</h1>
+  <p class="subtitle">Collaborator Preview</p>
+</header>
+
+<div class="preview-banner">
+  ⚠ This is a preview area — simulations here are not yet publicly released.
+  Share the URL only with collaborators.
+  Public site: <a href="http://qonticlab.rice.edu/">qonticlab.rice.edu</a>
+</div>
+
+<main>
+  <div class="sim-grid" id="grid"></div>
+</main>
+
+<footer>
+  <p>Q-Ontic Lab &nbsp;·&nbsp; Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a></p>
+</footer>
+
+<script>
+(function () {
+  function buildCard(app) {
+    const tags = app.tags.map(t => `<span class="tag tag-topic">${t}</span>`).join('');
+    return `
+      <div class="sim-card">
+        <h3>${app.title}</h3>
+        <div class="tags"><span class="tag tag-dev">Preview</span>${tags}</div>
+        <p>${app.description}</p>
+        <a class="button" href="${app.url}">Launch</a>
+      </div>`;
+  }
+
+  fetch('apps.json')
+    .then(r => r.json())
+    .then(apps => {
+      document.getElementById('grid').innerHTML = apps.map(buildCard).join('');
+    });
+})();
+</script>
+
+</body>
+</html>

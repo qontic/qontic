@@ -1,0 +1,10 @@
+[
+  {
+    "title": "2D Quantum Measurement",
+    "slug": "2d-measurement",
+    "status": "dev",
+    "url": "2d-measurement/",
+    "tags": ["Measurement", "2D", "GPU simulation"],
+    "description": "2D simulation of quantum measurement with detector coupling. GPU-accelerated real-time propagation. Preview — not yet publicly released."
+  }
+]

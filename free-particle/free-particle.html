@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Free Particle — Q-Ontic Lab</title>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZWF6YQM0YV"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-ZWF6YQM0YV');
+    gtag('event', 'page_view', {
+      'page_title': document.title,
+      'page_location': window.location.href,
+      'page_path': window.location.pathname
+    });
+  </script>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" />
+  <style>
+    /* ================================================================
+       CSS Variables — light / dark themes
+    ================================================================ */
+    :root {
+      --bg-primary:    #f8fafc;
+      --bg-secondary:  #ffffff;
+      --bg-tertiary:   #f1f5f9;
+      --bg-panel:      #ffffff;
+      --text-primary:  #1e293b;
+      --text-secondary:#475569;
+      --text-muted:    #64748b;
+      --border-color:  #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent-color:  #3b82f6;
+      --accent-hover:  #2563eb;
+      --accent-light:  #eff6ff;
+      --success-color: #10b981;
+      --danger-color:  #ef4444;
+      --canvas-bg:     #000010;
+      --canvas-border: #1e293b;
+      --shadow-sm:     0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md:     0 4px 6px -1px rgba(0,0,0,0.10), 0 2px 4px -1px rgba(0,0,0,0.06);
+      --shadow-lg:     0 10px 15px -3px rgba(0,0,0,0.10), 0 4px 6px -2px rgba(0,0,0,0.05);
+      --radius-sm:     4px;
+      --radius-md:     6px;
+      --radius-lg:     10px;
+      --font-base:     14px;
+    }
+    [data-theme="dark"] {
+      --bg-primary:    #0f172a;
+      --bg-secondary:  #1e293b;
+      --bg-tertiary:   #334155;
+      --bg-panel:      #1e293b;
+      --text-primary:  #f1f5f9;
+      --text-secondary:#cbd5e1;
+      --text-muted:    #94a3b8;
+      --border-color:  #334155;
+      --border-strong: #475569;
+      --accent-color:  #60a5fa;
+      --accent-hover:  #3b82f6;
+      --accent-light:  #1e3a5f;
+      --success-color: #34d399;
+      --danger-color:  #f87171;
+      --canvas-bg:     #000010;
+      --canvas-border: #3b82f6;
+      --shadow-sm:     0 1px 2px rgba(0,0,0,0.30);
+      --shadow-md:     0 4px 6px -1px rgba(0,0,0,0.40), 0 2px 4px -1px rgba(0,0,0,0.30);
+      --shadow-lg:     0 10px 15px -3px rgba(0,0,0,0.50), 0 4px 6px -2px rgba(0,0,0,0.40);
+    }
+
+    /* ================================================================
+       Base
+    ================================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0; padding: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: var(--font-base);
+      line-height: 1.5;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* ================================================================
+       Top bar / header
+    ================================================================ */
+    .top-bar {
+      background: #003366;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .top-bar .logo a {
+      color: white;
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 600;
+      opacity: 0.85;
+    }
+    .top-bar .logo a:hover { opacity: 1; }
+    .top-bar h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .top-bar .badge {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    .theme-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: white;
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .theme-btn:hover { background: rgba(255,255,255,0.22); }
+
+    /* ================================================================
+       Main layout: left panel + canvas + right info/stats
+    ================================================================ */
+    .app-outer {
+      display: flex;
+      gap: 14px;
+      padding: 14px;
+      align-items: flex-start;
+    }
+
+    /* ── Left control panel ───────────────────────────────────────── */
+    .left-panel {
+      width: 300px;
+      min-width: 220px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .panel-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .panel-card h3 {
+      margin: 0 0 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .fp-expert {
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: 6px 8px;
+      background: var(--bg-tertiary);
+    }
+    .fp-expert summary {
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      user-select: none;
+      outline: none;
+    }
+    .fp-expert summary::-webkit-details-marker { color: var(--text-muted); }
+    .fp-expert .expert-body {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    /* ── Radio toggle rows ────────────────────────────────────────── */
+    .radio-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .radio-row label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.18s;
+      user-select: none;
+    }
+    .radio-row input[type=radio] { display: none; }
+    .radio-row input[type=radio]:checked + span {
+      /* handled by JS – parent label gets .active */
+    }
+    .radio-row label.active,
+    .radio-row label:has(input:checked) {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+      color: white;
+    }
+    .radio-row label:hover:not(.active) {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    /* Interpretation colours */
+    .radio-row label.interp-cph.active  { background: #7c3aed; border-color:#7c3aed; }
+    .radio-row label.interp-boh.active  { background: #b45309; border-color:#b45309; }
+    .radio-row label.interp-mw.active   { background: #0f766e; border-color:#0f766e; }
+
+    /* ── Sliders ──────────────────────────────────────────────────── */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .slider-row label {
+      width: 72px;
+      flex-shrink: 0;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .slider-row input[type=range] {
+      flex: 1 1 auto;
+      accent-color: var(--accent-color);
+      height: 4px;
+    }
+    .slider-row input[type=number] {
+      width: 40px;
+      flex-shrink: 0;
+      padding: 3px 5px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      text-align: right;
+      box-sizing: border-box;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+    .slider-row input[type=number]::-webkit-outer-spin-button,
+    .slider-row input[type=number]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .slider-row input[type=number]:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+    .slider-row .unit {
+      width: 22px;
+      flex-shrink: 0;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      user-select: none;
+    }
+    .check-row input[type=checkbox] {
+      accent-color: var(--accent-color);
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .fp-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .fp-btn:hover   { border-color: var(--accent-color); color: var(--accent-color); }
+    .fp-btn:active  { transform: translateY(1px); }
+    .fp-btn:disabled { opacity: 0.4; cursor: default; }
+    .fp-btn.primary {
+      background: var(--accent-color);
+      color: white;
+      border-color: var(--accent-color);
+    }
+    .fp-btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .fp-btn.danger {
+      background: var(--danger-color);
+      color: white;
+      border-color: var(--danger-color);
+    }
+    .fp-btn.danger:hover { background: #dc2626; }
+
+    /* ── Info table ───────────────────────────────────────────────── */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    .info-table td { padding: 2px 4px; }
+    .info-table td:first-child {
+      color: var(--text-muted);
+      width: 55%;
+    }
+    .info-table td:last-child {
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* ── Speed selector ───────────────────────────────────────────── */
+    select.fp-select {
+      padding: 4px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    /* ================================================================
+       Centre: canvas stack
+    ================================================================ */
+    .canvas-area {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .sim-main-row {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .yproj-wrap {
+      position: relative;
+      width: 112px;
+      min-width: 90px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--canvas-bg);
+      overflow: hidden;
+    }
+    .yproj-wrap canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: block;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 860px;
+      border: 2px solid var(--canvas-border);
+      border-radius: var(--radius-md);
+      background: var(--canvas-bg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+    .canvas-wrap canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: block;
+    }
+    #fpWaveCanvas  { z-index: 1; }
+    #fpPartCanvas  { z-index: 2; }
+    #fpDetCanvas   { z-index: 3; }
+
+    /* make the wrap intrinsically sized */
+    .canvas-spacer { display: block; width: 100%; padding-top: 45%; } /* taller simulation view */
+
+    .prob-wrap {
+      position: relative;
+      height: 90px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--canvas-bg);
+      overflow: hidden;
+    }
+    .prob-wrap canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: block;
+    }
+
+    /* Compact info strip (2-column, half-height feel) */
+    .info-compact {
+      padding: 8px 10px;
+    }
+    .info-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr;
+      gap: 2px 8px;
+      font-size: 0.74rem;
+      line-height: 1.2;
+    }
+    .ig-l { color: var(--text-muted); white-space: nowrap; }
+    .ig-v { color: var(--text-primary); font-family: var(--font-mono); white-space: nowrap; }
+
+
+
+    /* tabs */
+    .tab-header {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 10px;
+    }
+    .tab-header button {
+      flex: 1;
+      padding: 6px 4px;
+      border: none;
+      background: none;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-header button.tab-active {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
+    }
+    .tab-pane { display: none; }
+    .tab-pane.tab-visible { display: block; }
+
+    /* view tab bar (simulation ↔ explanation) */
+    .view-tab-bar {
+      display: flex;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 0;
+    }
+    .view-tab {
+      padding: 7px 16px;
+      border: none;
+      background: none;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .view-tab.view-tab-active {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
+    }
+    .view-panel { display: none; }
+    .view-panel.view-panel-active { display: block; }
+
+    /* rationale text */
+    .rationale h4 {
+      margin: 0 0 4px;
+      font-size: 0.83rem;
+      color: var(--accent-color);
+    }
+    .rationale p {
+      margin: 0 0 8px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .rationale .math {
+      font-family: 'Georgia', serif;
+      font-style: italic;
+      font-size: 0.85rem;
+      background: var(--bg-tertiary);
+      border-left: 3px solid var(--accent-color);
+      padding: 5px 8px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin: 6px 0;
+      color: var(--text-primary);
+    }
+    .rationale ul {
+      margin: 4px 0 8px;
+      padding-left: 16px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+    .rationale li { margin-bottom: 3px; }
+
+    /* comparison table */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+    .compare-table th {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      padding: 4px 5px;
+      text-align: left;
+      font-weight: 600;
+    }
+    .compare-table td {
+      padding: 4px 5px;
+      border-top: 1px solid var(--border-color);
+      vertical-align: top;
+      color: var(--text-secondary);
+    }
+    .compare-table tr:hover td { background: var(--bg-tertiary); }
+
+    /* ================================================================
+       Born-rule histogram
+    ================================================================ */
+    .born-hist-wrap {
+      width: 100%;
+      height: 80px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      overflow: hidden;
+    }
+    .born-hist-wrap canvas {
+      width: 100%; height: 100%; display: block;
+    }
+
+    /* ── MW branch grid ───────────────────────────────────────────── */
+    .mw-grid {
+      display: grid;
+      gap: 8px;
+      width: 100%;
+      max-width: 860px;
+      aspect-ratio: 20 / 9;
+      border: 2px solid var(--canvas-border);
+      border-radius: var(--radius-md);
+      background: var(--canvas-bg);
+      box-shadow: var(--shadow-lg);
+      padding: 6px;
+      box-sizing: border-box;
+    }
+    .mw-mini-wrap {
+      position: relative;
+      background: #000;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .mw-mini-wrap canvas { display: block; }
+    .mw-grid.mw-choosing .mw-mini-wrap { transition: transform 0.12s; cursor: pointer; }
+    .mw-grid.mw-choosing .mw-mini-wrap:hover { transform: scale(1.03); box-shadow: 0 0 0 2px #38bdf8; }
+    #fp-mw-status {
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-panel);
+      color: var(--text-secondary);
+      max-width: 860px;
+    }
+
+    /* ================================================================
+       Responsive
+    ================================================================ */
+    @media (max-width: 760px) {
+      .app-outer { flex-direction: column; }
+      .left-panel { width: 100%; }
+      .canvas-spacer { padding-top: 45%; }
+      .sim-main-row { flex-direction: column; }
+      .yproj-wrap {
+        width: 100%;
+        min-width: 0;
+        height: 110px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ================================================================
+     Top navigation bar
+================================================================ -->
+<div class="top-bar">
+  <div class="logo"><a href="index.html">⟵ Q-Ontic Lab</a></div>
+  <h1>Free Particle</h1>
+  <span class="badge">Live · Wave · Pilot-Wave</span>
+  <button class="theme-btn" id="fp-theme-btn" title="Toggle dark/light theme">☽ Dark</button>
+</div>
+
+<!-- ================================================================
+     App body
+================================================================ -->
+<div style="margin:10px 16px 0; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; color:#334155; font-size:0.9rem;">Pedagogical 2D packet model. The detector is modeled phenomenologically with an effective absorbing region rather than a full detector Hamiltonian.</div>
+
+  <div class="app-outer">
+
+  <!-- ============================================================
+       LEFT: controls
+  ============================================================ -->
+  <div class="left-panel">
+
+    <!-- ── View ──────────────────────────────────────────────────── -->
+    <div class="panel-card">
+      <h3>View</h3>
+      <div class="radio-row" id="fp-interp-row">
+        <label class="interp-boh active">
+          <input type="radio" name="fp-interp" value="pilotwave" checked />
+          <span>Pilot-Wave</span>
+        </label>
+        <label class="interp-cph">
+          <input type="radio" name="fp-interp" value="collapse" />
+          <span>Collapse</span>
+        </label>
+        <label class="interp-mw">
+          <input type="radio" name="fp-interp" value="manyworlds" />
+          <span>Many-Worlds</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ── Display mode ──────────────────────────────────────────── -->
+    <div class="panel-card">
+      <h3>Wave Display</h3>
+      <div class="radio-row" id="fp-display-row">
+        <label class="active">
+          <input type="radio" name="fp-display" value="prob" checked />
+          <span>|ψ|²</span>
+        </label>
+        <label>
+          <input type="radio" name="fp-display" value="real" />
+          <span>Re(ψ)</span>
+        </label>
+        <label>
+          <input type="radio" name="fp-display" value="imag" />
+          <span>Im(ψ)</span>
+        </label>
+        <label>
+          <input type="radio" name="fp-display" value="phase" />
+          <span>Phase</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ── Wave / particle parameters ───────────────────────────── -->
+    <div class="panel-card">
+      <h3>Wave Parameters</h3>
+      <div class="slider-row">
+        <label title="Kinetic energy of the particle">Energy:</label>
+        <input type="range" id="fp-energy-slider" min="0.1" max="10" step="0.1" value="1.0" />
+        <input type="number" id="fp-energy-input" min="0.01" max="20" step="0.1" value="1.0" />
+        <span class="unit">eV</span>
+      </div>
+      <div class="slider-row" id="fp-sigma-row">
+        <label title="Initial spatial width σ₀ of the Gaussian packet">Width σ₀:</label>
+        <input type="range" id="fp-sigma-slider" min="1" max="18" step="0.5" value="2" />
+        <input type="number" id="fp-sigma-input" min="1" max="20" step="0.5" value="2.0" />
+        <span class="unit">nm</span>
+      </div>
+      <div class="slider-row" id="fp-sigma-y-row">
+        <label title="Initial vertical spread σy of the 2D packet">Spread σy:</label>
+        <input type="range" id="fp-sigmay-slider" min="8" max="60" step="1" value="33" />
+        <input type="number" id="fp-sigmay-input" min="8" max="60" step="1" value="33" />
+        <span class="unit">nm</span>
+      </div>
+    </div>
+
+    <!-- ── Detector ───────────────────────────────────────────────── -->
+    <div class="panel-card">
+      <h3>Detector</h3>
+      <div class="slider-row">
+        <label title="Number of vertical bands">Sections:</label>
+        <input type="range" id="fp-nsect-slider" min="2" max="12" step="1" value="6" />
+        <input type="number" id="fp-nsect-input" min="2" max="12" step="1" value="6" />
+      </div>
+      <p style="font-size:0.72rem; color:var(--text-muted); margin:6px 0 0">
+        Fixed at x&nbsp;=&nbsp;30&nbsp;nm &middot; half-width 4&nbsp;nm
+      </p>
+    </div>
+
+    <!-- ── Simulation controls ───────────────────────────────────── -->
+    <div class="panel-card">
+      <h3>Simulation</h3>
+      <div class="slider-row" style="margin-bottom:10px">
+        <label>Speed:</label>
+        <select id="fp-speed" class="fp-select">
+          <option value="auto" selected>Auto</option>
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+          <option value="8">8×</option>
+          <option value="16">16×</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="fp-btn primary" id="fp-btn-start">▶ Start</button>
+        <button class="fp-btn" id="fp-btn-stop" disabled>⏸ Stop</button>
+        <button class="fp-btn danger" id="fp-btn-reset">↺ Reset</button>
+      </div>
+      <label class="check-row" title="Automatically start the next run after detector click; in MW it pauses only until you choose a branch">
+        <input type="checkbox" id="fp-auto-next" checked />
+        <span>Auto-next run after detection (MW resumes after branch choice)</span>
+      </label>
+      <p style="font-size:0.72rem; color:var(--text-muted); margin:8px 0 0">
+        Space&nbsp;= play/pause · R&nbsp;= reset
+      </p>
+    </div>
+
+
+  </div><!-- /left-panel -->
+
+  <!-- ============================================================
+       CENTRE: visualisation canvases
+  ============================================================ -->
+  <div class="canvas-area">
+
+    <!-- View tab bar -->
+    <div class="view-tab-bar">
+      <button class="view-tab view-tab-active" data-viewtab="sim">&#9654; Simulation</button>
+      <button class="view-tab" data-viewtab="rationale">Rationale</button>
+      <button class="view-tab" data-viewtab="physics">Physics</button>
+      <button class="view-tab" data-viewtab="compare">Compare Views</button>
+    </div>
+
+    <!-- ── SIMULATION panel ─────────────────────────────────────────── -->
+    <div class="view-panel view-panel-active" id="viewpanel-sim">
+
+      <!-- Main visualisation (wave + particle + detector) -->
+      <div class="sim-main-row" id="fp-main-vis-wrap">
+        <div class="yproj-wrap" id="fp-yproj-wrap">
+          <canvas id="fpYProjCanvas"></canvas>
+        </div>
+        <div class="canvas-wrap" id="fp-canvas-wrap">
+          <div class="canvas-spacer"></div><!-- aspect ratio placeholder -->
+          <canvas id="fpWaveCanvas"></canvas>
+          <canvas id="fpPartCanvas"></canvas>
+          <canvas id="fpDetCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Many-worlds branch grid (shown only in many-worlds view) -->
+      <div id="fp-mw-grid" class="mw-grid" style="display:none"></div>
+      <div id="fp-mw-status" style="display:none"></div>
+
+      <!-- Probability density strip -->
+      <div class="prob-wrap" title="This strip shows |psi|^2 at the current time slice; detector clicks are modeled as events in time.">
+        <canvas id="fpProbCanvas"></canvas>
+      </div>
+
+      <!-- Live readout numbers (compact 2-column) -->
+      <div class="panel-card info-compact">
+        <div class="info-top">
+          <span>Detected: <b id="fp-detected">No</b></span>
+          <span>Runs: <b id="fp-ntrials">0</b></span>
+        </div>
+        <div class="info-grid">
+          <span class="ig-l">Time</span><span class="ig-v" id="fp-time">0.0 fs</span>
+          <span class="ig-l">σ(t)</span><span class="ig-v" id="fp-sigma">&mdash;</span>
+          <span class="ig-l">Energy</span><span class="ig-v" id="fp-energy">&mdash; eV</span>
+          <span class="ig-l" id="fp-bpos-label">Bohm pos</span><span class="ig-v" id="fp-bpos">&mdash;</span>
+          <span class="ig-l">k</span><span class="ig-v" id="fp-k">&mdash;</span>
+          <span class="ig-l" id="fp-vbohm-label">vB</span><span class="ig-v" id="fp-vbohm">&mdash;</span>
+          <span class="ig-l">λ</span><span class="ig-v" id="fp-lambda">&mdash;</span>
+          <span class="ig-l">vgr</span><span class="ig-v" id="fp-vgroup">&mdash;</span>
+          <span class="ig-l">vph</span><span class="ig-v" id="fp-vphase">&mdash;</span>
+        </div>
+      </div>
+
+    </div><!-- /viewpanel-sim -->
+
+    <!-- ── RATIONALE panel ──────────────────────────────────────────── -->
+    <div class="view-panel rationale" id="viewpanel-rationale">
+      <h4>The &ldquo;Simplest&rdquo; Particle &mdash; Not So Simple</h4>
+      <p>
+        A <strong>free particle</strong> (zero potential, V&nbsp;=&nbsp;0) is the
+        first system in every quantum mechanics textbook.  Classically it is
+        trivial: a particle moves at constant velocity with a perfectly sharp
+        position and momentum at every instant.  Quantum-mechanically, even this
+        minimal case reveals dramatic departures from that picture.
+      </p>
+
+      <h4>Wave Packet: Localisation and Spreading</h4>
+      <p>
+        A Gaussian packet localises the particle at the cost of a spread in momentum
+        (Heisenberg relation &Delta;x&middot;&Delta;p&nbsp;&ge;&nbsp;&hbar;/2).
+        The packet spreads as it evolves:
+      </p>
+      <div class="math">&sigma;(t) = &sigma;<sub>0</sub> &radic;(1 + (&hbar;t / m&sigma;<sub>0</sub>&sup2;)&sup2;)</div>
+      <p>
+        A classical free particle <em>never</em> spreads &mdash; this broadening
+        is a purely quantum effect.  Different momentum components travel at
+        different speeds, pulling the packet apart.
+      </p>
+
+      <h4>The Detector</h4>
+        <p>
+          In this pedagogical setup, the detector is modeled phenomenologically;
+          this is no longer a strictly free-particle Hamiltonian once detection is included.
+          We therefore treat this as a particle with a phenomenological detector and ask:
+          <em>how does a detection event happen?</em>  The three views displayed here give
+          different answers:
+        </p>
+      <p>
+        Important distinction: the lower |&psi;|&sup2; strip is a
+        <em>position distribution at fixed time</em>, while detector clicks are
+        modeled as <em>time-of-arrival events</em> in a finite detector window.
+      </p>
+      <ul>
+        <li><strong>Collapse view:</strong> before the detector
+          fires there is no particle position.  The wavefunction encodes
+          probabilities.  When a detection occurs, the wavefunction collapses
+          &mdash; it disappears and the particle is localised at the detector.</li>
+        <li><strong>Pilot-wave view (de Broglie&ndash;Bohm):</strong> the particle
+          has a definite position at all times, guided by the velocity field
+          v(x,t) derived from the wavefunction.  The detector fires when the
+          particle&rsquo;s actual trajectory enters the detector window.  In this
+          setup the displayed single-particle (conditional/effective) wave
+          description is updated after detection, while the ontology remains
+          unambiguous (a definite trajectory throughout).</li>
+        <li><strong>Many-worlds view (Everett):</strong> the wavefunction never
+          collapses.  Instead the universe &ldquo;branches&rdquo;: one branch
+          contains a detector that fired, another does not.  Both are equally real.</li>
+      </ul>
+    </div><!-- /viewpanel-rationale -->
+
+    <!-- ── PHYSICS panel ────────────────────────────────────────────── -->
+    <div class="view-panel rationale" id="viewpanel-physics">
+      <h4>Wavefunction (exact analytic solution)</h4>
+      <p><strong>Gaussian wave packet (free-particle propagator):</strong></p>
+      <div class="math">&psi;(x,t) = [&sigma;<sub>0</sub>/&sigma;(t)]<sup>1/2</sup>
+        &middot; exp(&minus;(x&minus;x&#773;)&sup2; / 4&sigma;<sub>0</sub>&sigma;(t))
+        &middot; e<sup>i&phi;(x,t)</sup></div>
+      <p>
+        where &sigma;(t) = &sigma;<sub>0</sub>&radic;(1+&tau;&sup2;),
+        &tau;&nbsp;=&nbsp;&hbar;t/(m&sigma;<sub>0</sub>&sup2;),
+        x&#773;(t) = x<sub>0</sub> + v<sub>g</sub>t,
+        and the phase &phi; includes a carrier wave, a chirp term, and a
+        Gouy-like phase.
+      </p>
+
+      <h4>Pilot-wave guidance equation</h4>
+      <p>The particle velocity in the pilot-wave view is:</p>
+      <div class="math">v(x,t) = (&hbar;/m) Im(&part;<sub>x</sub>&psi; / &psi;)</div>
+      <p>
+        <strong>Wave packet:</strong> different parts of the packet carry different
+        local phase gradients.  Particles near the front feel a larger phase
+        gradient (higher &ldquo;local k&rdquo;) and are pushed forward; particles
+        at the rear are slowed.  This velocity <em>differential</em> is what
+        spreads the packet.  The pilot-wave velocity v<sub>B</sub> at the
+        particle&rsquo;s current position is shown in the readout panel.
+      </p>
+      <p>
+        Compared to the classical prediction v&nbsp;=&nbsp;&hbar;k/m, a Bohmian
+        particle born near the leading edge of the packet starts slightly faster;
+        one born near the trailing edge starts slower.  In an ensemble all
+        particles spread exactly with |&psi;|&sup2;, reproducing the Born-rule
+        statistics.
+      </p>
+
+      <h4>Phase velocity vs. group velocity</h4>
+      <div class="math">v<sub>phase</sub> = &omega;/k = &hbar;k/(2m)
+        &nbsp;&nbsp;&nbsp;
+        v<sub>group</sub> = d&omega;/dk = &hbar;k/m = 2v<sub>phase</sub></div>
+      <p>
+        The <em>group velocity</em> is the speed of the envelope (and the
+        pilot-wave particle near the packet centre).  The <em>phase velocity</em>
+        is the speed of the wavefronts, which are not directly observable.
+      </p>
+
+      <h4>Effective absorbing detector</h4>
+      <p>
+        In a rigorous treatment the detector would enter the Hamiltonian as an
+        imaginary (absorbing) potential&nbsp;&minus;i&thinsp;W(x), so that the
+        Schr&ouml;dinger equation becomes
+      </p>
+      <div class="math">i&hbar; &part;<sub>t</sub>&psi; = (H<sub>0</sub> &minus; iW)&psi;</div>
+      <p>
+        This causes local amplitude decay at rate W/&hbar;: the probability
+        density &ldquo;leaks&rdquo; out of the detector region, representing
+        absorption.  In this simulation the analytic free-particle wavefunction
+        is multiplied by a smooth exponential damping factor inside the detector
+        window as a pedagogical approximation:
+      </p>
+      <div class="math">&psi;<sub>eff</sub>(x,t) = e<sup>&minus;&gamma;&thinsp;t&thinsp;f(x)</sup>&thinsp;&psi;<sub>free</sub>(x,t)</div>
+      <p>
+        where f(x) is a smooth profile that equals&nbsp;1 inside the detector
+        and tapers to&nbsp;0 outside over a narrow edge, and
+        &gamma;&nbsp;=&nbsp;0.02&nbsp;fs<sup>&minus;1</sup> is a fixed absorption
+        rate (corresponding to an imaginary-potential strength
+        W&nbsp;&asymp;&nbsp;&gamma;&hbar;&nbsp;&asymp;&nbsp;13&nbsp;meV).
+        This is not a full numerical PDE solve but correctly captures the
+        qualitative physics: the wave amplitude is reduced in the detector region
+        as the packet passes, providing backreaction on the guidance field in the
+        pilot-wave view.
+      </p>
+
+      <h4>Internal units</h4>
+      <p>Lengths in nm &middot; times in fs &middot; energies in eV &middot;
+        mass = electron mass.</p>
+    </div><!-- /viewpanel-physics -->
+
+    <!-- ── COMPARE panel ─────────────────────────────────────────────── -->
+    <div class="view-panel" id="viewpanel-compare">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th>Classical</th>
+            <th>Collapse view</th>
+            <th>Pilot-wave view</th>
+            <th>Many-worlds view</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Particle position</td>
+            <td>Always definite</td>
+            <td>Undefined before detection; updates on measurement</td>
+            <td>Always definite; guided by the velocity field</td>
+            <td>Undefined; different branches after detection</td>
+          </tr>
+          <tr>
+            <td>Particle velocity</td>
+            <td>v&nbsp;=&nbsp;p/m, constant</td>
+            <td>Momentum distribution |\u03c6&#x0303;(k)|&sup2;; only mean = &hbar;k/m</td>
+            <td>v(x,t) = (&hbar;/m) Im(&part;<sub>x</sub>&psi;/&psi;), varies with position</td>
+            <td>Each branch carries its own momentum amplitude</td>
+          </tr>
+          <tr>
+            <td>Why does the packet spread?</td>
+            <td>It does not</td>
+            <td>Momentum uncertainty: &Delta;k &gt; 0 components disperse</td>
+            <td>Phase gradient of the evolving &psi; pushes the front faster and slows the rear</td>
+            <td>Branches &ldquo;diverge&rdquo; in configuration space</td>
+          </tr>
+          <tr>
+            <td>Detection event</td>
+            <td>Trivial: particle hits detector</td>
+            <td>Born-rule probability; wavefunction collapses</td>
+            <td>Particle trajectory enters window; conditional wavefunction shows effective collapse</td>
+            <td>Universe branches; wavefunction never collapses</td>
+          </tr>
+          <tr>
+            <td>Role of V = 0</td>
+            <td>No force; constant velocity</td>
+            <td>Free propagation away from detector; effective absorbing region during detection</td>
+            <td>Guidance from phase field; detector represented by an effective absorbing region</td>
+            <td>Free propagation with branch-dependent detection outcomes</td>
+          </tr>
+          <tr>
+            <td>v<sub>group</sub> = 2v<sub>phase</sub>?</td>
+            <td>N/A</td>
+            <td>Yes &mdash; purely kinematic (&omega; = &hbar;k&sup2;/2m)</td>
+            <td>Yes &mdash; particle near centre moves at v<sub>group</sub></td>
+            <td>Yes &mdash; same dispersion relation</td>
+          </tr>
+        </tbody>
+      </table>
+    </div><!-- /viewpanel-compare -->
+
+  </div><!-- /canvas-area -->
+
+</div><!-- /app-outer -->
+
+<!-- ================================================================
+     Born-rule histogram (tiny canvas inside panel above) is
+     also updated by JS.
+================================================================ -->
+
+<script src="js/free-particle.js"></script>
+<script>
+// ================================================================
+//  Page-level glue: resize canvases, init, tab wiring, dark mode
+// ================================================================
+(function() {
+
+  // ── Canvas sizing ──────────────────────────────────────────────
+  function resizeCanvases() {
+    // fp-canvas-wrap may be display:none in MW mode; fall back to canvas-area width
+    const wrap = document.getElementById('fp-canvas-wrap');
+    let W = wrap ? wrap.clientWidth : 0;
+    if (!W) {
+      const area = document.querySelector('.canvas-area');
+      W = area ? Math.min(860, area.clientWidth) : 0;
+    }
+    if (!W) return;
+    const H = Math.round(W * 0.45); // taller aspect
+
+    ['fpWaveCanvas','fpPartCanvas','fpDetCanvas'].forEach(id => {
+      const c = document.getElementById(id);
+      if (c) { c.width = W; c.height = H; }
+    });
+
+    const yWrap = document.getElementById('fp-yproj-wrap');
+    const yCanvas = document.getElementById('fpYProjCanvas');
+    if (yWrap && yCanvas) {
+      const yW = yWrap.clientWidth || 100;
+      const yH = yWrap.clientHeight || H;
+      yCanvas.width = yW;
+      yCanvas.height = yH;
+    }
+
+    const probWrap = document.querySelector('.prob-wrap');
+    if (probWrap) {
+      const pc = document.getElementById('fpProbCanvas');
+      // Align the prob strip to the wave canvas: offset by the y-projection column width + gap
+      const yProjWrap = document.getElementById('fp-yproj-wrap');
+      const leftOffset = yProjWrap ? (yProjWrap.offsetWidth + 8) : 0; // 8 = sim-main-row gap
+      probWrap.style.marginLeft = leftOffset + 'px';
+      probWrap.style.width = W + 'px';
+      if (pc) { pc.width = W; pc.height = probWrap.clientHeight; }
+    }
+
+  }
+
+  // ── View tab wiring (Simulation / Rationale / Physics / Compare) ─
+  function initViewTabs() {
+    const tabs   = document.querySelectorAll('.view-tab');
+    const panels = document.querySelectorAll('.view-panel');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('view-tab-active'));
+        panels.forEach(p => p.classList.remove('view-panel-active'));
+        tab.classList.add('view-tab-active');
+        const panel = document.getElementById('viewpanel-' + tab.dataset.viewtab);
+        if (panel) panel.classList.add('view-panel-active');
+        // resize canvases when returning to simulation tab
+        if (tab.dataset.viewtab === 'sim') { resizeCanvases(); fpRender(); }
+      });
+    });
+  }
+
+  // ── Radio styling helper ───────────────────────────────────────
+  function initRadios() {
+    document.querySelectorAll('.radio-row').forEach(row => {
+      const labels = row.querySelectorAll('label');
+      const inputs = row.querySelectorAll('input[type=radio]');
+      inputs.forEach((inp, i) => {
+        inp.addEventListener('change', () => {
+          labels.forEach(l => l.classList.remove('active'));
+          if (inp.checked) labels[i].classList.add('active');
+        });
+      });
+    });
+  }
+
+  // ── Dark mode toggle ───────────────────────────────────────────
+  function initTheme() {
+    const btn  = document.getElementById('fp-theme-btn');
+    const html = document.documentElement;
+    // respect system preference
+    const prefers = window.matchMedia('(prefers-color-scheme: dark)');
+    if (prefers.matches) { html.dataset.theme = 'dark'; btn.textContent = '☀ Light'; }
+    btn.addEventListener('click', () => {
+      if (html.dataset.theme === 'dark') {
+        delete html.dataset.theme;
+        btn.textContent = '☽ Dark';
+      } else {
+        html.dataset.theme = 'dark';
+        btn.textContent = '☀ Light';
+      }
+    });
+  }
+
+  // fpRenderSectionHist() and fpRenderMWGrid() are now called directly inside
+  // fpRender() in free-particle.js, so no monkey-patching is needed here.
+  function patchRender() {}
+
+  // ── Entry point ────────────────────────────────────────────────
+  window.addEventListener('load', () => {
+    resizeCanvases();
+    initViewTabs();
+    initRadios();
+    initTheme();
+    patchRender();
+
+    // Initialise the simulation  (defined in free-particle.js)
+    fpInit();
+
+    // Track visit to GA4
+    gtag('event', 'app_view', {
+      'app_name': 'Free Particle'
+    });
+
+    // Handle window resize
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        resizeCanvases();
+        if (window.fp && fp.interpMode === 'manyworlds' && typeof fpResizeMWCanvases === 'function') {
+          fpResizeMWCanvases();
+        }
+        fpRender();
+      }, 120);
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>
+
