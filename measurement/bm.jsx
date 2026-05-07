@@ -613,26 +613,6 @@ const SimPanel = React.memo(({
             <span>off</span><span>strong</span></div>
         </SL>
 
-        <SL label={`Detector at x = ${xPointer.toFixed(1)}`}
-          tip={"Position of the detector entry line.\nThe pointer starts moving when the wave enters this region."}>
-          <input type="range" min={1} max={9} step={0.5} defaultValue={xPointer}
-            ref={xPointerRef} onInput={e => setXPointer(+e.target.value)}
-            disabled={!detectorOn}
-            style={{ width:"100%", accentColor:"#ffcc44", opacity: detectorOn ? 1 : 0.35 }} />
-          <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
-            <span>near</span><span>far</span></div>
-        </SL>
-
-        <SL label={`Detector width = ${detWidth.toFixed(1)}`}
-          tip={"Width of the detector region.\nThe pointer moves while the particle overlaps with this region and freezes once the particle exits."}>
-          <input type="range" min={0.5} max={6} step={0.5} defaultValue={detWidth}
-            ref={detWidthRef} onInput={e => setDetWidth(+e.target.value)}
-            disabled={!detectorOn}
-            style={{ width:"100%", accentColor:"#ffdd88", opacity: detectorOn ? 1 : 0.35 }} />
-          <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
-            <span>narrow</span><span>wide</span></div>
-        </SL>
-
         <SL label={`σ_x = ${sigX.toFixed(2)}`}
           tip={"Particle wavepacket width (Gaussian σ in x).\nAlso sets the initial pointer width if not overridden."}>
           <input type="range" min={0.2} max={2.0} step={0.05} defaultValue={sigX}
