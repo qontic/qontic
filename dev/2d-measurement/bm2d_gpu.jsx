@@ -51,6 +51,7 @@ const HIST = 200;
 // ── Simulation pacing ─────────────────────────────────────────────────────────
 const SKIP_BASE    = 32;
 const NT_MAX       = 20000;
+const _CACHE_VER   = 2;
 const READBACK_EVERY = 4;
 
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -220,7 +221,8 @@ vec3 inferno(float t){
 }
 void main(){
   vec2 uv = vec2(gl_FragCoord.x/uRes.x, 1.0-gl_FragCoord.y/uRes.y);
-  vec2 psi = texture(uPsi, uv).rg;
+  ivec2 px2 = ivec2(clamp(uv * float(${N}), 0.0, float(${N}-1)));
+  vec2 psi = texelFetch(uPsi, px2, 0).rg;
   float rho = psi.r*psi.r + psi.g*psi.g;
   float t = sqrt(clamp(rho * ${RHO_SCALE} * uBrightness, 0.0, 1.0));
   vec3 col = inferno(t);
@@ -367,16 +369,12 @@ function buildGPUEngine(gl) {
 
   function display(W, H, sb, sq, barX0, barX1, qX0, qX1, brightness=1.0) {
     gl.useProgram(pD); bind(0, pA.tex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.uniform2f(u.d.res, W,H);
     gl.uniform1i(u.d.sb, sb?1:0); gl.uniform1i(u.d.sq, sq?1:0);
     gl.uniform1f(u.d.bx0, barX0); gl.uniform1f(u.d.bx1, barX1);
     gl.uniform1f(u.d.qx0, qX0);   gl.uniform1f(u.d.qx1, qX1);
     gl.uniform1f(u.d.br, brightness);
     draw(null, W, H);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
 
   function readback() {
@@ -824,7 +822,7 @@ export default function App() {
         display:'flex',flexDirection:'column',gap:10}}>
         <div style={{fontSize:13,color:'#5599ff',fontWeight:700,
           borderBottom:'1px solid rgba(40,80,180,.3)',paddingBottom:6}}>
-          2D Quantum Measurement
+          2D Quantum Measurement v2
         </div>
         <div style={{fontSize:10,color:'#6080a0',lineHeight:1.6}}>
           GPU split-operator.<br/>x = particle, y = pointer.<br/>Physics from MATLAB.
@@ -929,4 +927,10 @@ function Hi({children}){
 }
 
 const container = document.getElementById('root');
-if (container) createRoot(container).render(<App />);
+if (container) {
+  if (!container._reactRoot) {
+    container._reactRoot = createRoot(container);
+  }
+  container._reactRoot.render(<App />);
+}
+// cache bust 1778035755
