@@ -605,8 +605,8 @@ const SimPanel = React.memo(({
 
         <SL label={`Coupling  ${detectorOn ? Math.round(lam/3*100)+"%" : "off (detector off)"}`}
           tip={"How far the pointer deflects after the interaction.\n0 = pointer does not move (no measurement).\nHigh = pointer clearly separates the two branches."}>
-          <input type="range" min={0} max={3} step={0.05} defaultValue={lam}
-            ref={lamRef} onInput={e => setLam(+e.target.value)}
+          <input type="range" min={0} max={3} step={0.05} value={lam}
+            ref={lamRef} onChange={e => setLam(+e.target.value)}
             disabled={!detectorOn}
             style={{ width:"100%", accentColor:"#44ffaa", opacity: detectorOn ? 1 : 0.35 }} />
           <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
@@ -655,7 +655,7 @@ const SimPanel = React.memo(({
         <SL label="Measurement regime"
           tip={"Presets for weak and strong measurement.\n\nStrong: high coupling + narrow pointer → T and R branches fully resolved. The detector always gives the right answer.\n\nWeak: low coupling + wide pointer → T and R pointer states overlap. The detector reading is ambiguous — sometimes the wrong branch is indicated."}>
           <div style={{ display:"flex", gap:6 }}>
-            {[{id:"weak", label:"≈ Weak", onClick:() => { setLam(0.6); setSigY(0.75); setRegime("weak"); },
+            {[{id:"weak", label:"≈ Weak", onClick:() => { setLam(0.15); setSigY(0.75); setRegime("weak"); },
                col:"#ffaa44", colBorder:"#cc7722", bgOff:"rgba(80,40,10,0.35)", bgOn:"rgba(160,80,10,0.65)"},
               {id:"strong", label:"⬛ Strong", onClick:() => { setLam(3.0); setSigY(0.3); setRegime("strong"); },
                col:"#44ee88", colBorder:"#228844", bgOff:"rgba(10,60,40,0.35)", bgOn:"rgba(10,120,60,0.65)"},
@@ -1489,7 +1489,7 @@ export default function App() {
     setTpUI(v); setRpUI(1 - v);
     if (tTargetRef.current) tTargetRef.current.value = Math.round(v * 100);
   };
-  const setLam = v => { S.current.lam = v; S.current.dirty=true; setLamUI(v); if(lamRef.current) lamRef.current.value=v; setRegime(null); };
+  const setLam = useCallback(v => { S.current.lam = v; S.current.dirty=true; setLamUI(v); if(lamRef.current) lamRef.current.value=v; setRegime(null); }, []);
   const setXPointer = v => { S.current.xPointer = v; setXPointerUI(v); if(xPointerRef.current) xPointerRef.current.value=v; };
   const setDetWidth  = v => { S.current.detWidth = v; setDetWidthUI(v); if(detWidthRef.current) detWidthRef.current.value=v; };
   const setSigX= v => { S.current.sigX=v; S.current.dirty=true; setSigXUI(v); if(sigXRef.current) sigXRef.current.value=v; setRegime(null); };
