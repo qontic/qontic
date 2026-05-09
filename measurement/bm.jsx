@@ -286,8 +286,10 @@ function invertT(target, k0) {
 // We use a simplified model: T_zeno = exactT(k0, V0 + zenoShift(g)) where
 // zenoShift(g) = g² * 2 (units ℏ=m=1).
 function zenoT(k0, V0, g) {
-  const shift = g * g * 2.0;
-  return exactT(k0, V0 + shift);
+  // Gentle Zeno suppression: T_zeno = T_base / (1 + (g/g_c)^2) where g_c = 1.
+  // At g=3 (max): T_zeno ≈ T_base / 10  — still nonzero, still shows Zeno trend.
+  const T0 = exactT(k0, V0);
+  return T0 / (1 + g * g);
 }
 
 // Dwell time inside barrier for a unit-amplitude right-incident wave.
@@ -1594,7 +1596,14 @@ export default function App() {
     S.current.colBranch = 0; S.current.colFade = 0; S.current.colTriggered = false; S.current.colYHold = 0;
     S.current.dirty = true;
   };
-  const setScenario = v => { S.current.scenario = v; S.current.dirty = true; setScenarioUI(v); };
+  const setScenario = v => {
+    S.current.scenario = v;
+    S.current.dirty = true;
+    // Reset collapse state so new scenario starts clean
+    S.current.colBranch = 0; S.current.colFade = 0;
+    S.current.colTriggered = false; S.current.colYHold = 0;
+    setScenarioUI(v);
+  };
   const setTTarget = v => {
     S.current.tTarget = v;
     S.current.V0 = invertT(v, S.current.k0);
