@@ -2040,7 +2040,10 @@ export default function App() {
         }
         if (!s.colTriggered && tPhys >= tPointerHit) {
           s.colTriggered = true;
-          s.colBranch = Math.random() < Tprob ? 1 : -1;
+          // Use base T (not Zeno-corrected) for the collapse coin flip so both
+          // outcomes are demonstrable; Zeno suppression is shown via the outcome bar.
+          const collapseT = isBarrierScenario ? exactT(s.k0, effV0) : Tprob;
+          s.colBranch = Math.random() < collapseT ? 1 : -1;
           // Capture jump at detector-triggered collapse, then hold y constant.
           s.colYHold = Math.max(dtP, 1.0);
           s.colFade   = 0;
@@ -2106,14 +2109,13 @@ export default function App() {
       const detXlo = s.scenario === "barrier" ? -BARRIER_A : s.xPointer;
       const detXhi = s.scenario === "barrier" ?  BARRIER_A : s.xPointer + s.detWidth;
       if (Tr.ptrLine) {
-        // Update position buffer directly (setFromPoints doesn't reliably trigger GPU upload)
-        const p1 = Tr.ptrLine.geometry.attributes.position;
-        if (p1) { p1.setX(0, detXlo); p1.setX(1, detXlo); p1.needsUpdate = true; }
+        // Move the whole object — geometry X is baked at 3.0 (initial creation), offset to detXlo
+        Tr.ptrLine.position.x = detXlo - 3.0;
         Tr.ptrLine.visible = s.detectorOn;
       }
       if (Tr.ptrLine2) {
-        const p2 = Tr.ptrLine2.geometry.attributes.position;
-        if (p2) { p2.setX(0, detXhi); p2.setX(1, detXhi); p2.needsUpdate = true; }
+        // Geometry X is baked at 5.0 (initial creation), offset to detXhi
+        Tr.ptrLine2.position.x = detXhi - 5.0;
         Tr.ptrLine2.visible = s.detectorOn;
       }
       if (Tr.detFill) {
