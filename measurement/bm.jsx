@@ -279,52 +279,6 @@ function invertT(target, k0) {
   return (lo + hi) / 2;
 }
 
-// ── Barrier-detector physics ──────────────────────────────────────────────────
-// Transmission under Zeno-type measurement inside barrier.
-// For strong coupling g, the effective barrier height grows: V0_eff = V0 + g²/2.
-// (Phenomenological: repeated projections add an imaginary potential ≈ iΓ/2.)
-// We use a simplified model: T_zeno = exactT(k0, V0 + zenoShift(g)) where
-// zenoShift(g) = g² * 2 (units ℏ=m=1).
-function zenoT(k0, V0, g) {
-  // Zeno suppression: T_zeno = T_base / (1 + g * 0.5).
-  // At g=3 (max): T_zeno = T_base / 2.5 (60% reduction) — shows clear Zeno trend
-  // while keeping transmission visible in the simulation.
-  const T0 = exactT(k0, V0);
-  return T0 / (1 + g * 0.5);
-}
-
-// Dwell time inside barrier for a unit-amplitude right-incident wave.
-// τ_dwell = (1/v) ∫_{-a}^{a} |ψ_k(x)|² dx  where v = k/m = k.
-// We approximate analytically for the tunnelling case.
-function barrierDwellFrac(k0, V0) {
-  const E = 0.5 * k0 * k0;
-  const L = 2 * BARRIER_A;
-  if (V0 <= 0 || E >= V0) {
-    // Above barrier: dwell ≈ L / v0 (just transit time)
-    return 1.0;
-  }
-  const kappa = Math.sqrt(2 * (V0 - E) + 1e-20);
-  const T = exactT(k0, V0);
-  // |ψ|² inside barrier ≈ |t|² * (cosh²(κx̃) + sinh²(κx̃)) integrated analytically
-  // Result: τ_dwell / τ_free ≈ T * sinh(2κa)/(2κa) * 1/(2|dV|) * ... simplified:
-  const sh = Math.sinh(kappa * L);
-  const ch = Math.cosh(kappa * L);
-  // ∫_{0}^{L} |ψ_in|² dx ≈ (1 + R) * L/2 + ...  use rough estimate:
-  // barrier amplitude ≈ sqrt(T) decaying exponentially: avg ~ sqrt(T)*e^{-κa/2}
-  const avg = Math.sqrt(T) * Math.exp(-kappa * BARRIER_A * 0.5);
-  return clamp(avg * avg * L, 0, 1);
-}
-
-// Weak value of Π_barrier for T-postselected particle:
-// ⟨Π_W⟩ = ⟨T|Π|ψ⟩ / ⟨T|ψ⟩  — real part shown.
-// Analytically: Re⟨Π_W⟩ ≈ (dwell fraction) / T for the tunnelling wavepacket.
-function weakValueBarrier(k0, V0) {
-  const T = exactT(k0, V0);
-  if (T < 1e-6) return 0;
-  const dw = barrierDwellFrac(k0, V0);
-  return dw / T;  // can be > 1 for strong tunnelling
-}
-
 // Integrate one Bohmian trajectory (returns array of {x,y})
 // Uses the real spectral wavefunction for x-velocity (guidance equation).
 function computeTraj(k0, V0, lam, sigX, sigY, y0) {
@@ -392,7 +346,6 @@ const FRAG2D = /* glsl */`
   uniform float uIsPW;            // 1=pilot-wave mode
   uniform float uBY;              // Bohmian pointer Y(t)
   uniform float uXin, uXT, uXR;  // packet x-centres: pre-scatter, T, R
-  uniform float uIsBarrier;       // 1 = barrier-detector scenario
 
   vec3 inferno(float t) {
     t = clamp(t,0.,1.);
@@ -419,37 +372,20 @@ const FRAG2D = /* glsl */`
     float gYT = exp(-0.5 * ((y - uYT) / uSigY) * ((y - uYT) / uSigY));
     float gYR = exp(-0.5 * ((y - uYR) / uSigY) * ((y - uYR) / uSigY));
 
-    float dens;
-    if (uIsBarrier > 0.5) {
-      // Barrier scenario: single blob (no split in x), pointer deflects for T branch only.
-      // Pre-scatter: incoming packet + pointer at rest.
-      // Post-scatter: T branch (particle passed) → pointer went up, shown at uYT.
-      //               R branch (reflected) → pointer stayed, shown at uYR.
-      // Both branches continue to propagate in x.
-      float wT = uPT, wR = uPR;
-      if (uIsPW < 0.5) {
-        if(uColBranch > 0.5)  wR *= (1. - uColFade);
-        if(uColBranch < -0.5) wT *= (1. - uColFade);
-      }
-      float pre  = gX0 * gY0;
-      float post = wT * gXT * gYT + wR * gXR * gYR;
-      dens = mix(pre, post, uBl);
-    } else {
-      // Branch weights — Copenhagen collapses one branch; Pilot-Wave shows both always
-      float wT = uPT, wR = uPR;
-      if (uIsPW < 0.5) {
-        if(uColBranch > 0.5)  wR *= (1. - uColFade);
-        if(uColBranch < -0.5) wT *= (1. - uColFade);
-      }
-
-      // Pre-scatter: incoming packet approaching barrier, pointer at y=0
-      float pre  = gX0 * gY0;
-
-      // Post-scatter: T/R branches, each at its x/y centre
-      float post = wT * gXT * gYT + wR * gXR * gYR;
-
-      dens = mix(pre, post, uBl);
+    // Branch weights — Copenhagen collapses one branch; Pilot-Wave shows both always
+    float wT = uPT, wR = uPR;
+    if (uIsPW < 0.5) {
+      if(uColBranch > 0.5)  wR *= (1. - uColFade);
+      if(uColBranch < -0.5) wT *= (1. - uColFade);
     }
+
+    // Pre-scatter: incoming packet approaching barrier, pointer at y=0
+    float pre  = gX0 * gY0;
+
+    // Post-scatter: T/R branches, each at its x/y centre
+    float post = wT * gXT * gYT + wR * gXR * gYR;
+
+    float dens = mix(pre, post, uBl);
     vec3  col  = inferno(clamp(dens * 2.2, 0., 1.));
     gl_FragColor = vec4(col, 1.0);
   }
@@ -573,17 +509,6 @@ const SL = ({ label, tip, children, fullWidth }) => (
   </div>
 );
 
-// ── Scenario constants ────────────────────────────────────────────────────────
-const SCENARIO_LABEL = { after:"Detector after barrier", barrier:"Detector in barrier" };
-const SCENARIO_TIP   = {
-  after:   "Classic setup: detector sits in the transmission channel.\nMeasures which way the particle went (T or R).\nPointer deflects proportional to coupling × time.",
-  barrier: "The measuring device is placed INSIDE the barrier.\nIt probes the observable Π_barrier = |in barrier⟩⟨in barrier|.\n\nWeak coupling: pointer shifts by the weak value ⟨Π_W⟩.\nFor the T-postselected branch this can exceed 1 or go negative.\n\nStrong coupling: quantum Zeno effect — frequent measurement\ncollapses the particle inside the barrier, suppressing tunneling.\nTransmission probability DECREASES with coupling strength.",
-};
-const SCENARIO_DESC  = {
-  after:   "The detector sits in the transmitted beam and measures whether the particle went through or reflected. This is the standard 'which-way' measurement.",
-  barrier: "The detector is placed inside the potential barrier itself. It measures the observable Π_barrier — whether the particle is in the barrier region right now. In the weak regime, the pointer shifts by the weak value of Π_barrier, which can be anomalous. In the strong regime, quantum Zeno suppresses tunneling: the more you look, the less likely the particle gets through.",
-};
-
 const VIEWS      = ["cpn","pw","mw"];
 const VIEW_LABEL = { cpn:"Projection Postulate", pw:"Pilot-Wave", mw:"Many Worlds" };
 const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff",   mw:"#cc88ff" };
@@ -619,8 +544,6 @@ function ShowDesc({ text }) {
 // ── Shared audio player ─────────────────────────────────────────────────────
 const SimPanel = React.memo(({
   interp, setInterp,
-  scenario, setScenario,
-  weakValue,
   tTarget, setTTarget, tTargetRef,
   lam, setLam, lamRef,
   xPointer, setXPointer, xPointerRef,
@@ -649,51 +572,6 @@ const SimPanel = React.memo(({
       overflowY:"auto" }}>
 
       <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 6 : 10, padding:p }}>
-
-        {/* Scenario switcher */}
-        <SL label="Scenario" tip="Choose where the detector is placed.\n\nAfter barrier: classic which-way detector in the transmitted channel.\n\nIn barrier: detector inside the barrier — probes the Π_barrier observable.\nWeak coupling → pointer shifts by weak value (can be > 1).\nStrong coupling → Zeno suppression of tunneling (T decreases with coupling).">
-          <div style={{ display:"flex", gap:6 }}>
-            {[
-              { id:"after",   label:"After barrier" },
-              { id:"barrier", label:"In barrier" },
-            ].map(({ id, label }) => {
-              const active = scenario === id;
-              const col = id === "barrier" ? "#ffaa44" : "#44ccff";
-              return (
-                <button key={id} onClick={() => setScenario(id)} style={{
-                  flex:1, padding:"5px 0",
-                  background: active ? `rgba(${id==="barrier"?"120,60,0":"0,80,120"},0.5)` : "rgba(15,30,70,0.4)",
-                  border:`2px solid ${active ? col : col+"55"}`,
-                  borderRadius:5, color: active ? col : col+"88",
-                  cursor:"pointer", fontSize:11,
-                  fontFamily:"'JetBrains Mono','Courier New',monospace",
-                  fontWeight: active ? 700 : 400,
-                  boxShadow: active ? `0 0 8px ${col}55` : "none",
-                  transition:"all 0.15s",
-                }}>
-                  {active ? "● " : "○ "}{label}
-                </button>
-              );
-            })}
-          </div>
-          {scenario === "barrier" && (
-            <div style={{ fontSize:10, color:"#aa8844", marginTop:4, lineHeight:1.5 }}>
-              {SCENARIO_DESC.barrier}
-            </div>
-          )}
-          {scenario === "barrier" && weakValue !== null && (
-            <div style={{ marginTop:6, padding:"4px 8px",
-              background:"rgba(80,40,0,0.3)", border:"1px solid rgba(200,140,40,0.4)", borderRadius:4 }}>
-              <div style={{ fontSize:10, color:"#ffcc66", lineHeight:1.6 }}>
-                <span style={{ color:"#aaaaaa" }}>Re⟨Π_barrier⟩_W  </span>
-                <span style={{ color: weakValue > 1 ? "#ff9933" : weakValue < 0 ? "#ff4444" : "#44ee88",
-                  fontWeight:700 }}>
-                  {weakValue.toFixed(3)}{weakValue > 1 ? " ▲ anomalous" : ""}
-                </span>
-              </div>
-            </div>
-          )}
-        </SL>
 
         {/* Interpretation switcher — full width */}
         <SL label="Interpretation" tip="Click to cycle: Projection Postulate → Pilot-Wave → Many Worlds&#10;&#10;Projection Postulate: wavefunction collapses on measurement (Born rule). No mechanism specified — the rule is postulated. Used in virtually all university courses.&#10;&#10;Pilot-Wave (de Broglie–Bohm): particle has a definite trajectory guided by the wavefunction. No collapse; randomness comes from unknown initial positions.&#10;&#10;Many Worlds (Everett): wavefunction never collapses. All outcomes happen in branching worlds.">
@@ -726,9 +604,7 @@ const SimPanel = React.memo(({
         </SL>
 
         <SL label={`Coupling  ${detectorOn ? Math.round(lam/3*100)+"%" : "off (detector off)"}`}
-          tip={scenario === "barrier"
-            ? "In-barrier coupling strength g.\n\nWeak (g≈0): pointer barely moves; reading is ambiguous.\nThe shift equals the weak value ⟨Π_barrier⟩_W, which can exceed 1.\n\nStrong (g large): Zeno effect — the measurement suppresses tunneling.\nTransmission probability DROPS as g increases.\n(Effective barrier height grows as V_eff = V₀ + 2g².)"
-            : "How far the pointer deflects after the interaction.\n0 = pointer does not move (no measurement).\nHigh = pointer clearly separates the two branches."}>
+          tip={"How far the pointer deflects after the interaction.\n0 = pointer does not move (no measurement).\nHigh = pointer clearly separates the two branches."}>
           <input type="range" min={0} max={3} step={0.05} value={lam}
             ref={lamRef} onChange={e => setLam(+e.target.value)}
             disabled={!detectorOn}
@@ -785,10 +661,10 @@ const SimPanel = React.memo(({
         </SL>
 
         {/* Outcome bar */}
-        <SL label={scenario === "barrier" ? "Outcome (Zeno-corrected T)" : "Outcome probabilities"}>
+        <SL label="Outcome probabilities">
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4, fontSize:11 }}>
-            <span style={{ color:"#44ee88" }}>T {Math.round(Tp*100)}%{scenario==="barrier" ? " ↓Zeno" : ""}</span>
-            <span style={{ color:"#ff7744" }}>R {Math.round(Rp*100)}%</span>
+            <span style={{ color:"#44ee88" }}>Transmitted {Math.round(Tp*100)}%</span>
+            <span style={{ color:"#ff7744" }}>Reflected {Math.round(Rp*100)}%</span>
           </div>
           <div style={{ height:6, background:"rgba(15,30,70,0.6)", borderRadius:3, overflow:"hidden" }}>
             <div style={{ height:"100%", borderRadius:3,
@@ -1421,16 +1297,6 @@ function MathPanel({ interp }) {
 
       {sec("Animation")}
       {txt("Units: ℏ = m = 1. Velocity v₀ = k₀. The simulation rescales physical time to fit the canvas. The barrier occupies |x| < 0.5.")}
-
-      {sec("Detector in barrier — weak value")}
-      {txt("When the detector probes Π_barrier = |in barrier⟩⟨in barrier|, the pointer shift in the weak-coupling limit is the weak value:")}
-      {eq("⟨Π_barrier⟩_W = ⟨f|Π_barrier|ψ⟩ / ⟨f|ψ⟩\n\nFor T-postselected outcome (f = transmitted state):\n  Re⟨Π_W⟩ ≈ τ_dwell / (T · τ_free)\n\nThis can exceed 1 — the particle appears to spend MORE time\ninside the barrier than classically allowed.\nFor strong tunnelling (T ≪ 1) the weak value diverges.")}
-      {txt("In pilot-wave theory, the Bohmian particle NEVER enters the barrier in the tunnelling regime (its trajectory goes around in configuration space). Yet the pointer shifts by a non-zero amount — the wave enters the barrier and couples to the pointer even though the particle does not. This is the empty-wave effect at its sharpest.")}
-
-      {sec("Detector in barrier — quantum Zeno")}
-      {txt("Strong coupling g suppresses tunnelling. The measurement adds an effective imaginary potential, increasing the barrier height:")}
-      {eq("V_eff = V₀ + 2g²\n\nT_Zeno = T(k₀, V_eff)\n\nAs g → ∞: T_Zeno → 0  (complete Zeno suppression)")}
-      {txt("This is the quantum Zeno effect: the more frequently you check whether the particle is in the barrier, the less likely it is to tunnel through. Observation changes the outcome.")}
     </div>
   );
 }
@@ -1548,7 +1414,6 @@ export default function App() {
 
   const S = useRef({
     interp:"cpn",
-    scenario:"after",   // "after" | "barrier"
     k0:4.0, V0:invertT(0.5,4.0), tTarget:0.5, lam:3.0, sigX:0.5, sigY:0.3,
     xPointer: 4.0,
     detWidth: 2.0,
@@ -1570,7 +1435,6 @@ export default function App() {
   });
 
   const [interp,    setInterpUI]    = useState("cpn");
-  const [scenario,  setScenarioUI]  = useState("after");
   const [tTarget,   setTTargetUI]   = useState(0.5);
   const [lam,       setLamUI]       = useState(3.0);
   const [xPointer,  setXPointerUI]  = useState(4.0);
@@ -1587,7 +1451,6 @@ export default function App() {
   const [detectorOn, setDetectorOnUI] = useState(true);
   const [Tp,       setTpUI]       = useState(0.5);
   const [Rp,       setRpUI]       = useState(0.5);
-  const [weakValue, setWeakValue] = useState(null);  // null or number
   // Collapse flash: branch = ±1 while flashing, 0 when idle
   const [flashBranch, setFlashBranch] = useState(0);
   const [flashAlpha,  setFlashAlpha]  = useState(0);
@@ -1595,15 +1458,8 @@ export default function App() {
   const setInterp = v => {
     S.current.interp = v; setInterpUI(v);
     S.current.colBranch = 0; S.current.colFade = 0; S.current.colTriggered = false; S.current.colYHold = 0;
+
     S.current.dirty = true;
-  };
-  const setScenario = v => {
-    S.current.scenario = v;
-    S.current.dirty = true;
-    // Reset collapse state so new scenario starts clean
-    S.current.colBranch = 0; S.current.colFade = 0;
-    S.current.colTriggered = false; S.current.colYHold = 0;
-    setScenarioUI(v);
   };
   const setTTarget = v => {
     S.current.tTarget = v;
@@ -1674,7 +1530,6 @@ export default function App() {
       uColBranch:{ value:0 }, uColFade:{ value:0 },
       uIsPW:{ value:0 }, uBY:{ value:0 },
       uXin:{ value:X0 }, uXT:{ value:0 }, uXR:{ value:0 },
-      uIsBarrier:{ value:0 },  // 1 = barrier-detector scenario
     };
     const heatMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(60, 40),
@@ -1962,12 +1817,7 @@ export default function App() {
 
       const effV0   = s.barrierOn  ? s.V0  : 0;
       const effLam  = s.detectorOn ? s.lam : 0;
-      const isBarrierScenario = s.scenario === "barrier";
-
-      // ── Barrier scenario: Zeno-corrected transmission ─────────────────────
-      // In barrier scenario the coupling modifies the effective transmission.
-      const zenoCorrT = isBarrierScenario ? zenoT(s.k0, effV0, effLam) : null;
-      const Tprob  = clamp(isBarrierScenario ? zenoCorrT : exactT(s.k0, effV0), 0, 1);
+      const Tprob  = clamp(exactT(s.k0, effV0), 0, 1);
       const Rprob  = 1 - Tprob;
       const v0     = s.k0;
       const tScatter = Math.abs(X0) / v0;
@@ -1980,8 +1830,8 @@ export default function App() {
       const dtA      = Math.max(0, tPhys - tScatter);
       const xIn      = X0 + v0 * Math.min(tPhys, tScatter);
       const xT       =  v0 * dtA,  xR = -v0 * dtA;
-      // Pointer coupling: in barrier scenario fires at barrier crossing; in after scenario fires when wave-front reaches xPointer.
-      const tPointerHit = isBarrierScenario ? tScatter : tScatter + s.xPointer / v0;
+      // Pointer coupling starts only when the T wave-front reaches xPointer.
+      const tPointerHit = tScatter + s.xPointer / v0;
       const dtP      = Math.max(0, tPhys - tPointerHit);  // time since wave hit pointer
       // Pointer only moves while the particle overlaps the detector region [xPointer, xPointer+detWidth].
       // Once the particle exits the region, dtP_capped freezes at its max value.
@@ -1994,29 +1844,9 @@ export default function App() {
       // CPN: pointer jumps instantly to its final (coupling-scaled) position at T-collapse.
       // For R collapse: keep dtP_capped (blob stays where it is, then fades).
       const dtPShown = (s.interp === "cpn" && s.colTriggered && s.colBranch > 0) ? gWindow : dtP_capped;
-
-      let yT, yR, sepFrac;
-      if (isBarrierScenario) {
-        // Barrier scenario: pointer shifts while the wave is INSIDE the barrier.
-        const halfBarrier = BARRIER_A / v0;
-        const tInBarrier  = Math.max(0, halfBarrier - Math.abs(tPhys - tScatter));
-        const barrierOvlp = clamp(tInBarrier / halfBarrier, 0, 1);
-        const tBarrierExit = tScatter + halfBarrier;
-        const dwellFrac = s.barrierOn ? barrierDwellFrac(s.k0, effV0) : 1;
-        const postBarrier = tPhys > tBarrierExit ? 1 : barrierOvlp;
-        const yPointerT = yRFixed + 3 * effLam * dwellFrac * (bl > 0.05 ? 1 : postBarrier);
-        yT      = yPointerT;
-        yR      = yRFixed;
-        sepFrac = effLam > 0 ? clamp(bl * dwellFrac * effLam, 0, 1) : 0;
-        s._weakValue = s.barrierOn ? weakValueBarrier(s.k0, effV0) : 0;
-        s._dwellFrac = dwellFrac;
-        s._zenoT     = Tprob;
-      } else {
-        // T blob starts at yRFixed and moves up only while inside detector; R stays at yRFixed.
-        yT = yRFixed + 4 * effLam * dtPShown; yR = yRFixed;
-        sepFrac  = effLam > 0 ? clamp(dtPShown / 3.0, 0, 1) : 0;
-        s._weakValue = null;
-      }
+      // T blob starts at yRFixed and moves up only while inside detector; R stays at yRFixed.
+      const yT       = yRFixed + 4 * effLam * dtPShown, yR = yRFixed;
+      const sepFrac  = effLam > 0 ? clamp(dtPShown / 3.0, 0, 1) : 0;
       const tIdx     = clamp(Math.round(tFrac*STEPS), 0, STEPS);
 
       // ── Stop before lobes exit canvas, pause 1.5 s then restart ───────────
@@ -2040,10 +1870,7 @@ export default function App() {
         }
         if (!s.colTriggered && tPhys >= tPointerHit) {
           s.colTriggered = true;
-          // Use base T (not Zeno-corrected) for the collapse coin flip so both
-          // outcomes are demonstrable; Zeno suppression is shown via the outcome bar.
-          const collapseT = isBarrierScenario ? exactT(s.k0, effV0) : Tprob;
-          s.colBranch = Math.random() < collapseT ? 1 : -1;
+          s.colBranch = Math.random() < Tprob ? 1 : -1;
           // Capture jump at detector-triggered collapse, then hold y constant.
           s.colYHold = Math.max(dtP, 1.0);
           s.colFade   = 0;
@@ -2106,41 +1933,29 @@ export default function App() {
       });
 
       // ── Update detector region lines ──────────────────────────────────────
-      const detXlo = s.scenario === "barrier" ? -BARRIER_A : s.xPointer;
-      const detXhi = s.scenario === "barrier" ?  BARRIER_A : s.xPointer + s.detWidth;
+      const xExit = s.xPointer + s.detWidth;
       if (Tr.ptrLine) {
-        // Move the whole object — geometry X is baked at 3.0 (initial creation), offset to detXlo
-        Tr.ptrLine.position.x = detXlo - 3.0;
+        Tr.ptrLine.geometry.setFromPoints([
+          new THREE.Vector3(s.xPointer, -20, 0.05),
+          new THREE.Vector3(s.xPointer,  20, 0.05),
+        ]);
         Tr.ptrLine.visible = s.detectorOn;
       }
       if (Tr.ptrLine2) {
-        // Geometry X is baked at 5.0 (initial creation), offset to detXhi
-        Tr.ptrLine2.position.x = detXhi - 5.0;
+        Tr.ptrLine2.geometry.setFromPoints([
+          new THREE.Vector3(xExit, -20, 0.05),
+          new THREE.Vector3(xExit,  20, 0.05),
+        ]);
         Tr.ptrLine2.visible = s.detectorOn;
       }
       if (Tr.detFill) {
-        const cx = (detXlo + detXhi) / 2;
+        const cx = (s.xPointer + xExit) / 2;
         Tr.detFill.position.set(cx, s.camY, 0.04);
-        Tr.detFill.scale.set(detXhi - detXlo, 40, 1);
+        Tr.detFill.scale.set(s.detWidth, 40, 1);
         Tr.detFill.visible = s.detectorOn;
       }
       if (Tr.lblPointer) {
-        const detCx = (detXlo + detXhi) / 2;
-        const detLbl = isBarrierScenario ? "Π_barrier" : "detector";
-        // Only update text if scenario changed — recreating texture each frame is wasteful
-        if (Tr._lastScenario !== s.scenario) {
-          Tr._lastScenario = s.scenario;
-          const cv = Tr.lblPointer.material.map.image;
-          if (cv) {
-            const ctx2 = cv.getContext("2d");
-            ctx2.clearRect(0, 0, cv.width, cv.height);
-            ctx2.font = "700 24px 'JetBrains Mono','Courier New',monospace";
-            ctx2.fillStyle = "#ffcc44"; ctx2.textAlign = "center"; ctx2.textBaseline = "middle";
-            ctx2.fillText(detLbl, cv.width/2, cv.height/2);
-            Tr.lblPointer.material.map.needsUpdate = true;
-          }
-        }
-        Tr.lblPointer.position.set(detCx, s.camY + halfH - 0.8, 0.2);
+        Tr.lblPointer.position.set((s.xPointer + xExit) / 2, s.camY + halfH - 0.8, 0.2);
         Tr.lblPointer.visible = s.detectorOn;
       }
       if (Tr.lblBarrier) {
@@ -2167,7 +1982,6 @@ export default function App() {
         u.uColFade.value=s.colFade;
         u.uIsPW.value = s.interp === "pw" ? 1 : 0;
         u.uBY.value = bY;
-        u.uIsBarrier.value = isBarrierScenario ? 1 : 0;
       }
 
       // Branch labels — keep within visible area on any screen aspect
@@ -2187,7 +2001,7 @@ export default function App() {
 
       // ── Many-Worlds overlay ────────────────────────────────────────────────
       // MW separation uses live dtP (uncapped) so labels/overlay keep moving after detector exit
-      const sepFracMW = isBarrierScenario ? sepFrac : (effLam > 0 ? clamp(dtP / 3.0, 0, 1) : 0);
+      const sepFracMW = effLam > 0 ? clamp(dtP / 3.0, 0, 1) : 0;
       Tr.mwOverlay.visible = isMW;
       Tr.mwDivLine.visible = isMW && sepFracMW > 0.05;
       Tr.lblMW1.visible    = isMW && sepFracMW > 0.3;
@@ -2222,11 +2036,6 @@ export default function App() {
         lastReactUpdate = now;
 
         // nothing else throttled here — panels drawn directly below
-
-        // Weak value update for barrier scenario
-        if (s._weakValue !== undefined) setWeakValue(s._weakValue);
-        // Keep outcome bar in sync with actual (Zeno-corrected) T probability
-        if (isBarrierScenario && effLam > 0) { setTpUI(Tprob); setRpUI(1 - Tprob); }
 
         // Collapse flash signal
         if (s._flashPending) {
@@ -2486,7 +2295,6 @@ export default function App() {
               "The side panels show the conditional wavefunction: a slice of the full two-dimensional state at the particle's actual position. Unlike the global projection — which always shows two peaks — the conditional wavefunction has a single peak, localised on the occupied branch. This is the effective wavefunction the particle actually rides.",
               "All three interpretations give identical experimental predictions. The difference is not in what we measure — it is in what we believe is really happening.",
               "Not every measurement is equally decisive. A strong measurement uses a narrow pointer wavepacket and a large coupling so that the pointer states corresponding to transmission and reflection end up well separated — the device always gives the right answer. A weak measurement uses a wide pointer wavepacket and a small coupling: the two pointer states overlap significantly, and the device reading is ambiguous. The pointer still shifts slightly in the direction of the more probable outcome, but it cannot reliably identify which branch the particle actually took. This simulation lets you explore both regimes using the σ_pointer and Coupling sliders, or the Weak / Strong preset buttons.",
-              "A second scenario places the detector inside the barrier itself. Instead of asking 'did the particle transmit or reflect?', it asks 'is the particle inside the barrier right now?' — probing the observable Π_barrier. In the weak-coupling regime the pointer shifts by the weak value of Π_barrier: for the branch that eventually transmits, this quantity can exceed 1 or even diverge for deep tunnelling. The particle appears to spend more time in the barrier than classical physics allows. In the strong-coupling regime the frequent projections create a quantum Zeno effect: looking too hard suppresses tunnelling, and the transmission probability drops toward zero with increasing coupling. In the pilot-wave picture, the Bohmian particle never enters the barrier during tunnelling — its trajectory goes around in configuration space — yet the pointer still deflects because the wave (not the particle) enters the barrier and couples to the device. This is the empty-wave phenomenon, and the barrier-detector scenario is where it is most striking.",
             ].map((para, i) => (
               <p key={i} style={{
                 marginBottom:"1.2em",
@@ -2517,8 +2325,6 @@ export default function App() {
       }}>
         <SimPanel
           interp={interp}   setInterp={setInterp}
-          scenario={scenario} setScenario={setScenario}
-          weakValue={weakValue}
           tTarget={tTarget} setTTarget={setTTarget} tTargetRef={tTargetRef}
           lam={lam} setLam={setLam} lamRef={lamRef}
           xPointer={xPointer} setXPointer={setXPointer} xPointerRef={xPointerRef}
