@@ -286,11 +286,10 @@ function invertT(target, k0) {
 // We use a simplified model: T_zeno = exactT(k0, V0 + zenoShift(g)) where
 // zenoShift(g) = g² * 2 (units ℏ=m=1).
 function zenoT(k0, V0, g) {
-  // Zeno suppression: T_zeno = T_base / (1 + g * 0.5).
-  // At g=3 (max): T_zeno = T_base / 2.5 (60% reduction) — shows clear Zeno trend
-  // while keeping transmission visible in the simulation.
+  // Gentle Zeno suppression: T_zeno = T_base / (1 + (g/g_c)^2) where g_c = 1.
+  // At g=3 (max): T_zeno ≈ T_base / 10  — still nonzero, still shows Zeno trend.
   const T0 = exactT(k0, V0);
-  return T0 / (1 + g * 0.5);
+  return T0 / (1 + g * g);
 }
 
 // Dwell time inside barrier for a unit-amplitude right-incident wave.
@@ -1980,8 +1979,8 @@ export default function App() {
       const dtA      = Math.max(0, tPhys - tScatter);
       const xIn      = X0 + v0 * Math.min(tPhys, tScatter);
       const xT       =  v0 * dtA,  xR = -v0 * dtA;
-      // Pointer coupling: in barrier scenario fires at barrier crossing; in after scenario fires when wave-front reaches xPointer.
-      const tPointerHit = isBarrierScenario ? tScatter : tScatter + s.xPointer / v0;
+      // Pointer coupling starts only when the T wave-front reaches xPointer.
+      const tPointerHit = tScatter + s.xPointer / v0;
       const dtP      = Math.max(0, tPhys - tPointerHit);  // time since wave hit pointer
       // Pointer only moves while the particle overlaps the detector region [xPointer, xPointer+detWidth].
       // Once the particle exits the region, dtP_capped freezes at its max value.
