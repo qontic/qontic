@@ -2103,20 +2103,17 @@ export default function App() {
       });
 
       // ── Update detector region lines ──────────────────────────────────────
-      const detXlo = isBarrierScenario ? -BARRIER_A : s.xPointer;
-      const detXhi = isBarrierScenario ?  BARRIER_A : s.xPointer + s.detWidth;
+      const detXlo = s.scenario === "barrier" ? -BARRIER_A : s.xPointer;
+      const detXhi = s.scenario === "barrier" ?  BARRIER_A : s.xPointer + s.detWidth;
       if (Tr.ptrLine) {
-        Tr.ptrLine.geometry.setFromPoints([
-          new THREE.Vector3(detXlo, -20, 0.05),
-          new THREE.Vector3(detXlo,  20, 0.05),
-        ]);
+        // Update position buffer directly (setFromPoints doesn't reliably trigger GPU upload)
+        const p1 = Tr.ptrLine.geometry.attributes.position;
+        if (p1) { p1.setX(0, detXlo); p1.setX(1, detXlo); p1.needsUpdate = true; }
         Tr.ptrLine.visible = s.detectorOn;
       }
       if (Tr.ptrLine2) {
-        Tr.ptrLine2.geometry.setFromPoints([
-          new THREE.Vector3(detXhi, -20, 0.05),
-          new THREE.Vector3(detXhi,  20, 0.05),
-        ]);
+        const p2 = Tr.ptrLine2.geometry.attributes.position;
+        if (p2) { p2.setX(0, detXhi); p2.setX(1, detXhi); p2.needsUpdate = true; }
         Tr.ptrLine2.visible = s.detectorOn;
       }
       if (Tr.detFill) {
@@ -2226,6 +2223,8 @@ export default function App() {
 
         // Weak value update for barrier scenario
         if (s._weakValue !== undefined) setWeakValue(s._weakValue);
+        // Keep outcome bar in sync with actual (Zeno-corrected) T probability
+        if (isBarrierScenario && effLam > 0) { setTpUI(Tprob); setRpUI(1 - Tprob); }
 
         // Collapse flash signal
         if (s._flashPending) {
