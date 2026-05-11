@@ -32,6 +32,13 @@ const BARRIER_A = 0.5; // barrier half-width
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function lerp(a, b, t)    { return a + (b - a) * t; }
 
+// Box-Muller Gaussian sample  N(0,1)
+function sampleGauss() {
+  let u;
+  do { u = Math.random(); } while (u <= 0);
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+}
+
 // Exact rectangular-barrier |T|² (ℏ=m=1)
 function exactT(k0, V0) {
   if (V0 <= 0) return 1.0;
@@ -312,10 +319,13 @@ function computeTraj(k0, V0, lam, sigX, sigY, y0) {
 // Compute N trajectories with Born-rule initial positions
 function computeMultiTraj(k0, V0, lam, sigX, sigY, n) {
   const trajs = [];
+  const Tprob = clamp(exactT(k0, V0), 0, 1);
   for (let i = 0; i < n; i++) {
-    // Initial pointer position is random, but the OUTCOME is determined by it (Bohmian determinism).
-    // Sample uniformly in [-sigY, sigY]; positive y0 → T branch, negative → R branch.
-    const y0 = sigY * (Math.random() * 2 - 1);
+    // Branch is assigned with Born-rule probability P(T)=T, P(R)=R.
+    // Within each branch, |y0| is drawn from a half-Gaussian (magnitude of N(0,σ_p))
+    // so the full distribution across both branches is N(0,σ_p) — matching |χ₀(y)|².
+    const isT = Math.random() < Tprob;
+    const y0 = sigY * Math.abs(sampleGauss()) * (isT ? 1 : -1);
     const pts = computeTraj(k0, V0, lam, sigX, sigY, y0);
     // isTransmit read from final trajectory point — physics, not a coin flip
     const isTransmit = pts[pts.length - 1].y > 0;
@@ -439,15 +449,13 @@ const VERT_MW = /* glsl */`
 const FRAG_MW = /* glsl */`
   varying vec2 vPos;
   uniform float uSep;       // sepFrac 0→1
-  uniform float uSepA;      // y-intercept of branch separator (= yRFixed + lam*dtA)
-  uniform float uSepSlope;  // slope (perpendicular bisector of T–R direction)
+  uniform float uSepA;      // x-position of vertical separator (= 0, the barrier)
   void main() {
-    float sep = uSepA + uSepSlope * vPos.x;
-    float isT = step(sep, vPos.y);  // 1 if in T-branch half
-    vec3 tCol = vec3(0.13, 0.93, 0.53);  // green — World T
-    vec3 rCol = vec3(1.0,  0.47, 0.27);  // orange — World R
+    float isT = step(uSepA, vPos.x);  // 1 if x > uSepA (right = World 1)
+    vec3 tCol = vec3(0.00, 0.90, 1.00);  // electric cyan — World 1 (T)
+    vec3 rCol = vec3(0.93, 0.08, 0.82);  // hot magenta — World 2 (R)
     vec3 color = mix(rCol, tCol, isT);
-    float alpha = uSep * 0.13;
+    float alpha = uSep * 0.28;
     gl_FragColor = vec4(color, alpha);
   }
 `;
@@ -510,15 +518,15 @@ const SL = ({ label, tip, children, fullWidth }) => (
 );
 
 const VIEWS      = ["cpn","pw","mw"];
-const VIEW_LABEL = { cpn:"Projection Postulate", pw:"Pilot-Wave", mw:"Many Worlds" };
+const VIEW_LABEL = { cpn:"Orthodox", pw:"Pilot-Wave", mw:"Many Worlds" };
 const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff",   mw:"#cc88ff" };
 const VIEW_TIP   = {
-  cpn: "Projection Postulate (von Neumann):\nThe wavefunction collapses instantly on measurement.\nThe outcome is random with Born-rule probabilities.\nNo physical mechanism for collapse is specified —\nit is an additional postulate added to the Schrödinger\nequation. This is the version routinely taught in\nuniversity QM courses, often called 'Copenhagen',\nthough Copenhagen itself is not a single well-defined\ninterpretation. Contrast with GRW/CSL, which do\nprovide an explicit collapse mechanism.",
-  pw:  "Pilot-Wave / de Broglie–Bohm:\nThe particle always has a definite position, guided\nby the wavefunction via the quantum potential.\nNo collapse occurs; randomness arises solely from\nuncertainty in the particle's initial position.",
+  cpn: "Orthodox QM (von Neumann collapse):\nThe wavefunction collapses onto one branch when the\npointer states become sufficiently distinguishable.\nThe outcome is random with Born-rule probabilities.\nNo physical mechanism for collapse is specified —\nit is an additional postulate. Whether collapse occurs\ndepends on pointer overlap: if T and R branches still\noverlap significantly the measurement is too weak to\ntrigger collapse.",
+  pw:  "Pilot-Wave / de Broglie–Bohm:\nThe particle always has a definite position, guided\nby the wavefunction via the guidance equation.\nNo collapse ever occurs. Randomness arises solely\nfrom uncertainty in the particle's initial position.\nThe y-projection shows the conditional wavefunction\nψ_cond(x) = Ψ(x, Y(t)) — a single peak at the\nparticle's actual pointer position, not the global ρ(y).",
   mw:  "Many-Worlds (Everett):\nThe wavefunction never collapses. Every outcome\noccurs — in separate, non-communicating branches\nof a universal wavefunction. There is no preferred\noutcome and no randomness beyond branch indexing.",
 };
 const VIEW_DESC  = {
-  cpn: "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). The 2D canvas shows the full configuration space: x = particle position, y = pointer of the measuring device. When the wave reaches the detector (yellow line), measurement occurs: one branch is selected by the Born rule and the other collapses, while the pointer starts moving with the transmitted outcome.",
+  cpn: "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). The 2D canvas shows the full configuration space: x = particle position, y = pointer of the measuring device. When the wave reaches the detector (yellow line), measurement occurs — but only if the pointer states are sufficiently separated (overlap < 1%). In a weak measurement the branches remain in superposition; in a strong measurement one branch collapses.",
   pw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Same global |Ψ(x,y)|² plus the Bohmian particle (X,Y) that rides one branch. Below: conditional wavefunction ψ_cond(x,Y(t)) and the two marginals.",
   mw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Both branches persist — the universe splits. World 1: particle transmitted. World 2: particle reflected. Neither world 'knows about' the other.",
 };
@@ -550,7 +558,7 @@ const SimPanel = React.memo(({
   detWidth, setDetWidth, detWidthRef,
   sigX, setSigX, sigXRef,
   sigY, setSigY, sigYRef,
-  regime, setRegime,
+  collapseThreshold, setCollapseThreshold, collapseThresholdRef,
   speed, setSpeed, speedRef,
   showWave, setShowWave,
   showTraj, setShowTraj,
@@ -560,7 +568,9 @@ const SimPanel = React.memo(({
   detectorOn, setDetectorOn,
   Tp, Rp,
   isMobile,
+  advMode,
 }) => {
+  const adv = !!advMode;
   const vc  = VIEW_COLOR[interp];
   const p   = isMobile ? "8px 8px" : "10px 9px";
   const fs  = isMobile ? 10 : 12;
@@ -573,8 +583,8 @@ const SimPanel = React.memo(({
 
       <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 6 : 10, padding:p }}>
 
-        {/* Interpretation switcher — full width */}
-        <SL label="Interpretation" tip="Click to cycle: Projection Postulate → Pilot-Wave → Many Worlds&#10;&#10;Projection Postulate: wavefunction collapses on measurement (Born rule). No mechanism specified — the rule is postulated. Used in virtually all university courses.&#10;&#10;Pilot-Wave (de Broglie–Bohm): particle has a definite trajectory guided by the wavefunction. No collapse; randomness comes from unknown initial positions.&#10;&#10;Many Worlds (Everett): wavefunction never collapses. All outcomes happen in branching worlds.">
+        {/* View switcher — always visible */}
+        <SL label="View" tip="Click to cycle: Orthodox → Pilot-Wave → Many Worlds&#10;&#10;Orthodox QM: collapse fires when pointer overlap drops below 1% (von Neumann criterion). Outcome random with Born-rule probabilities.&#10;&#10;Pilot-Wave (de Broglie–Bohm): particle has a definite trajectory guided by the wavefunction. No collapse; randomness comes from unknown initial positions.&#10;&#10;Many Worlds (Everett): wavefunction never collapses. All outcomes happen in branching worlds.">
           <Tip text={VIEW_TIP[interp]}>
             <button onClick={() => setInterp(VIEWS[(VIEWS.indexOf(interp)+1)%VIEWS.length])}
               style={{
@@ -603,7 +613,7 @@ const SimPanel = React.memo(({
           </div>
         </SL>
 
-        <SL label={`Coupling  ${detectorOn ? Math.round(lam/3*100)+"%" : "off (detector off)"}`}
+        {adv && <SL label={`Coupling  ${detectorOn ? Math.round(lam/3*100)+"%" : "off (detector off)"}`}
           tip={"How far the pointer deflects after the interaction.\n0 = pointer does not move (no measurement).\nHigh = pointer clearly separates the two branches."}>
           <input type="range" min={0} max={3} step={0.05} value={lam}
             ref={lamRef} onChange={e => setLam(+e.target.value)}
@@ -611,18 +621,18 @@ const SimPanel = React.memo(({
             style={{ width:"100%", accentColor:"#44ffaa", opacity: detectorOn ? 1 : 0.35 }} />
           <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
             <span>off</span><span>strong</span></div>
-        </SL>
+        </SL>}
 
-        <SL label={`σ_x = ${sigX.toFixed(2)}`}
+        {adv && <SL label={`σ_x = ${sigX.toFixed(2)}`}
           tip={"Particle wavepacket width (Gaussian σ in x).\nAlso sets the initial pointer width if not overridden."}>
           <input type="range" min={0.2} max={2.0} step={0.05} defaultValue={sigX}
             ref={sigXRef} onInput={e => setSigX(+e.target.value)}
             style={{ width:"100%", accentColor:"#cc88ff" }} />
           <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
             <span>narrow</span><span>wide</span></div>
-        </SL>
+        </SL>}
 
-        <SL label={`σ_pointer = ${sigY.toFixed(2)}`}
+        {adv && <SL label={`σ_pointer = ${sigY.toFixed(2)}`}
           tip={"Pointer wavepacket width (Gaussian σ in y).\nSmall σ_pointer + large coupling → strong measurement: T and R branches clearly resolved.\nLarge σ_pointer + small coupling → weak measurement: branches overlap, outcome uncertain."}>
           <input type="range" min={0.1} max={2.5} step={0.05} defaultValue={sigY}
             ref={sigYRef} onInput={e => setSigY(+e.target.value)}
@@ -630,35 +640,49 @@ const SimPanel = React.memo(({
             style={{ width:"100%", accentColor:"#ff88cc", opacity: detectorOn ? 1 : 0.35 }} />
           <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#506080" }}>
             <span>narrow</span><span>wide</span></div>
-        </SL>
+        </SL>}
 
-        <SL label="Measurement regime"
-          tip={"Presets for weak and strong measurement.\n\nStrong: high coupling + narrow pointer → T and R branches fully resolved. The detector always gives the right answer.\n\nWeak: low coupling + wide pointer → T and R pointer states overlap. The detector reading is ambiguous — sometimes the wrong branch is indicated."}>
-          <div style={{ display:"flex", gap:6 }}>
-            {[{id:"weak", label:"≈ Weak", onClick:() => { setLam(0.15); setSigY(0.75); setRegime("weak"); },
-               col:"#ffaa44", colBorder:"#cc7722", bgOff:"rgba(80,40,10,0.35)", bgOn:"rgba(160,80,10,0.65)"},
-              {id:"strong", label:"⬛ Strong", onClick:() => { setLam(3.0); setSigY(0.3); setRegime("strong"); },
-               col:"#44ee88", colBorder:"#228844", bgOff:"rgba(10,60,40,0.35)", bgOn:"rgba(10,120,60,0.65)"},
-            ].map(({id, label, onClick, col, colBorder, bgOff, bgOn}) => {
-              const active = regime === id;
-              return (
-                <button key={id} onClick={onClick} style={{
-                  flex:1, padding:"5px 0",
-                  background: active ? bgOn : bgOff,
-                  border: `2px solid ${active ? col : colBorder}`,
-                  borderRadius:5, color: active ? col : col+"99",
-                  cursor:"pointer", fontSize:11,
-                  fontFamily:"'JetBrains Mono','Courier New',monospace",
-                  fontWeight: active ? 700 : 400,
-                  boxShadow: active ? `0 0 8px ${col}55` : "none",
-                  transition:"all 0.15s",
-                }}>
-                  {active ? "● " : "○ "}{label}
-                </button>
-              );
-            })}
-          </div>
-        </SL>
+        {adv && interp === "cpn" && (() => {
+          // Compute final pointer overlap from current params (at full detector interaction)
+          const k0 = 4.0, v0 = k0;
+          const gWindowUI   = detWidth / v0;
+          const effLamUI    = detectorOn ? lam : 0;
+          const deltaYFinal = 4 * effLamUI * gWindowUI;
+          const ptrOverlap  = Math.exp(-deltaYFinal * deltaYFinal / (4 * sigY * sigY));
+          const overlapPct  = Math.round(ptrOverlap * 100);
+          // von Neumann criterion: collapse fires when pointer states are effectively orthogonal (overlap < 1%)
+          const COLLAPSE_CUTOFF = 0.01;
+          const isWeak = !detectorOn || effLamUI === 0 || ptrOverlap >= COLLAPSE_CUTOFF;
+          const regimeColor = isWeak ? "#ffaa44" : "#44ee88";
+          const regimeLabel = isWeak
+            ? "Weak  —  branches overlap, no collapse"
+            : "Strong  —  branches resolved, collapse fires";
+          return (
+            <SL label="Measurement strength"
+              tip={"Pointer overlap ⟨χ_T|χ_R⟩ — how much the T and R pointer states overlap.\n\n100%  →  pointer is blind to the outcome  (weak, no collapse)\n  0%  →  branches orthogonal  (strong, collapse fires)\n\nOverlap is set by the Coupling and σ_pointer sliders:\n  O = exp(−(4λw/v₀)² / 4σ_p²)\n\nCollapse fires when O < 1% (von Neumann orthogonality criterion).\nAbove 1% the pointer states still overlap — the global state remains entangled\nand the particle alone is in a mixed state.\nPilot-Wave / Many-Worlds never collapse regardless."}>
+              {/* Overlap monitor */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
+                marginBottom:4, fontSize:11 }}>
+                <span style={{ color:"rgba(160,180,220,0.7)", fontSize:10 }}>Pointer overlap</span>
+                <span style={{ color: regimeColor, fontWeight:700 }}>{overlapPct}%</span>
+              </div>
+              <div style={{ height:5, background:"rgba(15,30,70,0.6)", borderRadius:3,
+                overflow:"hidden", marginBottom:4 }}>
+                <div style={{ height:"100%", borderRadius:3,
+                  background: isWeak
+                    ? "linear-gradient(90deg,#aa6600,#ffaa44)"
+                    : "linear-gradient(90deg,#226633,#44ee88)",
+                  width:`${overlapPct}%`, transition:"width 0.2s" }} />
+              </div>
+              {/* Regime badge */}
+              <div style={{ fontSize:11, color: regimeColor, fontWeight:700,
+                textAlign:"center", padding:"2px 0", borderRadius:3,
+                background: isWeak ? "rgba(100,60,0,0.2)" : "rgba(0,80,40,0.2)" }}>
+                {regimeLabel}
+              </div>
+            </SL>
+          );
+        })()}
 
         {/* Outcome bar */}
         <SL label="Outcome probabilities">
@@ -683,7 +707,7 @@ const SimPanel = React.memo(({
             <span>×{speed.toFixed(1)}</span></div>
         </SL>
 
-        <SL label="Physics">
+        {adv && <SL label="Physics">
           <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
             {[
               { key:"barrier",  label:"Barrier",  on:barrierOn,  fn:setBarrierOn,  tip:"Toggle the potential barrier.\nOff = 100% transmission (free particle)." },
@@ -701,15 +725,16 @@ const SimPanel = React.memo(({
               </Tip>
             ))}
           </div>
-        </SL>
+        </SL>}
 
+        {adv && interp === "pw" && (
         <SL label="Toggles">
           <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
             {[
               { key:"wave", label:"Wave",  on:showWave, fn:setShowWave, tip:"Show/hide 2D |Ψ|² heatmap" },
-              interp==="pw" && { key:"traj", label:"Paths",  on:showTraj, fn:setShowTraj, tip:"Show/hide Bohmian trajectories" },
-              interp==="pw" && { key:"proj", label:"Proj",  on:showProj, fn:setShowProj, tip:"Also overlay global projections ρ(x), ρ(y) on the CWF panels" },
-            ].filter(Boolean).map(({ key, label, on, fn, tip }) => (
+              { key:"traj", label:"Paths",  on:showTraj, fn:setShowTraj, tip:"Show/hide Bohmian trajectories" },
+              { key:"proj", label:"Proj",  on:showProj, fn:setShowProj, tip:"Also overlay global projections ρ(x), ρ(y) on the CWF panels" },
+            ].map(({ key, label, on, fn, tip }) => (
               <Tip key={key} text={tip}>
                 <button onClick={() => fn(!on)} style={{
                   padding:"5px 10px",
@@ -733,6 +758,24 @@ const SimPanel = React.memo(({
             </Tip>
           </div>
         </SL>
+        )}
+
+        {!(adv && interp === "pw") && (
+        <SL label="Playback">
+          <div style={{ display:"flex", gap:4 }}>
+            <Tip text="Pause / resume">
+              <button onClick={() => setRunning(!running)} style={{
+                padding:"5px 10px",
+                background: running ? "rgba(20,55,130,0.6)" : "rgba(25,80,40,0.6)",
+                border:"1px solid " + (running ? "rgba(70,130,255,0.4)" : "rgba(60,200,80,0.35)"),
+                borderRadius:5, color: running ? "#88bbff" : "#66dd88",
+                cursor:"pointer", fontSize:12,
+                fontFamily:"'JetBrains Mono','Courier New',monospace",
+              }}>{running ? "⏸" : "▶"}</button>
+            </Tip>
+          </div>
+        </SL>
+        )}
 
         {!isMobile && <div style={{ fontSize:10, color:"#506080",
           borderTop:"1px solid rgba(50,80,180,0.15)", paddingTop:8 }}>
@@ -946,11 +989,11 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     const sf  = Math.min(sepFrac * 1.5, 1);
 
     // Background tints — fade in with sepFrac
-    ctx.fillStyle = `rgba(34,238,136,${0.07 * sf})`;  ctx.fillRect(0,   0,   W, mid);
-    ctx.fillStyle = `rgba(255,119,68,${0.07 * sf})`;  ctx.fillRect(0,   mid, W, H - mid);
-    // Separator line
-    ctx.strokeStyle = `rgba(200,170,255,${0.5 * sf})`;
-    ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.fillStyle = `rgba(0,229,255,${0.12 * sf})`;   ctx.fillRect(0,   0,   W, mid);
+    ctx.fillStyle = `rgba(238,20,210,${0.12 * sf})`;  ctx.fillRect(0,   mid, W, H - mid);
+    // Separator line — bright white-violet, thicker
+    ctx.strokeStyle = `rgba(255,255,255,${0.75 * sf})`;
+    ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
     ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
     ctx.setLineDash([]);
     // Axis & barrier lines
@@ -960,16 +1003,16 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.strokeStyle = "rgba(0,200,255,0.2)"; ctx.setLineDash([3,3]);
     ctx.beginPath(); ctx.moveTo(wx(0),0); ctx.lineTo(wx(0),H); ctx.stroke();
     ctx.setLineDash([]);
-    // World T (top half): ρ_T in green
-    if (ampT > 0.001) drawDensityInRegion(rhoT, "#22ee88", 0.75*(mid-6)/Math.max(peakDensity(rhoT),1e-10), 0, mid);
-    // World R (bottom half): ρ_R in orange
-    if (ampR > 0.001) drawDensityInRegion(rhoR, "#ff7744", 0.75*(H-mid-6)/Math.max(peakDensity(rhoR),1e-10), mid, H-mid);
+    // World 1 (top half): ρ_T in cyan
+    if (ampT > 0.001) drawDensityInRegion(rhoT, "#00e5ff", 0.75*(mid-6)/Math.max(peakDensity(rhoT),1e-10), 0, mid);
+    // World 2 (bottom half): ρ_R in magenta
+    if (ampR > 0.001) drawDensityInRegion(rhoR, "#ee14d2", 0.75*(H-mid-6)/Math.max(peakDensity(rhoR),1e-10), mid, H-mid);
     // Labels
     const fs = Math.max(7, Math.round(H * 0.12));
     const lbY = Math.round(H * 0.09);
     ctx.font = `bold ${fs}px 'JetBrains Mono',monospace`;
-    ctx.fillStyle = `rgba(34,238,136,${0.85 * sf})`; ctx.fillText("World 1  (transmitted)", 6, lbY);
-    ctx.fillStyle = `rgba(255,119,68,${0.85 * sf})`; ctx.fillText("World 2  (reflected)",   6, mid + lbY);
+    ctx.fillStyle = `rgba(0,229,255,${0.95 * sf})`;  ctx.fillText("World 1  (transmitted)", 6, lbY);
+    ctx.fillStyle = `rgba(238,20,210,${0.95 * sf})`; ctx.fillText("World 2  (reflected)",   6, mid + lbY);
   } else {
     // ── Standard (CPn / PW) background + axes ─────────────────────────────
     ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
@@ -1130,23 +1173,23 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       const sf    = Math.min(sepFrac * 1.5, 1);
       const pxMid = W / 2;
       // Tinted backgrounds
-      ctx.fillStyle = `rgba(34,238,136,${0.07 * sf})`;  ctx.fillRect(0,      0, pxMid,      H);
-      ctx.fillStyle = `rgba(255,119,68,${0.07 * sf})`;  ctx.fillRect(pxMid,  0, W - pxMid,  H);
-      // Separator line (vertical) at W/2
-      ctx.strokeStyle = `rgba(200,170,255,${0.5 * sf})`;
-      ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+      ctx.fillStyle = `rgba(0,229,255,${0.12 * sf})`;   ctx.fillRect(0,      0, pxMid,      H);
+      ctx.fillStyle = `rgba(238,20,210,${0.12 * sf})`;  ctx.fillRect(pxMid,  0, W - pxMid,  H);
+      // Separator line (vertical) at W/2 — bright white
+      ctx.strokeStyle = `rgba(255,255,255,${0.75 * sf})`;
+      ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
       ctx.beginPath(); ctx.moveTo(pxMid, 0); ctx.lineTo(pxMid, H); ctx.stroke();
       ctx.setLineDash([]);
-      // World T density clipped to left half
+      // World 1 density clipped to left half (cyan)
       if (ampT > 0.001) {
         ctx.save(); ctx.beginPath(); ctx.rect(0, 0, pxMid, H); ctx.clip();
-        drawDensityY(y => bl * ampT * gauss(y, yT, sigY), "#22ee88", 4, (pxMid - 6) * 0.88);
+        drawDensityY(y => bl * ampT * gauss(y, yT, sigY), "#00e5ff", 4, (pxMid - 6) * 0.88);
         ctx.restore();
       }
-      // World R density clipped to right half
+      // World 2 density clipped to right half (magenta)
       if (ampR > 0.001) {
         ctx.save(); ctx.beginPath(); ctx.rect(pxMid, 0, W - pxMid, H); ctx.clip();
-        drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744", pxMid + 2, (W - pxMid - 6) * 0.88);
+        drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ee14d2", pxMid + 2, (W - pxMid - 6) * 0.88);
         ctx.restore();
       }
     } else if (isPW && bl > 0.05) {
@@ -1252,8 +1295,8 @@ function MathPanel({ interp }) {
       {eq("Ψ₀(x,y) = ψ₀(x) · χ₀(y)\n\nψ₀(x) = exp[-(x-x₀)²/4σₓ²] · exp[ik₀x]\nχ₀(y) = exp[-y²/4σ_p²]\n\nσₓ     — particle wavepacket width (σ_x slider)\nσ_p    — pointer wavepacket width (σ_pointer slider)")}
 
       {sec("After barrier scattering")}
-      {txt("The barrier splits the particle into transmitted (T) and reflected (R) branches.\nEach branch couples to the pointer via H_int = λ (Π_T - Π_R) P_y:")}
-      {eq("Ψ(x,y,t) = √T · ψ_T(x,t) · χ_T(y,t)\n         + √R · ψ_R(x,t) · χ_R(y,t)\n\nψ_T:  centre → +v₀t   (transmitted)\nψ_R:  centre → -v₀t   (reflected)\nχ_T:  centre → +λt    (pointer shifts up)\nχ_R:  centre → -λt    (pointer shifts down)")}
+      {txt("Only the T (transmitted) branch couples to the detector pointer via H_int = λ·Π_T·P_y. The R branch never reaches the detector:")}
+      {eq("Ψ(x,y,t) = √T · ψ_T(x,t) · χ_T(y,t)\n         + √R · ψ_R(x,t) · χ_R(y,t)\n\nψ_T:  centre → +v₀t          (transmitted, heading right)\nψ_R:  centre → -v₀t          (reflected, heading left)\nχ_T:  shifts up by +Δy = 4λ·(w/v₀)   as T traverses detector\nχ_R:  stays at rest                   (R never enters the detector)")}
 
       {sec("Probabilities")}
       {txt("Exact rectangular-barrier transmission (ℏ = m = 1, barrier width a):")}
@@ -1264,10 +1307,13 @@ function MathPanel({ interp }) {
       {eq("ρ(x,t) = ∫|Ψ(x,y,t)|²dy  ≈  T·|ψ_T(x)|² + R·|ψ_R(x)|²\n\nρ(y,t) = ∫|Ψ(x,y,t)|²dx  ≈  T·|χ_T(y)|² + R·|χ_R(y)|²")}
 
       {interp === "cpn" && (<>
-        {sec("Projection Postulate")}
-        {txt("The 2D canvas shows the full configuration space (x = particle, y = pointer). The yellow detector line marks where measurement begins. When the wave reaches that detector, the global wavefunction collapses to one branch with Born-rule probability:")}
-        {eq("Ψ(x,y,t*)  →  ψ_T · χ_T   with prob T\n            →  ψ_R · χ_R   with prob R = 1 - T")}
-        {txt("The mechanism of collapse is not specified by the theory.")}
+        {sec("Orthodox QM — collapse criterion")}
+        {txt("After the detector interaction, each branch has a pointer state. Collapse requires these to be orthogonal — the von Neumann criterion:")}
+        {eq("O = ⟨χ_T|χ_R⟩ = exp(−Δy² / 4σ_p²)\n\nΔy = 4λ·(detector width / v₀)   — total pointer separation\nσ_p                          — pointer wavepacket width\n\nCollapse fires  iff  O ≈ 0   (in practice O < 1%)")}
+        {txt("When collapse occurs, one branch is selected with Born-rule probability:")}
+        {eq("Ψ(x,y,t*)  →  ψ_T · χ_T   with prob T\n            →  ψ_R · χ_R   with prob R = 1 − T")}
+        {txt("When O is not negligible (weak measurement), the global state Ψ = √T·ψ_T·χ_T + √R·ψ_R·χ_R remains entangled. The particle alone is in a mixed state — the pointer has shifted, but no definite outcome has occurred.")}
+        {txt("Note: Orthodox QM provides no microscopic derivation of the collapse rule — it is an axiom. The von Neumann criterion (orthogonal pointer states) gives the most precise operational version of 'when a measurement is complete'.")}
       </>)}
 
       {interp === "mw" && (<>
@@ -1275,9 +1321,9 @@ function MathPanel({ interp }) {
         {txt("The wavefunction evolves unitarily forever. After scattering, the global state is:")}
         {eq("Ψ(x,y,t) = √T · ψ_T(x,t) · χ_T(y,t)\n         + √R · ψ_R(x,t) · χ_R(y,t)")}
         {txt("Both branches are equally real. There is no collapse and no preferred outcome. The universe 'splits' into two non-interacting worlds:")}
-        {eq("World 1:  ψ_T · χ_T   (particle transmitted, pointer up)\nWorld 2:  ψ_R · χ_R   (particle reflected, pointer down)")}
-        {txt("The diagonal dividing line in the simulation marks where the two branches separate in configuration space. Each half of the 2D canvas belongs to a different world.")}
-        {txt("The x- and y-projection panels are each split in two: the top/green half shows World 1 (transmitted), the bottom/orange half shows World 2 (reflected).")}
+        {eq("World 1:  ψ_T · χ_T   (particle transmitted, pointer deflected up)\nWorld 2:  ψ_R · χ_R   (particle reflected, pointer at rest)")}
+        {txt("The vertical dividing line at x=0 in the simulation marks the separation between the two worlds in configuration space. Right of the line (x>0) belongs to World 1; left (x<0) belongs to World 2.")}
+        {txt("The x- and y-projection panels are each split in two: the cyan half shows World 1 (transmitted), the magenta half shows World 2 (reflected).")}
         {txt("Probabilities emerge from the Born rule applied to the branch amplitudes — but in MW this is a derived (and debated) result, not a postulate.")}
         {eq("P(World 1) = ‖√T ψ_T χ_T‖² = T\nP(World 2) = ‖√R ψ_R χ_R‖² = R")}
       </>)}
@@ -1288,15 +1334,17 @@ function MathPanel({ interp }) {
         {eq("dX/dt = ℏ/m · Im[Ψ* ∂_x Ψ] / |Ψ|²  |_(X,Y)\ndY/dt = ℏ/m · Im[Ψ* ∂_y Ψ] / |Ψ|²  |_(X,Y)")}
         {txt("For the two-branch state with non-overlapping lobes, whichever branch contains (X,Y) acts as the effective wavefunction — the other branch is 'empty'.")}
         {eq("ψ_cond(x,t) = Ψ(x, Y(t), t)  [conditional wavefunction]")}
+        {txt("Bohmian statistics: the initial pointer position Y₀ is drawn from the half-Gaussian |χ₀(y)|² restricted to each branch, with branch probability P(T)=T and P(R)=R — giving the correct Born-rule distribution. After scattering, the x-branches are spatially separated, so the pointer y-guidance reduces to: y→y_T (rate 4λ) for the T-branch trajectory, y→0 for the R-branch — regardless of measurement strength.")}
       </>)}
 
       {sec("Measurement strength")}
-      {txt("The quality of a measurement depends on whether the pointer states for T and R can be distinguished. Define the separation-to-width ratio:")}
-      {eq("Δy = 2λt*          — centre-to-centre separation at time t*\nσ_p             — pointer wavepacket width\n\nStrong:  Δy ≫ σ_p  →  ⟨χ_T|χ_R⟩ ≈ 0,  outcome unambiguous\nWeak:    Δy ≲ σ_p  →  ⟨χ_T|χ_R⟩ > 0,  pointer states overlap")}
-      {txt("In the weak regime the pointer reading is statistically biased toward the mean position but cannot certify which branch the particle is on. Use the Weak / Strong preset buttons to explore both limits.")}
+      {txt("The quality of a measurement depends on whether the pointer states for T and R are distinguishable. The pointer overlap quantifies this:")}
+      {eq("O = ⟨χ_T|χ_R⟩ = exp(−Δy² / 4σ_p²)\n\nΔy = 4λ·(w / v₀)   — total pointer separation (w = detector width)\nσ_p             — pointer wavepacket width\n\nO → 0  (strong):  branches orthogonal, unambiguous readout, collapse fires\nO → 1  (weak):    branches indistinguishable, no information gained, no collapse")}
+      {txt("In Orthodox mode, collapse fires when O < 1% (branches effectively orthogonal). Above that the global system+pointer state remains entangled; the particle alone is in a mixed state. In Pilot-Wave / Many-Worlds, the wavefunction never collapses regardless of the overlap.")}
 
       {sec("Animation")}
       {txt("Units: ℏ = m = 1. Velocity v₀ = k₀. The simulation rescales physical time to fit the canvas. The barrier occupies |x| < 0.5.")}
+      {txt("Approximations: (1) Wavepacket dispersion is omitted in the 2D display — packets keep their initial width σ_x for visual clarity (realistic packets broaden as σ_x(t)=σ_x0√(1+t²/4σ_x0⁴)). (2) The Bohmian x-trajectory uses the exact spectral guidance equation; the y (pointer) motion uses the leading-order Gaussian approximation, which is exact for spatially separated branches.")}
     </div>
   );
 }
@@ -1382,6 +1430,7 @@ export default function App() {
   const tTargetRef = useRef(null), lamRef = useRef(null);
   const xPointerRef = useRef(null), detWidthRef = useRef(null);
   const sigXRef = useRef(null), sigYRef = useRef(null), speedRef = useRef(null);
+  const collapseThresholdRef = useRef(null);
   const T = useRef(null);
   const xCanvasRef = useRef(null);
   const yCanvasRef = useRef(null);
@@ -1418,6 +1467,7 @@ export default function App() {
     xPointer: 4.0,
     detWidth: 2.0,
     speed:0.5,
+    collapseThreshold:0.01, // von Neumann criterion — fixed, not user-adjustable
     showWave:true, showTraj:true, showProj:false, running:true,
     tick:0, dirty:true,
     pauseUntil:0,  // wall-clock ms to hold before restarting cycle
@@ -1441,7 +1491,7 @@ export default function App() {
   const [detWidth,   setDetWidthUI]  = useState(2.0);
   const [sigX,     setSigXUI]     = useState(0.5);
   const [sigY,     setSigYUI]     = useState(0.3);
-  const [regime,   setRegime]     = useState("strong"); // "weak" | "strong" | null
+  const [collapseThreshold, setCollapseThresholdUI] = useState(0.10);
   const [speed,    setSpeedUI]    = useState(0.5);
   const [showWave, setShowWaveUI] = useState(true);
   const [showTraj, setShowTrajUI] = useState(true);
@@ -1469,11 +1519,11 @@ export default function App() {
     setTpUI(v); setRpUI(1 - v);
     if (tTargetRef.current) tTargetRef.current.value = Math.round(v * 100);
   };
-  const setLam = useCallback(v => { S.current.lam = v; S.current.dirty=true; setLamUI(v); if(lamRef.current) lamRef.current.value=v; setRegime(null); }, []);
+  const setLam = useCallback(v => { S.current.lam = v; S.current.dirty=true; setLamUI(v); if(lamRef.current) lamRef.current.value=v; }, []);
   const setXPointer = v => { S.current.xPointer = v; setXPointerUI(v); if(xPointerRef.current) xPointerRef.current.value=v; };
   const setDetWidth  = v => { S.current.detWidth = v; setDetWidthUI(v); if(detWidthRef.current) detWidthRef.current.value=v; };
-  const setSigX= v => { S.current.sigX=v; S.current.dirty=true; setSigXUI(v); if(sigXRef.current) sigXRef.current.value=v; setRegime(null); };
-  const setSigY= v => { S.current.sigY=v; S.current.dirty=true; setSigYUI(v); if(sigYRef.current) sigYRef.current.value=v; setRegime(null); };
+  const setSigX= v => { S.current.sigX=v; S.current.dirty=true; setSigXUI(v); if(sigXRef.current) sigXRef.current.value=v; };
+  const setSigY= v => { S.current.sigY=v; S.current.dirty=true; setSigYUI(v); if(sigYRef.current) sigYRef.current.value=v; };
   const setSpeed= v => { S.current.speed=v; setSpeedUI(v); if(speedRef.current) speedRef.current.value=v; };
   const setShowWave = v => { S.current.showWave=v; setShowWaveUI(v); };
   const setShowTraj = v => { S.current.showTraj=v; setShowTrajUI(v); };
@@ -1481,6 +1531,7 @@ export default function App() {
   const setRunning   = v => { S.current.running=v;  setRunningUI(v);  };
   const setBarrierOn  = v => { S.current.barrierOn=v;  S.current.dirty=true; setBarrierOnUI(v);  };
   const setDetectorOn = v => { S.current.detectorOn=v; S.current.dirty=true; setDetectorOnUI(v); };
+  const setCollapseThreshold = v => { S.current.collapseThreshold=v; setCollapseThresholdUI(v); if(collapseThresholdRef.current) collapseThresholdRef.current.value=Math.round(v*100); };
 
 
   useEffect(() => {
@@ -1610,7 +1661,6 @@ export default function App() {
     const mwUni = {
       uSep:      { value: 0 },
       uSepA:     { value: 0 },
-      uSepSlope: { value: -1 },
     };
     const mwOverlay = new THREE.Mesh(
       new THREE.PlaneGeometry(60, 40),
@@ -1628,14 +1678,14 @@ export default function App() {
       new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(-15, 0, 0.1), new THREE.Vector3(15, 0, 0.1)
       ]),
-      new THREE.LineBasicMaterial({ color: 0xccaaff, transparent: true, opacity: 0 })
+      new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 })
     );
     mwDivLine.visible = false;
     scene.add(mwDivLine);
 
     // World label sprites — "World 1 (transmitted)" / "World 2 (reflected)"
-    const lblMW1 = makeSprite("World 1  (transmitted)", "#44ee88");
-    const lblMW2 = makeSprite("World 2  (reflected)",   "#ff8844");
+    const lblMW1 = makeSprite("World 1  (transmitted)", "#00e5ff");
+    const lblMW2 = makeSprite("World 2  (reflected)",   "#ee14d2");
     lblMW1.visible = false; lblMW2.visible = false;
     scene.add(lblMW1); scene.add(lblMW2);
 
@@ -1860,6 +1910,11 @@ export default function App() {
       // Collapse requires both detector on AND non-zero coupling (effLam > 0).
       // λ=0 means no interaction — same as no detector.
       if (s.interp === "cpn" && s.detectorOn && effLam > 0) {
+        // Compute final pointer overlap (at full interaction time) to decide if
+        // the measurement is strong enough to trigger collapse.
+        const deltaYFinal = 4 * effLam * gWindow;
+        const ptrOverlap  = Math.exp(-deltaYFinal * deltaYFinal / (4 * s.sigY * s.sigY));
+        const collapseAllowed = ptrOverlap < 0.01; // von Neumann criterion: collapse when pointer states effectively orthogonal
         // New cycle: restore pre-collapse superposition so both branches are visible
         // again until the transmitted branch reaches the detector.
         if (tFrac < 0.02 && s.colTriggered) {
@@ -1870,16 +1925,18 @@ export default function App() {
         }
         if (!s.colTriggered && tPhys >= tPointerHit) {
           s.colTriggered = true;
-          s.colBranch = Math.random() < Tprob ? 1 : -1;
-          // Capture jump at detector-triggered collapse, then hold y constant.
-          s.colYHold = Math.max(dtP, 1.0);
-          s.colFade   = 0;
-          s.colStartMs = performance.now();
-          s.colPhase = 0;
-          s._flashPending = true;
-          // Keep dynamics running after collapse.
+          if (collapseAllowed) {
+            s.colBranch = Math.random() < Tprob ? 1 : -1;
+            // Capture jump at detector-triggered collapse, then hold y constant.
+            s.colYHold = Math.max(dtP, 1.0);
+            s.colFade   = 0;
+            s.colStartMs = performance.now();
+            s.colPhase = 0;
+            s._flashPending = true;
+          }
+          // If weak (collapseAllowed = false): colBranch stays 0, no flash, no fade.
         }
-        if (s.colTriggered) {
+        if (s.colTriggered && s.colBranch !== 0) {
           s.colFade = Math.min(s.colFade + 0.08, 1);
         }
         // Reset is handled by the pause-restart cycle above
@@ -2000,34 +2057,30 @@ export default function App() {
       Tr.lblR.scale.set(lblSX, lblSY, 1);
 
       // ── Many-Worlds overlay ────────────────────────────────────────────────
-      // MW separation uses live dtP (uncapped) so labels/overlay keep moving after detector exit
+      // Branching happens at measurement (detector entanglement), not at the barrier
       const sepFracMW = effLam > 0 ? clamp(dtP / 3.0, 0, 1) : 0;
       Tr.mwOverlay.visible = isMW;
       Tr.mwDivLine.visible = isMW && sepFracMW > 0.05;
-      Tr.lblMW1.visible    = isMW && sepFracMW > 0.3;
-      Tr.lblMW2.visible    = isMW && sepFracMW > 0.3;
+      Tr.lblMW1.visible    = isMW && sepFracMW > 0.08;
+      Tr.lblMW2.visible    = isMW && sepFracMW > 0.08;
       if (isMW) {
-        // Perpendicular bisector between T-branch (xT,yT) and R-branch (xR,yRFixed)
-        // Midpoint: (0, yRFixed + 2*lam*dtA); slope: -k0 / lam
-        const sepA     = yRFixed + 2 * effLam * dtA;
-        const sepSlope = effLam > 0 ? -s.k0 / effLam : 0;
-        Tr.mwUni.uSep.value      = sepFrac;
-        Tr.mwUni.uSepA.value     = sepA;
-        Tr.mwUni.uSepSlope.value = sepSlope;
-        // Update dividing line endpoints to span visible width
+        // Vertical separator at x = 0 (the barrier): World 1 right, World 2 left
+        Tr.mwUni.uSep.value  = sepFracMW;
+        Tr.mwUni.uSepA.value = 0;
+        // Update dividing line as a vertical line at x = 0
         Tr.mwDivLine.geometry.setFromPoints([
-          new THREE.Vector3(-halfW, sepA + sepSlope * (-halfW), 0.1),
-          new THREE.Vector3( halfW, sepA + sepSlope *   halfW,  0.1),
+          new THREE.Vector3(0, s.camY - halfH, 0.1),
+          new THREE.Vector3(0, s.camY + halfH, 0.1),
         ]);
-        Tr.mwDivLine.material.opacity = Math.min(sepFracMW * 1.5, 0.65);
+        Tr.mwDivLine.material.opacity = Math.min(sepFracMW * 1.5, 0.95);
         // World labels: track branch centres, clamped inside visible area
         const pad = 2.5;
-        const lx1 = clamp(xT * 0.7, -(halfW-pad), halfW-pad);
+        const lx1 = clamp(Math.max(xT * 0.7, 1.5), 0.5, halfW-pad);  // always right of x=0
         const ly1 = clamp(yT * 0.7 + yRFixed * 0.3, s.camY-halfH+1, s.camY+halfH-1);
-        const lx2 = clamp(xR * 0.7, -(halfW-pad), halfW-pad);
+        const lx2 = clamp(Math.min(xR * 0.7, -1.5), -(halfW-pad), -0.5);  // always left of x=0
         const ly2 = clamp(yRFixed - halfH * 0.28, s.camY-halfH+1, s.camY+halfH-1);
-        Tr.lblMW1.position.set(lx1, ly1, 0.2); Tr.lblMW1.scale.set(lblSX, lblSY, 1);
-        Tr.lblMW2.position.set(lx2, ly2, 0.2); Tr.lblMW2.scale.set(lblSX, lblSY, 1);
+        Tr.lblMW1.position.set(lx1, ly1, 0.2); Tr.lblMW1.scale.set(lblSX * 1.3, lblSY * 1.3, 1);
+        Tr.lblMW2.position.set(lx2, ly2, 0.2); Tr.lblMW2.scale.set(lblSX * 1.3, lblSY * 1.3, 1);
       }
 
       // ── Throttled React state updates (~10 Hz) ────────────────────────────
@@ -2166,6 +2219,7 @@ export default function App() {
   }, []);
 
   const [canvasTab, setCanvasTab] = useState("sim"); // "sim" | "math"
+  const [advMode,   setAdvMode]   = useState(false); // false = beginner, true = advanced
 
   return (
     <div style={{ display:"flex", flexDirection: sidebarBelow ? "column" : "row",
@@ -2183,8 +2237,10 @@ export default function App() {
 
         {/* Tab strip */}
         <div style={{ display:"flex", flexShrink:0, background:"rgba(4,10,30,0.9)",
-          borderBottom:"1px solid rgba(40,80,180,0.35)", height:28 }}>
-          {[["sim","Simulation"],["math","Math"],["about","About"]].map(([key,label]) => (
+          borderBottom:"1px solid rgba(40,80,180,0.35)", height:28, alignItems:"center" }}>
+          {[["sim","Simulation"],["math","Math"],["about","About"]].map(([key,label]) => {
+            if (key === "math" && !advMode) return null;
+            return (
             <button key={key} onClick={() => setCanvasTab(key)} style={{
               padding:"0 16px", fontSize:11, cursor:"pointer", border:"none",
               fontFamily:"'JetBrains Mono','Courier New',monospace",
@@ -2192,8 +2248,29 @@ export default function App() {
               background: canvasTab===key ? "rgba(40,80,200,0.3)" : "transparent",
               color: canvasTab===key ? "#88bbff" : "#4a6a9a",
               borderBottom: canvasTab===key ? "2px solid #5588ff" : "2px solid transparent",
+              height:"100%",
             }}>{label}</button>
-          ))}
+            );
+          })}
+          {/* Beginner / Advanced toggle — pinned to the right */}
+          <button onClick={() => {
+              const goingBeginner = advMode;
+              setAdvMode(a => !a);
+              // if switching to beginner while on math tab, go back to sim
+              if (goingBeginner && canvasTab === "math") setCanvasTab("sim");
+            }}
+            style={{
+              marginLeft:"auto", padding:"0 12px", height:"100%",
+              fontSize:10, cursor:"pointer", border:"none",
+              fontFamily:"'JetBrains Mono','Courier New',monospace",
+              letterSpacing:"0.06em", textTransform:"uppercase",
+              background: advMode ? "rgba(80,40,160,0.35)" : "rgba(0,60,120,0.25)",
+              color: advMode ? "#cc99ff" : "#4a8ac0",
+              borderLeft:"1px solid rgba(60,80,180,0.25)",
+              borderBottom:"2px solid transparent",
+            }}>
+            {advMode ? "▼ Advanced" : "▶ Beginner"}
+          </button>
         </div>
 
         {/* Simulation view */}
@@ -2234,7 +2311,7 @@ export default function App() {
               y — pointer
             </div>
             )}
-            {/* Interpretation badge */}
+            {/* View badge */}
             <div style={{ position:"absolute", top:10, right:12 }}>
               <Tip text={VIEW_TIP[interp]}>
                 <div style={{
@@ -2285,16 +2362,15 @@ export default function App() {
             background:"#040a1c", color:"#c8d8f0", lineHeight:1.9, fontSize:15 }}>
               {[
               "What does it mean to measure a quantum particle?",
-              "This simulation shows a quantum particle — say, an electron — approaching a potential barrier from the left. The horizontal axis is the particle's position x. The vertical axis is the pointer of a measuring device: a needle that deflects upward if the particle transmits, and stays at rest if it reflects. The yellow vertical line marks the detector position where coupling begins.",
-              "Before the particle hits the barrier, the two-dimensional wavefunction is a single blob moving diagonally. The particle and pointer are not yet entangled.",
-              "At the barrier, the wavefunction splits into two branches. The transmitted branch moves to the upper right — the particle passes through and the pointer deflects upward. The reflected branch moves to the left while the pointer stays at its resting position — the particle bounces back, and the device registers nothing. The marginal projections on the sides show the two distinct outcomes.",
-              "What happens next depends on your interpretation of quantum mechanics. This simulation lets you switch between three.",
-              "In the Projection Postulate interpretation, measurement collapses the wavefunction onto one of its eigenstates. One branch survives; the other vanishes. The outcome is random, governed by the Born rule — the probability of each result is set by how much of the wavefunction sits in that branch. The pointer lands at a definite value. No mechanism is given for when or why collapse occurs — it is simply postulated as a rule of the theory. This is what is assumed in most university physics courses, and it correctly predicts all experimental outcomes.",
-              "In the Many-Worlds interpretation, the wavefunction never collapses and nothing is ever discarded. Both branches continue to exist — but in separate, non-communicating worlds. In one world the particle transmits and the pointer deflects; in the other it reflects and the pointer stays put. The universe itself has split, and each copy of the observer sees a definite outcome. There is no randomness in the dynamics — only the appearance of it, from inside one branch.",
-              "In the Pilot-Wave interpretation — also called Bohmian mechanics — the wavefunction never collapses either. Both branches persist, but the particle follows a single definite trajectory, guided by the wave. The white dot traces that path. It enters one branch and stays there, guided deterministically by its initial position. The other branch becomes empty: it still exists mathematically, but carries no particle and has no further physical effect. This is the empty wave.",
-              "The side panels show the conditional wavefunction: a slice of the full two-dimensional state at the particle's actual position. Unlike the global projection — which always shows two peaks — the conditional wavefunction has a single peak, localised on the occupied branch. This is the effective wavefunction the particle actually rides.",
-              "All three interpretations give identical experimental predictions. The difference is not in what we measure — it is in what we believe is really happening.",
-              "Not every measurement is equally decisive. A strong measurement uses a narrow pointer wavepacket and a large coupling so that the pointer states corresponding to transmission and reflection end up well separated — the device always gives the right answer. A weak measurement uses a wide pointer wavepacket and a small coupling: the two pointer states overlap significantly, and the device reading is ambiguous. The pointer still shifts slightly in the direction of the more probable outcome, but it cannot reliably identify which branch the particle actually took. This simulation lets you explore both regimes using the σ_pointer and Coupling sliders, or the Weak / Strong preset buttons.",
+              "This simulation shows a quantum particle — say, an electron — approaching a potential barrier from the left. The horizontal axis is the particle's position x. The vertical axis is the internal coordinate of a measuring device: a pointer that deflects upward when the particle transmits and stays at rest when it reflects. The yellow vertical line marks the detector where the particle–pointer coupling begins.",
+              "Before the barrier, the wavefunction is a single two-dimensional blob moving horizontally — the particle drifts toward the barrier while the pointer stays at rest.",
+              "At the barrier, the wavefunction splits into two branches. The transmitted branch moves to the upper right — the particle passes through and the pointer deflects upward. The reflected branch moves to the lower left — the particle bounces back and the pointer stays near rest. The projection panels on the sides show the resulting two-peaked distributions.",
+              "What happens next depends on your view of quantum mechanics.",
+              "Orthodox QM: The wavefunction collapses to a single branch when the two pointer states become orthogonal — that is, when their overlap ⟨χ_T|χ_R⟩ drops to essentially zero. This is the von Neumann orthogonality criterion: the device has unambiguously recorded a result. If the coupling is too weak or the pointer too broad, the overlap stays high, no collapse occurs, and the system remains in an entangled superposition. The Pointer overlap readout in the Advanced panel tracks this live.",
+              "Many Worlds (Everett): The wavefunction never collapses. Both branches continue to exist in separate, non-communicating worlds — one where the particle transmitted, one where it reflected. The cyan/magenta split in the simulation makes the two worlds visible. There is no randomness in the dynamics; the appearance of probability arises from counting branches.",
+              "Pilot-Wave (Bohmian mechanics): The wavefunction never collapses either, but the particle always has a definite position, guided by the wave. The white dot traces this trajectory. It enters one branch and never crosses to the other. The other branch — the empty wave — continues to propagate but carries no particle and has no further physical effect on the outcome.",
+              "All three views make identical experimental predictions. The difference is ontological: what they claim is really happening between measurements.",
+              "A strong measurement uses a large coupling and a narrow pointer so the T and R pointer states end up well separated and orthogonal — collapse fires every cycle in Orthodox mode. A weak measurement uses a small coupling or a wide pointer: the pointer states overlap significantly, the device cannot distinguish the two outcomes, and no definite result is recorded. Switch to Advanced mode to adjust these parameters and watch the Pointer overlap change in real time.",
             ].map((para, i) => (
               <p key={i} style={{
                 marginBottom:"1.2em",
@@ -2305,7 +2381,7 @@ export default function App() {
             ))}
             <p style={{ marginTop:"2em", fontSize:11,
               color:"#2a4060", fontFamily:"'JetBrains Mono','Courier New',monospace" }}>
-              Bohmian Measurement · v{__APP_VERSION__}
+              Bohmian Measurement · v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev"}
             </p>
           </div>
         )}
@@ -2331,7 +2407,7 @@ export default function App() {
           detWidth={detWidth} setDetWidth={setDetWidth} detWidthRef={detWidthRef}
           sigX={sigX} setSigX={setSigX} sigXRef={sigXRef}
           sigY={sigY} setSigY={setSigY} sigYRef={sigYRef}
-          regime={regime} setRegime={setRegime}
+          collapseThreshold={collapseThreshold} setCollapseThreshold={setCollapseThreshold} collapseThresholdRef={collapseThresholdRef}
           speed={speed} setSpeed={setSpeed} speedRef={speedRef}
           showWave={showWave} setShowWave={setShowWave}
           showTraj={showTraj} setShowTraj={setShowTraj}
@@ -2341,6 +2417,7 @@ export default function App() {
           detectorOn={detectorOn} setDetectorOn={setDetectorOn}
           Tp={Tp} Rp={Rp}
           isMobile={isMobile}
+          advMode={advMode}
         />
       </div>
     </div>
