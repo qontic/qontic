@@ -522,7 +522,7 @@ const VIEW_LABEL = { cpn:"Orthodox", pw:"Pilot-Wave", mw:"Many Worlds" };
 const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff",   mw:"#cc88ff" };
 const VIEW_TIP   = {
   cpn: "Orthodox QM (von Neumann collapse):\nThe wavefunction collapses onto one branch when the\npointer states become sufficiently distinguishable.\nThe outcome is random with Born-rule probabilities.\nNo physical mechanism for collapse is specified —\nit is an additional postulate. Whether collapse occurs\ndepends on pointer overlap: if T and R branches still\noverlap significantly the measurement is too weak to\ntrigger collapse.",
-  pw:  "Pilot-Wave / de Broglie–Bohm:\nThe particle always has a definite position, guided\nby the wavefunction via the guidance equation.\nNo collapse ever occurs. Randomness arises solely\nfrom uncertainty in the particle's initial position.\nThe y-projection shows the conditional wavefunction\nψ_cond(x) = Ψ(x, Y(t)) — a single peak at the\nparticle's actual pointer position, not the global ρ(y).",
+  pw:  "Pilot-Wave / de Broglie–Bohm:\nThe particle always has a definite position, guided\nby the wavefunction via the guidance equation.\nNo collapse ever occurs. Randomness arises solely\nfrom uncertainty in the particle's initial position.\nThe x-projection shows ψ_cond(x|Y(t)) = Ψ(x, Y(t)) —\nthe conditional wavefunction at the actual pointer position.\nWeak coupling: both T and R peaks survive (pointer branches\noverlap at Y(t)). Strong coupling: only the particle's branch\nsurvives as the pointer branches separate.",
   mw:  "Many-Worlds (Everett):\nThe wavefunction never collapses. Every outcome\noccurs — in separate, non-communicating branches\nof a universal wavefunction. There is no preferred\noutcome and no randomness beyond branch indexing.",
 };
 const VIEW_DESC  = {
@@ -642,7 +642,7 @@ const SimPanel = React.memo(({
             <span>narrow</span><span>wide</span></div>
         </SL>}
 
-        {adv && interp === "cpn" && (() => {
+        {adv && (() => {
           // Compute final pointer overlap from current params (at full detector interaction)
           const k0 = 4.0, v0 = k0;
           const gWindowUI   = detWidth / v0;
@@ -655,8 +655,10 @@ const SimPanel = React.memo(({
           const isWeak = !detectorOn || effLamUI === 0 || ptrOverlap >= COLLAPSE_CUTOFF;
           const regimeColor = isWeak ? "#ffaa44" : "#44ee88";
           const regimeLabel = isWeak
-            ? "Weak  —  branches overlap, no collapse"
-            : "Strong  —  branches resolved, collapse fires";
+            ? "Weak  —  branches overlap, not resolved"
+            : interp === "cpn"
+              ? "Strong  —  branches resolved, collapse fires"
+              : "Strong  —  branches resolved";
           return (
             <SL label="Measurement strength"
               tip={"Pointer overlap ⟨χ_T|χ_R⟩ — how much the T and R pointer states overlap.\n\n100%  →  pointer is blind to the outcome  (weak, no collapse)\n  0%  →  branches orthogonal  (strong, collapse fires)\n\nOverlap is set by the Coupling and σ_pointer sliders:\n  O = exp(−(4λw/v₀)² / 4σ_p²)\n\nCollapse fires when O < 1% (von Neumann orthogonality criterion).\nAbove 1% the pointer states still overlap — the global state remains entangled\nand the particle alone is in a mixed state.\nPilot-Wave / Many-Worlds never collapse regardless."}>
@@ -917,7 +919,7 @@ function _WF1DPanel_removed({ Tp, Rp, xT, xR, yT, yR, sigX, sigY, bX, bY, bl, sh
 
 
 // ── X-marginal panel: ∫|Ψ(x,y)|²dy  vs  x  (horizontal strip below 2D) ──────
-function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, bIsTransmit, yT, yR, sigY, isPW, interp, colElapsedMs, colPhase, sepFrac, showProj, xLo, xHi, rho, rhoXs, V0 }) {
+function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, bIsTransmit, yT, yR, sigY, isPW, interp, colElapsedMs, colPhase, sepFrac, ptrOverlap, showProj, xLo, xHi, rho, rhoXs, V0 }) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
@@ -983,36 +985,60 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
   const rhoT = x => bl * ampT * gT(x);
   const rhoR = x => bl * ampR * gR(x);
 
-  if (isMW && bl > 0.05) {
-    // ── Many-Worlds: split panel into two worlds, one per half ───────────────
-    const mid = Math.round(H / 2);
-    const sf  = Math.min(sepFrac * 1.5, 1);
+  // Conditional pointer weights — needed by both the density block and the label block.
+  // Declared here (function scope) so the label block outside the if/else can access them.
+  const pwChiT = isPW ? gauss(bY, yT, sigY) : 0;
+  const pwChiR = isPW ? gauss(bY, yR, sigY) : 0;
+  const pwMaxChi = Math.max(pwChiT, pwChiR, 1e-8);
 
-    // Background tints — fade in with sepFrac
-    ctx.fillStyle = `rgba(0,229,255,${0.12 * sf})`;   ctx.fillRect(0,   0,   W, mid);
-    ctx.fillStyle = `rgba(238,20,210,${0.12 * sf})`;  ctx.fillRect(0,   mid, W, H - mid);
-    // Separator line — bright white-violet, thicker
-    ctx.strokeStyle = `rgba(255,255,255,${0.75 * sf})`;
-    ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
-    ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
-    ctx.setLineDash([]);
-    // Axis & barrier lines
+  // MW split strength: strong measurement (small ptrOverlap) → full split;
+  // weak measurement (large ptrOverlap) → worlds not resolved, no split.
+  const mwSplitStrength = isMW ? Math.max(0, 1 - (ptrOverlap ?? 1)) : 0;
+
+  if (isMW && bl > 0.05) {
+    const mid = Math.round(H / 2);
+    // sf: visual split driven by both sepFrac (timing) AND mwSplitStrength (coupling).
+    // Weak measurement → mwSplitStrength≈0 → sf≈0 → no split drawn.
+    const sf  = Math.min(sepFrac * 1.5, 1) * mwSplitStrength;
+
+    ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = "rgba(60,100,200,0.25)"; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, mid - 1); ctx.lineTo(W, mid - 1); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, H    - 2); ctx.lineTo(W, H    - 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, H - 2); ctx.lineTo(W, H - 2); ctx.stroke();
     ctx.strokeStyle = "rgba(0,200,255,0.2)"; ctx.setLineDash([3,3]);
     ctx.beginPath(); ctx.moveTo(wx(0),0); ctx.lineTo(wx(0),H); ctx.stroke();
     ctx.setLineDash([]);
-    // World 1 (top half): ρ_T in cyan
-    if (ampT > 0.001) drawDensityInRegion(rhoT, "#00e5ff", 0.75*(mid-6)/Math.max(peakDensity(rhoT),1e-10), 0, mid);
-    // World 2 (bottom half): ρ_R in magenta
-    if (ampR > 0.001) drawDensityInRegion(rhoR, "#ee14d2", 0.75*(H-mid-6)/Math.max(peakDensity(rhoR),1e-10), mid, H-mid);
-    // Labels
+
     const fs = Math.max(7, Math.round(H * 0.12));
     const lbY = Math.round(H * 0.09);
     ctx.font = `bold ${fs}px 'JetBrains Mono',monospace`;
-    ctx.fillStyle = `rgba(0,229,255,${0.95 * sf})`;  ctx.fillText("World 1  (transmitted)", 6, lbY);
-    ctx.fillStyle = `rgba(238,20,210,${0.95 * sf})`; ctx.fillText("World 2  (reflected)",   6, mid + lbY);
+
+    if (sf > 0.05) {
+      // ── Split view: two worlds ──────────────────────────────────────────
+      // Background tints
+      ctx.fillStyle = `rgba(0,229,255,${0.12 * sf})`;   ctx.fillRect(0,   0,   W, mid);
+      ctx.fillStyle = `rgba(238,20,210,${0.12 * sf})`;  ctx.fillRect(0,   mid, W, H - mid);
+      // Separator line
+      ctx.strokeStyle = `rgba(255,255,255,${0.75 * sf})`;
+      ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
+      ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+      ctx.setLineDash([]);
+      // Axis lines
+      ctx.strokeStyle = "rgba(60,100,200,0.25)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, mid - 1); ctx.lineTo(W, mid - 1); ctx.stroke();
+      // World 1 (top): ρ_T in cyan
+      if (ampT > 0.001) drawDensityInRegion(rhoT, "#00e5ff", 0.75*(mid-6)/Math.max(peakDensity(rhoT),1e-10), 0, mid);
+      // World 2 (bottom): ρ_R in magenta
+      if (ampR > 0.001) drawDensityInRegion(rhoR, "#ee14d2", 0.75*(H-mid-6)/Math.max(peakDensity(rhoR),1e-10), mid, H-mid);
+      ctx.fillStyle = `rgba(0,229,255,${0.95 * sf})`;  ctx.fillText("World 1  (transmitted)", 6, lbY);
+      ctx.fillStyle = `rgba(238,20,210,${0.95 * sf})`; ctx.fillText("World 2  (reflected)",   6, mid + lbY);
+    } else {
+      // ── Weak measurement: worlds not resolved — show combined superposition ─
+      const normScale = SCALE;
+      if (ampT > 0.001) drawDensity(rhoT, "#22ee88", normScale);
+      if (ampR > 0.001) drawDensity(rhoR, "#ff7744", normScale);
+      ctx.fillStyle = "rgba(100,160,255,0.55)";
+      ctx.fillText("worlds not resolved  (weak measurement)", 6, lbY);
+    }
   } else {
     // ── Standard (CPn / PW) background + axes ─────────────────────────────
     ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
@@ -1022,13 +1048,12 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
     ctx.beginPath(); ctx.moveTo(wx(0),0); ctx.lineTo(wx(0),H); ctx.stroke();
     ctx.setLineDash([]);
     if (isPW) {
-      const chiT = gauss(bY, yT, sigY), chiR = gauss(bY, yR, sigY);
-      const maxChi = Math.max(chiT, chiR, 1e-8);
+      const chiT = pwChiT, chiR = pwChiR, maxChi = pwMaxChi;
       // Pre-scatter: single blue incoming blob
       if (1 - bl > 0.01) drawDensity(x => (1 - bl) * gIn(x), "#88aaff", SCALE);
-      // Post-scatter: T component in green, R component in orange (conditional weights)
+      // Post-scatter: ψ_cond(x|Y(t)) = Σ_branch |ψ_branch(x)|² · |χ_branch(Y(t))|²
+      // Each component weighted by the pointer overlap at the actual pointer position.
       if (bl > 0.05 && ampT > 0.001) {
-        const scaleT = SCALE / Math.max(peakDensity(x => bl * Tp * (chiT/maxChi) * gT(x)), 1e-10) * bl * Tp * (chiT/maxChi);
         drawDensity(x => bl * Tp * (chiT/maxChi) * gT(x), "#22ee88", SCALE);
       }
       if (bl > 0.05 && ampR > 0.001) {
@@ -1068,9 +1093,20 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
       if (bl < 0.05) {
         ctx.fillStyle = "#88aaff"; ctx.fillText("Ψ_in(x)", 6, labelY);
       } else {
-        if (bIsTransmit && ampT > 0.001) { ctx.fillStyle = "#22ee88"; ctx.fillText("T", wx(xT) - 6, labelY); }
-        if (!bIsTransmit && ampR > 0.001) { ctx.fillStyle = "#ff7744"; ctx.fillText("R", wx(xR) - 6, labelY); }
+        // Show T/R labels based on conditional weight at Y(t), not just bIsTransmit.
+        // Both labels appear for weak measurement (both branches present in ψ_cond);
+        // only one label for strong (other branch suppressed at Y(t)).
+        const fracT = pwChiT / pwMaxChi, fracR = pwChiR / pwMaxChi;
+        const THRESH = 0.15;  // branch is "visible" if its conditional weight > 15%
+        if (ampT > 0.001 && fracT > THRESH) { ctx.fillStyle = "#22ee88"; ctx.fillText("T", Math.min(W - 20, wx(xT) - 6), labelY); }
+        if (ampR > 0.001 && fracR > THRESH) { ctx.fillStyle = "#ff7744"; ctx.fillText("R", Math.max(6, wx(xR) - 6), labelY); }
       }
+      // Axis label — top-right, always visible in PW mode
+      ctx.font = `${Math.max(8, Math.round(H * 0.13))}px 'JetBrains Mono', monospace`;
+      ctx.fillStyle = "rgba(100,160,255,0.5)";
+      ctx.textAlign = "right";
+      ctx.fillText("\u03c8_cond(x|Y(t))", W - 4, labelY);
+      ctx.textAlign = "left";
     } else {
       // Floating labels at each blob's x-centre — only show the winning branch post-collapse
       const showT = colBranch >= 0;  // 0 = pre-collapse (show both), 1 = T won
@@ -1353,7 +1389,10 @@ function MathPanel({ interp }) {
 // ── Gauge face renderer ──────────────────────────────────────────────────────
 // needles: [{fraction 0→1, color, alpha}]
 // fraction 0 = R side (left), 0.5 = centre, 1 = T side (right)
-function drawGaugeFace(gCtx, W, H, needles) {
+// labelFracs: { r: 0..1, t: 0..1 } — fixed arc positions marking where each branch's
+// pointer rests once coupling is fully applied. Determined by coupling strength alone,
+// not the current animation frame. R is always 0; T = lamScale (effLam / LAM_MAX).
+function drawGaugeFace(gCtx, W, H, needles, labelFracs) {
   gCtx.clearRect(0, 0, W, H);
   const cx = W / 2, cy = H / 2;
   const R  = Math.min(cx, cy) - 3;
@@ -1390,16 +1429,32 @@ function drawGaugeFace(gCtx, W, H, needles) {
     gCtx.stroke();
   }
 
-  // R / T labels
-  const lR  = R * 0.67;
-  const lAng = -Math.PI / 2 - sweepHalf;
-  const rAng = -Math.PI / 2 + sweepHalf;
+  // R / T labels — fixed at the final resting positions for each branch given
+  // the current coupling strength. R never deflects (always fraction 0);
+  // T deflects to lamScale = effLam / LAM_MAX.
+  const lf = labelFracs || { r: 0, t: 1 };
+  const lR   = R * 0.67;
+  const angR = -Math.PI / 2 + (lf.r - 0.5) * 2 * sweepHalf;
+  const angT = -Math.PI / 2 + (lf.t - 0.5) * 2 * sweepHalf;
+
+  // Green tick on the arc marking the T resting position
+  if (lf.t > 0) {
+    gCtx.beginPath();
+    gCtx.moveTo(cx + Math.cos(angT) * (R - R * 0.28), cy + Math.sin(angT) * (R - R * 0.28));
+    gCtx.lineTo(cx + Math.cos(angT) * (R - 3),        cy + Math.sin(angT) * (R - 3));
+    gCtx.strokeStyle = "rgba(34,238,136,0.9)";
+    gCtx.lineWidth   = 2.5;
+    gCtx.stroke();
+  }
+
   gCtx.font = `bold ${Math.round(R * 0.28)}px 'JetBrains Mono',monospace`;
   gCtx.textAlign = "center"; gCtx.textBaseline = "middle";
+  gCtx.shadowColor = "rgba(0,0,0,0.8)"; gCtx.shadowBlur = 4;
   gCtx.fillStyle = "rgba(255,110,60,0.85)";
-  gCtx.fillText("R", cx + Math.cos(lAng) * lR, cy + Math.sin(lAng) * lR);
+  gCtx.fillText("R", cx + Math.cos(angR) * lR, cy + Math.sin(angR) * lR);
   gCtx.fillStyle = "rgba(34,238,136,0.85)";
-  gCtx.fillText("T", cx + Math.cos(rAng) * lR, cy + Math.sin(rAng) * lR);
+  gCtx.fillText("T", cx + Math.cos(angT) * lR, cy + Math.sin(angT) * lR);
+  gCtx.shadowBlur = 0;
 
   // Needles
   needles.forEach(({ fraction, color, alpha }) => {
@@ -1888,7 +1943,9 @@ export default function App() {
       const detWidth  = s.detWidth;
       const dtP_capped = Math.min(dtP, detWidth / v0);
       // edgeX / gWindow computed here so dtPShown can reference them.
-      const edgeX  = Math.min(halfW - 1.5, 9.0);
+      // Must be at least xPointer+detWidth so the cycle never stops before the wave
+      // finishes traversing the detector (otherwise the needle freezes short of T).
+      const edgeX  = Math.max(Math.min(halfW - 1.5, 9.0), s.xPointer + s.detWidth);
       // gWindow: max time the pointer can be active (capped by detector width)
       const gWindow = detWidth / v0;
       // CPN: pointer jumps instantly to its final (coupling-scaled) position at T-collapse.
@@ -1906,14 +1963,19 @@ export default function App() {
         s.pauseUntil = performance.now() + 500;
       }
 
+      // Pointer overlap O = ⟨χ_T|χ_R⟩ — shared across all views.
+      // Determines whether the measurement is weak (O≈1) or strong (O≈0).
+      const deltaYFinal = 4 * effLam * gWindow;
+      const ptrOverlap  = effLam > 0
+        ? Math.exp(-deltaYFinal * deltaYFinal / (4 * s.sigY * s.sigY))
+        : 1.0;  // no coupling → complete overlap (trivially weak)
+
       // ── Copenhagen: collapse logic ─────────────────────────────────────────
       // Collapse requires both detector on AND non-zero coupling (effLam > 0).
       // λ=0 means no interaction — same as no detector.
       if (s.interp === "cpn" && s.detectorOn && effLam > 0) {
         // Compute final pointer overlap (at full interaction time) to decide if
         // the measurement is strong enough to trigger collapse.
-        const deltaYFinal = 4 * effLam * gWindow;
-        const ptrOverlap  = Math.exp(-deltaYFinal * deltaYFinal / (4 * s.sigY * s.sigY));
         const collapseAllowed = ptrOverlap < 0.01; // von Neumann criterion: collapse when pointer states effectively orthogonal
         // New cycle: restore pre-collapse superposition so both branches are visible
         // again until the transmitted branch reaches the detector.
@@ -2123,6 +2185,7 @@ export default function App() {
         colElapsedMs: s.colTriggered ? (performance.now() - (s.colStartMs || 0)) : 0,
         colPhase: s.colPhase,
         sepFrac,
+        ptrOverlap,
         showProj: s.showProj,
         // x-panel: use camera's actual visible range so particle position matches 2D canvas exactly
         xLo: s.camX - halfW,
@@ -2181,20 +2244,19 @@ export default function App() {
           const pwFrac = bIsTransmit ? gFrac : 0;
           needles.push({ fraction: pwFrac, color: "#ffffff", alpha: 0.92 });
         } else {
-          // Copenhagen
+          // Copenhagen — needle stays blue throughout; only its position changes
           if (!s.colTriggered) {
             // Superposition: needle drifts toward Tprob as the Y blobs separate
             needles.push({ fraction: meanFrac, color: "#88aaff", alpha: 0.82 });
           } else if (s.colBranch > 0) {
-            // Collapsed to T: winner moves like the T branch (same as PW/MW)
-            needles.push({ fraction: gFrac, color: "#22ee88", alpha: 0.95 });
-            needles.push({ fraction: 0,     color: "#ff7744", alpha: (1 - s.colFade) * 0.55 });
+            // Collapsed to T: needle jumps to gFrac, still blue
+            needles.push({ fraction: gFrac, color: "#88aaff", alpha: 0.95 });
           } else {
-            // Collapsed to R: winner stays at rest (fraction 0), no T ghost
-            needles.push({ fraction: 0, color: "#ff7744", alpha: 0.95 });
+            // Collapsed to R: needle stays at rest, still blue
+            needles.push({ fraction: 0, color: "#88aaff", alpha: 0.95 });
           }
         }
-        drawGaugeFace(Tr.gCtx, 128, 128, needles);
+        drawGaugeFace(Tr.gCtx, 128, 128, needles, { r: 0, t: lamScale });
         Tr.gaugeTex.needsUpdate = true;
       } else if (Tr.gaugeSprite) {
         Tr.gaugeSprite.visible = false;
