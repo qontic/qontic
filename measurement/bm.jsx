@@ -1561,6 +1561,8 @@ export default function App() {
     colYHold:0,
     colPhase:0,
     sampledPointerY: null,  // Y sampled from ρ(y) on first pointer hit — drives needle
+    sampledPointerY_T: null,  // Y sampled from χ_T² for MW strong world-1 needle
+    sampledPointerY_R: null,  // Y sampled from χ_R² for MW strong world-2 needle
     barrierOn:true,
     detectorOn:true,
     // Projection panel state
@@ -1913,6 +1915,8 @@ export default function App() {
             s.pauseUntil = 0;
             s.colTriggered = false; s.colBranch = 0; s.colFade = 0; s.colYHold = 0;
             s.sampledPointerY = null;  // fresh sample next cycle
+            s.sampledPointerY_T = null;
+            s.sampledPointerY_R = null;
             s.dirty = true;  // rebuild trajectory with new random initial conditions
           }
           // else: don't advance tick
@@ -2018,6 +2022,8 @@ export default function App() {
           s.colFade = 0;
           s.colYHold = 0;
           s.sampledPointerY = null;
+          s.sampledPointerY_T = null;
+          s.sampledPointerY_R = null;
         }
         if (!s.colTriggered && tPhys >= tPointerHit) {
           s.colTriggered = true;
@@ -2259,6 +2265,7 @@ export default function App() {
 
         // Sample pointer position from ρ(y) = T·χ_T² + R·χ_R² once, on first pointer hit.
         // Stored in s.sampledPointerY; cleared each cycle reset for a fresh draw.
+        // Also sample per-world positions for MW strong (one draw per world per cycle).
         if (pointerHit && s.sampledPointerY === null) {
           const yT_final = yRFixed + 4 * effLam * gWindow;
           const randn = () => {
@@ -2267,6 +2274,9 @@ export default function App() {
           };
           const branch = Math.random() < Tprob ? yT_final : yRFixed;
           s.sampledPointerY = branch + randn() * s.sigY;
+          // Per-world samples: each drawn independently from its own χ²
+          s.sampledPointerY_T = yT_final + randn() * s.sigY;
+          s.sampledPointerY_R = yRFixed  + randn() * s.sigY;
         }
         // Convert sampled Y to gauge fraction [0..1], normalised by max possible deflection.
         const yMaxDeflect = 4 * LAM_MAX * gWindow;
@@ -2285,10 +2295,15 @@ export default function App() {
           // Wave hasn't reached detector yet — needle at dead rest
           needles.push({ fraction: 0, color: "#88aaff", alpha: 0.55 });
         } else if (mwStrong) {
-          // Many-Worlds strong: two resolved worlds, T and R needles
+          // Many-Worlds strong: two resolved worlds, each needle at a position sampled
+          // from its own pointer wavepacket N(y_branch, σ_p) — not the exact centre.
           const sf = Math.min(gFrac * 2, 1);
-          needles.push({ fraction: gFrac, color: "#22ee88", alpha: sf * 0.88 });
-          needles.push({ fraction: 0,     color: "#ff7744", alpha: sf * 0.88 });
+          const tFracSampled = (s.sampledPointerY_T !== null && yMaxDeflect > 0)
+            ? clamp((s.sampledPointerY_T - yRFixed) / yMaxDeflect, -0.05, 1.05) : gFrac;
+          const rFracSampled = (s.sampledPointerY_R !== null && yMaxDeflect > 0)
+            ? clamp((s.sampledPointerY_R - yRFixed) / yMaxDeflect, -0.05, 1.05) : 0;
+          needles.push({ fraction: progress * tFracSampled, color: "#22ee88", alpha: sf * 0.88 });
+          needles.push({ fraction: progress * rFracSampled, color: "#ff7744", alpha: sf * 0.88 });
         } else if (isMW) {
           // Many-Worlds weak: single needle at sampled position from ρ(y)
           needles.push({ fraction: sampledNeedle, color: "#88aaff", alpha: 0.82 });
