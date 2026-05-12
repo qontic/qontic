@@ -550,293 +550,6 @@ function ShowDesc({ text }) {
   );
 }
 
-// ── Floating pointer readout distribution ─────────────────────────────────────
-function PointerDistFloat({ needleHistory, deltaY, sigY, Tp }) {
-  const [minimized, setMinimized] = React.useState(false);
-  const posRef = React.useRef({ x: 10, y: 215 });
-  const [pos, setPos] = React.useState(posRef.current);
-  const cvRef = React.useRef(null);
-  const Rp = 1 - Tp;
-
-  const onTitleMouseDown = (e) => {
-    if (e.button !== 0) return;
-    const ox = e.clientX - posRef.current.x, oy = e.clientY - posRef.current.y;
-    const onMove = (ev) => { const next = { x: ev.clientX - ox, y: ev.clientY - oy }; posRef.current = next; setPos({ ...next }); };
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
-  };
-  const onTitleTouchStart = (e) => {
-    const t = e.touches[0];
-    const ox = t.clientX - posRef.current.x, oy = t.clientY - posRef.current.y;
-    const onMove = (ev) => { const tt = ev.touches[0]; const next = { x: tt.clientX - ox, y: tt.clientY - oy }; posRef.current = next; setPos({ ...next }); };
-    const onEnd = () => { window.removeEventListener("touchmove", onMove); window.removeEventListener("touchend", onEnd); };
-    window.addEventListener("touchmove", onMove, { passive: false }); window.addEventListener("touchend", onEnd);
-  };
-
-  // Redraw the canvas whenever inputs change
-  React.useEffect(() => {
-    if (minimized || !cvRef.current) return;
-    const cv = cvRef.current;
-    const W = cv.width, H = cv.height;
-    const ctx = cv.getContext("2d");
-    ctx.clearRect(0, 0, W, H);
-
-    const ml = 6, mr = 6, mt = 8, mb = 18;
-    const pw = W - ml - mr, ph = H - mt - mb;
-
-    const gauss = (x, mu, sig) =>
-      Math.exp(-0.5 * ((x - mu) / sig) ** 2) / (sig * Math.sqrt(2 * Math.PI));
-
-    const yLo = Math.min(0, deltaY) - 3.2 * sigY;
-    const yHi = Math.max(0, deltaY) + 3.2 * sigY;
-    const ySpan = yHi - yLo || 1;
-    const toX = (dy) => ml + (dy - yLo) / ySpan * pw;
-
-    // Scale: find peak of the mixed distribution
-    let maxD = 0;
-    for (let i = 0; i <= 300; i++) {
-      const dy = yLo + ySpan * i / 300;
-      const d = Tp * gauss(dy, deltaY, sigY) + Rp * gauss(dy, 0, sigY);
-      if (d > maxD) maxD = d;
-    }
-    if (maxD === 0) maxD = 1;
-    const toY = (d) => mt + ph - (d / maxD) * ph;
-
-    const drawCurve = (fn, color, fill) => {
-      if (fill) {
-        ctx.beginPath();
-        for (let i = 0; i <= 300; i++) {
-          const dy = yLo + ySpan * i / 300;
-          const cx = toX(dy), cy = toY(fn(dy));
-          i === 0 ? ctx.moveTo(cx, mt + ph) : undefined;
-          ctx.lineTo(cx, cy);
-        }
-        ctx.lineTo(toX(yHi), mt + ph);
-        ctx.closePath();
-        ctx.fillStyle = fill; ctx.fill();
-      }
-      ctx.beginPath();
-      for (let i = 0; i <= 300; i++) {
-        const dy = yLo + ySpan * i / 300;
-        const cx = toX(dy), cy = toY(fn(dy));
-        i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
-      }
-      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
-    };
-
-    drawCurve(dy => Tp * gauss(dy, deltaY, sigY), "rgba(68,238,136,0.85)",  "rgba(68,238,136,0.10)");
-    drawCurve(dy => Rp * gauss(dy, 0,      sigY), "rgba(255,119,68,0.85)", "rgba(255,119,68,0.10)");
-    drawCurve(dy => Tp * gauss(dy, deltaY, sigY) + Rp * gauss(dy, 0, sigY), "rgba(160,190,255,0.4)", null);
-
-    // x-axis
-    ctx.strokeStyle = "rgba(50,80,140,0.5)"; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(ml, mt + ph); ctx.lineTo(ml + pw, mt + ph); ctx.stroke();
-
-    // Vertical reference lines at R=0 and T=deltaY
-    ctx.setLineDash([2, 3]);
-    [{ x: 0, c: "rgba(255,119,68,0.4)" }, { x: deltaY, c: "rgba(68,238,136,0.4)" }].forEach(({ x, c }) => {
-      const cx = toX(x);
-      if (cx >= ml && cx <= ml + pw) {
-        ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(cx, mt); ctx.lineTo(cx, mt + ph); ctx.stroke();
-      }
-    });
-    ctx.setLineDash([]);
-
-    // Rug plot — each recorded reading as a small tick below x-axis
-    const rugY0 = mt + ph + 2, rugY1 = mt + ph + 9;
-    needleHistory.forEach(({ dy, isT }, idx) => {
-      const cx = toX(dy);
-      if (cx < ml || cx > ml + pw) return;
-      const opacity = (0.25 + 0.7 * (idx / Math.max(needleHistory.length - 1, 1))).toFixed(2);
-      ctx.strokeStyle = isT ? `rgba(68,238,136,${opacity})` : `rgba(255,119,68,${opacity})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(cx, rugY0); ctx.lineTo(cx, rugY1); ctx.stroke();
-    });
-
-    ctx.fillStyle = "rgba(70,100,150,0.7)";
-    ctx.font = "8px 'JetBrains Mono',monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("pointer y", ml + pw / 2, H - 2);
-  }, [needleHistory, deltaY, sigY, Tp, minimized]);
-
-  return ReactDOM.createPortal(
-    <div style={{
-      position: "fixed", left: pos.x, top: pos.y, zIndex: 9999,
-      width: minimized ? "auto" : 190,
-      minWidth: minimized ? 150 : 190,
-      background: "rgba(4,10,30,0.90)",
-      border: "1px solid rgba(60,110,220,0.45)",
-      borderRadius: 7,
-      boxShadow: "0 4px 18px rgba(0,0,0,0.6)",
-      fontFamily: "'JetBrains Mono','Courier New',monospace",
-      userSelect: "none",
-    }}>
-      <div
-        onMouseDown={onTitleMouseDown}
-        onTouchStart={onTitleTouchStart}
-        style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"4px 7px", background:"rgba(20,40,100,0.5)", cursor:"grab",
-          borderRadius: minimized ? 7 : "7px 7px 0 0",
-          borderBottom: minimized ? "none" : "1px solid rgba(60,110,220,0.3)" }}>
-        <span style={{ fontSize:10, color:"#8ab0e0", fontWeight:700, letterSpacing:"0.07em" }}>
-          POINTER DIST  N={needleHistory.length}
-        </span>
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onClick={() => setMinimized(m => !m)}
-          style={{ background:"none", border:"none", color:"#5080c0", cursor:"pointer",
-            fontSize:12, lineHeight:1, padding:"0 2px", marginLeft:6 }}
-          title={minimized ? "Expand" : "Minimise"}>
-          {minimized ? "▶" : "▼"}
-        </button>
-      </div>
-      {!minimized && (
-        <div style={{ padding:"5px 6px 4px" }}>
-          <div style={{ display:"flex", gap:10, marginBottom:3, fontSize:9 }}>
-            <span style={{ color:"#44ee88" }}>■ T  {Math.round(Tp*100)}%</span>
-            <span style={{ color:"#ff7744" }}>■ R  {Math.round(Rp*100)}%</span>
-            <span style={{ color:"rgba(160,190,255,0.55)" }}>— total</span>
-          </div>
-          <canvas ref={cvRef} width={178} height={110}
-            style={{ display:"block", width:"100%", height:"auto" }} />
-          <div style={{ fontSize:9, color:"#304560", textAlign:"center", marginTop:2 }}>
-            {needleHistory.length === 0 ? "waiting for outcomes…" : `${needleHistory.length} readings`}
-          </div>
-        </div>
-      )}
-    </div>,
-    document.body
-  );
-}
-
-// ── Floating outcome histogram ────────────────────────────────────────────────
-function HistogramFloat({ histT, histR, histTotal, Tp }) {
-  const [minimized, setMinimized] = React.useState(false);
-  // Use a ref to track position so drag closures never go stale
-  const posRef = React.useRef({ x: 10, y: 70 });
-  const [pos, setPos] = React.useState(posRef.current);
-
-  // Drag starts only from the title bar div
-  const onTitleMouseDown = (e) => {
-    if (e.button !== 0) return;
-    const ox = e.clientX - posRef.current.x;
-    const oy = e.clientY - posRef.current.y;
-    const onMove = (ev) => {
-      const next = { x: ev.clientX - ox, y: ev.clientY - oy };
-      posRef.current = next;
-      setPos({ ...next });
-    };
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  };
-
-  const onTitleTouchStart = (e) => {
-    const t = e.touches[0];
-    const ox = t.clientX - posRef.current.x;
-    const oy = t.clientY - posRef.current.y;
-    const onMove = (ev) => {
-      const tt = ev.touches[0];
-      const next = { x: tt.clientX - ox, y: tt.clientY - oy };
-      posRef.current = next;
-      setPos({ ...next });
-    };
-    const onEnd = () => {
-      window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("touchend", onEnd);
-    };
-    window.addEventListener("touchmove", onMove, { passive: false });
-    window.addEventListener("touchend", onEnd);
-  };
-
-  const fT = histTotal > 0 ? histT / histTotal : 0;
-  const fR = histTotal > 0 ? histR / histTotal : 0;
-  const theoT = Tp;
-
-  return ReactDOM.createPortal(
-    <div style={{
-      position: "fixed", left: pos.x, top: pos.y, zIndex: 9999,
-      width: minimized ? "auto" : 178,
-      minWidth: minimized ? 140 : 178,
-      background: "rgba(4,10,30,0.90)",
-      border: "1px solid rgba(60,110,220,0.45)",
-      borderRadius: 7,
-      boxShadow: "0 4px 18px rgba(0,0,0,0.6)",
-      fontFamily: "'JetBrains Mono','Courier New',monospace",
-      userSelect: "none",
-    }}>
-      {/* Title bar — this is the only drag handle */}
-      <div
-        onMouseDown={onTitleMouseDown}
-        onTouchStart={onTitleTouchStart}
-        style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"4px 7px", background:"rgba(20,40,100,0.5)", cursor:"grab",
-          borderRadius: minimized ? 7 : "7px 7px 0 0",
-          borderBottom: minimized ? "none" : "1px solid rgba(60,110,220,0.3)" }}>
-        <span style={{ fontSize:10, color:"#8ab0e0", fontWeight:700, letterSpacing:"0.07em" }}>
-          OUTCOMES  N={histTotal}
-        </span>
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onClick={() => setMinimized(m => !m)}
-          style={{ background:"none", border:"none", color:"#5080c0", cursor:"pointer",
-            fontSize:12, lineHeight:1, padding:"0 2px", marginLeft:6 }}
-          title={minimized ? "Expand" : "Minimise"}>
-          {minimized ? "▶" : "▼"}
-        </button>
-      </div>
-
-      {/* Body */}
-      {!minimized && (
-        <div style={{ padding:"7px 9px 6px" }}>
-          {histTotal === 0 ? (
-            <div style={{ fontSize:10, color:"#405070", fontStyle:"italic", textAlign:"center", padding:"4px 0" }}>
-              waiting for outcomes…
-            </div>
-          ) : (<>
-            {/* T bar */}
-            <div style={{ marginBottom:5 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, marginBottom:2 }}>
-                <span style={{ color:"#44ee88" }}>T  {histT}</span>
-                <span style={{ color:"#44ee88" }}>{Math.round(fT*100)}%</span>
-              </div>
-              <div style={{ position:"relative", height:9, background:"rgba(15,30,70,0.7)", borderRadius:3, overflow:"visible" }}>
-                <div style={{ height:"100%", borderRadius:3,
-                  background:"linear-gradient(90deg,#1a7a3a,#44ee88)",
-                  width:`${fT*100}%`, transition:"width 0.4s" }} />
-                <div style={{ position:"absolute", top:-2, bottom:-2, left:`${theoT*100}%`,
-                  width:2, background:"rgba(255,255,255,0.5)", borderRadius:1,
-                  transform:"translateX(-50%)" }} />
-              </div>
-            </div>
-            {/* R bar */}
-            <div style={{ marginBottom:4 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, marginBottom:2 }}>
-                <span style={{ color:"#ff7744" }}>R  {histR}</span>
-                <span style={{ color:"#ff7744" }}>{Math.round(fR*100)}%</span>
-              </div>
-              <div style={{ height:9, background:"rgba(15,30,70,0.7)", borderRadius:3, overflow:"hidden" }}>
-                <div style={{ height:"100%", borderRadius:3,
-                  background:"linear-gradient(90deg,#7a2a10,#ff7744)",
-                  width:`${fR*100}%`, transition:"width 0.4s" }} />
-              </div>
-            </div>
-            <div style={{ fontSize:9, color:"#304560", textAlign:"right", marginTop:2 }}>
-              ╴ theory T={Math.round(theoT*100)}%
-            </div>
-          </>)}
-        </div>
-      )}
-    </div>,
-    document.body
-  );
-}
-
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 // ── Shared audio player ─────────────────────────────────────────────────────
 const SimPanel = React.memo(({
@@ -856,7 +569,7 @@ const SimPanel = React.memo(({
   running, setRunning,
   barrierOn, setBarrierOn,
   detectorOn, setDetectorOn,
-  histT, histR, histTotal,
+  Tp, Rp,
   isMobile,
   advMode,
 }) => {
@@ -975,6 +688,21 @@ const SimPanel = React.memo(({
             </SL>
           );
         })()}
+
+        {/* Outcome bar */}
+        <SL label="Outcome probabilities">
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4, fontSize:11 }}>
+            <span style={{ color:"#44ee88" }}>Transmitted {Math.round(Tp*100)}%</span>
+            <span style={{ color:"#ff7744" }}>Reflected {Math.round(Rp*100)}%</span>
+          </div>
+          <div style={{ height:6, background:"rgba(15,30,70,0.6)", borderRadius:3, overflow:"hidden" }}>
+            <div style={{ height:"100%", borderRadius:3,
+              background:"linear-gradient(90deg,#22aa44,#44ee88)",
+              width:`${Math.round(Tp*100)}%`, transition:"width 0.3s" }} />
+          </div>
+        </SL>
+
+
 
         <SL label="Speed" tip="Playback speed">
           <input type="range" min={0.1} max={4} step={0.05} defaultValue={0.5}
@@ -1837,13 +1565,6 @@ export default function App() {
     sampledPointerY_R: null,  // Y sampled from χ_R² for MW strong world-2 needle
     barrierOn:true,
     detectorOn:true,
-    // Outcome histogram: counts of T/R outcomes across cycles
-    histT: 0, histR: 0, histTotal: 0,
-    histLastTprob: 0.5, // reset counts when T probability changes
-    lastBIsTransmit: false, // PW: last known trajectory outcome, preserved across reset
-    needleHistory: [],      // [{dy, isT}] — pointer readings relative to yRFixed, max 300
-    lastBY: 0,              // world-y of Bohmian pointer from previous frame (PW)
-    lastYRFixed: 0,         // yRFixed from previous frame (used at cycle restart)
     // Projection panel state
     marg: { Tp:0.5, Rp:0.5, xIn:X0, xT:0, xR:0, yT:0, yR:0,
             sigX:0.5, sigY:0.3, bl:0, colBranch:0, colFade:0, bX:0, bY:0 },
@@ -1868,10 +1589,6 @@ export default function App() {
   const [detectorOn, setDetectorOnUI] = useState(true);
   const [Tp,       setTpUI]       = useState(0.5);
   const [Rp,       setRpUI]       = useState(0.5);
-  const [histT,    setHistT]      = useState(0);
-  const [histR,    setHistR]      = useState(0);
-  const [histTotal,setHistTotal]  = useState(0);
-  const [needleHistory, setNeedleHistory] = useState([]);
   // Collapse flash: branch = ±1 while flashing, 0 when idle
   const [flashBranch, setFlashBranch] = useState(0);
   const [flashAlpha,  setFlashAlpha]  = useState(0);
@@ -1879,19 +1596,15 @@ export default function App() {
   const setInterp = v => {
     S.current.interp = v; setInterpUI(v);
     S.current.colBranch = 0; S.current.colFade = 0; S.current.colTriggered = false; S.current.colYHold = 0;
-    S.current.histT = 0; S.current.histR = 0; S.current.histTotal = 0;
-    S.current.needleHistory = [];
-    setHistT(0); setHistR(0); setHistTotal(0); setNeedleHistory([]);
+
     S.current.dirty = true;
   };
   const setTTarget = v => {
     S.current.tTarget = v;
     S.current.V0 = invertT(v, S.current.k0);
     S.current.dirty = true;
-    S.current.histT = 0; S.current.histR = 0; S.current.histTotal = 0;
-    S.current.needleHistory = [];
-    setHistT(0); setHistR(0); setHistTotal(0); setNeedleHistory([]);
-    setTTargetUI(v); setTpUI(v); setRpUI(1 - v);
+    setTTargetUI(v);
+    setTpUI(v); setRpUI(1 - v);
     if (tTargetRef.current) tTargetRef.current.value = Math.round(v * 100);
   };
   const setLam = useCallback(v => { S.current.lam = v; S.current.dirty=true; setLamUI(v); if(lamRef.current) lamRef.current.value=v; }, []);
@@ -2186,7 +1899,6 @@ export default function App() {
     let raf;
     // throttle React state updates to ~10Hz to avoid jank
     let lastReactUpdate = 0;
-    let needleHistoryRef = { current: 0 }; // tracks length to detect new samples
 
     function animate() {
       raf = requestAnimationFrame(animate);
@@ -2199,46 +1911,6 @@ export default function App() {
         if (s.pauseUntil > 0) {
           // Holding at cycle end — wait, then restart
           if (nowMs >= s.pauseUntil) {
-            // ── Record outcome before clearing cycle state ──────────────────
-            // Reset histogram when T probability changes significantly
-            const Tprob_now = clamp(exactT(s.k0, s.V0), 0, 1);
-            if (Math.abs(Tprob_now - s.histLastTprob) > 0.01) {
-              s.histT = 0; s.histR = 0; s.histTotal = 0;
-              s.histLastTprob = Tprob_now;
-            }
-            const isMW_rec = s.interp === "mw";
-            const isPW_rec = s.interp === "pw";
-            const isCPN_rec = s.interp === "cpn";
-            // Compute pointer overlap for weak/strong gate
-            const v0_rec = s.k0, gW_rec = s.detWidth / v0_rec;
-            const effLam_rec = s.detectorOn ? s.lam : 0;
-            const dY_rec = 4 * effLam_rec * gW_rec;
-            const overlap_rec = Math.exp(-dY_rec * dY_rec / (4 * s.sigY * s.sigY));
-            const isStrong_rec = effLam_rec > 0 && overlap_rec < 0.01;
-            if (isMW_rec && isStrong_rec) {
-              // MW strong: both worlds occurred
-              s.histT += 1; s.histR += 1; s.histTotal += 2;
-            } else if (isPW_rec) {
-              // PW: always a definite outcome
-              if (s.lastBIsTransmit) s.histT++; else s.histR++;
-              s.histTotal++;
-            } else if (isCPN_rec && s.colTriggered && s.colBranch !== 0) {
-              // Orthodox strong: definite collapse
-              if (s.colBranch > 0) s.histT++; else s.histR++;
-              s.histTotal++;
-            }
-            // Orthodox weak / MW weak: no definite outcome — don't record
-            // Record pointer position for distribution plot (relative to R center)
-            const yRF = s.lastYRFixed;
-            if (isMW_rec && isStrong_rec) {
-              if (s.sampledPointerY_T !== null) s.needleHistory.push({ dy: s.sampledPointerY_T - yRF, isT: true });
-              if (s.sampledPointerY_R !== null) s.needleHistory.push({ dy: s.sampledPointerY_R - yRF, isT: false });
-            } else if (isPW_rec) {
-              s.needleHistory.push({ dy: s.lastBY - yRF, isT: s.lastBIsTransmit });
-            } else if (isCPN_rec && s.colTriggered && s.colBranch !== 0) {
-              if (s.sampledPointerY !== null) s.needleHistory.push({ dy: s.sampledPointerY - yRF, isT: s.colBranch > 0 });
-            }
-            if (s.needleHistory.length > 300) s.needleHistory = s.needleHistory.slice(-300);
             s.tick = 0;
             s.pauseUntil = 0;
             s.colTriggered = false; s.colBranch = 0; s.colFade = 0; s.colYHold = 0;
@@ -2284,7 +1956,6 @@ export default function App() {
       }
       // R/incoming blob: 20% up from bottom, pointer stays here when not transmitted
       const yRFixed = s.camY - halfH * 0.6;
-      s.lastYRFixed = yRFixed;
 
       const effV0   = s.barrierOn  ? s.V0  : 0;
       const effLam  = s.detectorOn ? s.lam : 0;
@@ -2411,7 +2082,7 @@ export default function App() {
         const dtP_cur = Math.min(Math.max(0, (fl.dtAs ? fl.dtAs[tIdx] : 0) - dtPointerOffset), dtCap);
         const branchShiftCur = isTransmit ? (4 * effLam * dtP_cur) : 0;
         const ptYScreen = yRFixed + pt.y + branchShiftCur;
-        if (i === 0) { bX = pt.x; bY = ptYScreen; bIsTransmit = isTransmit; s.lastBIsTransmit = isTransmit; s.lastBY = ptYScreen; }
+        if (i === 0) { bX = pt.x; bY = ptYScreen; bIsTransmit = isTransmit; }
         fDots[i].visible  = s.showTraj;
         fGlows[i].visible = s.showTraj;
         if (s.showTraj) {
@@ -2526,12 +2197,7 @@ export default function App() {
       if (now - lastReactUpdate > 80) {
         lastReactUpdate = now;
 
-        // Histogram counts
-        setHistT(s.histT); setHistR(s.histR); setHistTotal(s.histTotal);
-        if (s.needleHistory.length !== needleHistoryRef.current) {
-          needleHistoryRef.current = s.needleHistory.length;
-          setNeedleHistory([...s.needleHistory]);
-        }
+        // nothing else throttled here — panels drawn directly below
 
         // Collapse flash signal
         if (s._flashPending) {
@@ -2758,17 +2424,6 @@ export default function App() {
                 </div>
               );
             })()}
-            {/* Outcome histogram + pointer distribution — floating panels */}
-            {canvasTab === "sim" && (<>
-              <HistogramFloat histT={histT} histR={histR} histTotal={histTotal} Tp={Tp} />
-              <PointerDistFloat
-                needleHistory={needleHistory}
-                deltaY={4 * lam * (detWidth / 4.0)}
-                sigY={sigY}
-                Tp={Tp}
-              />
-            </>)}
-
             {/* Axis labels */}
             <div style={{ position:"absolute", bottom:14, left:"50%", transform:"translateX(-50%)",
               color:"rgba(100,160,255,0.5)", fontSize: isMobile ? 13 : 16, pointerEvents:"none",
@@ -2892,7 +2547,7 @@ export default function App() {
           running={running} setRunning={setRunning}
           barrierOn={barrierOn} setBarrierOn={setBarrierOn}
           detectorOn={detectorOn} setDetectorOn={setDetectorOn}
-          histT={histT} histR={histR} histTotal={histTotal}
+          Tp={Tp} Rp={Rp}
           isMobile={isMobile}
           advMode={advMode}
         />
@@ -2900,3 +2555,6 @@ export default function App() {
     </div>
   );
 }
+
+const container = document.getElementById("root");
+if (container) createRoot(container).render(<App />);

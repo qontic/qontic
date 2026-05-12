@@ -166,7 +166,6 @@
   <h2 class="section-heading" id="heading-dev" style="display:none">In Development</h2>
   <div class="sim-grid" id="grid-dev"></div>
 
-
 </main>
 
 <footer>
@@ -248,15 +247,18 @@
   function render(apps) {
     const gridLive    = document.getElementById('grid-live');
     const gridDev     = document.getElementById('grid-dev');
-    const headingDev = document.getElementById('heading-dev');
-    const noResults  = document.getElementById('no-results');
+    const gridPlanned = document.getElementById('grid-planned');
+    const headingDev  = document.getElementById('heading-dev');
+    const noResults   = document.getElementById('no-results');
 
-    const live = apps.filter(a => a.status === 'live');
-    const dev  = apps.filter(a => a.status === 'dev');
+    const live    = apps.filter(a => a.status === 'live');
+    const dev     = apps.filter(a => a.status === 'dev');
+    const planned = apps.filter(a => a.status === 'planned');
 
     // Keep the no-results placeholder inside grid-live
     gridLive.innerHTML = noResults.outerHTML + live.map(buildCard).join('');
-    gridDev.innerHTML  = dev.map(buildCard).join('');
+    gridDev.innerHTML     = dev.map(buildCard).join('');
+    gridPlanned.innerHTML = planned.map(buildCard).join('');
 
     if (dev.length > 0) headingDev.style.display = '';
 
@@ -290,7 +292,7 @@
     noResults.style.display = (q && !anyVisible) ? 'block' : 'none';
 
     // Hide/show section headings when all cards in a section are hidden
-    ['live', 'dev'].forEach(section => {
+    ['live', 'dev', 'planned'].forEach(section => {
       const grid    = document.getElementById('grid-' + section);
       const heading = document.getElementById('heading-' + section);
       if (!grid || !heading) return;
