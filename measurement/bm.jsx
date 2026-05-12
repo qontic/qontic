@@ -2512,7 +2512,7 @@ export default function App() {
             ))}
             <p style={{ marginTop:"2em", fontSize:11,
               color:"#2a4060", fontFamily:"'JetBrains Mono','Courier New',monospace" }}>
-              Bohmian Measurement · v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev"}
+              Measurement · v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev"}
             </p>
           </div>
         )}
