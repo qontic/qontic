@@ -1302,7 +1302,7 @@ function _WF1DPanel_removed({ Tp, Rp, xT, xR, yT, yR, sigX, sigY, bX, bY, bl, sh
 
 
 // ── X-marginal panel: ∫|Ψ(x,y)|²dy  vs  x  (horizontal strip below 2D) ──────
-function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, bIsTransmit, yT, yR, sigY, isPW, interp, colElapsedMs, colPhase, sepFrac, ptrOverlap, showProj, xLo, xHi, rho, rhoXs, V0 }) {
+function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, bX, bY, bIsTransmit, yT, yR, sigY, isPW, interp, colElapsedMs, colPhase, sepFrac, ptrOverlap, showProj, showCoarse, xLo, xHi, rho, rhoXs, V0 }) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   // Sync intrinsic size to CSS rendered size so fonts/coords are in real screen pixels
@@ -1374,14 +1374,15 @@ function drawXMarg(canvas, { Tp, Rp, xIn, xT, xR, sigX, bl, colBranch, colFade, 
   const pwChiR = isPW ? gauss(bY, yR, sigY) : 0;
   const pwMaxChi = Math.max(pwChiT, pwChiR, 1e-8);
 
-  // MW split strength: matches the same COLLAPSE_CUTOFF=0.01 used by the collapse logic.
-  // Strong (ptrOverlap < 0.01) → full split; weak (ptrOverlap ≥ 0.01) → no split.
-  const mwSplitStrength = (isMW && (ptrOverlap ?? 1) < 0.01) ? 1 : 0;
+  // MW split strength: split if the fine pointer is orthogonal (strong measurement)
+  // OR if the coarse detector is active (it collapses the branch even for weak fine pointer).
+  const mwSplitStrength = (isMW && ((ptrOverlap ?? 1) < 0.01 || showCoarse)) ? 1 : 0;
 
   if (isMW && bl > 0.05) {
     const mid = Math.round(H / 2);
     // sf: visual split driven by both sepFrac (timing) AND mwSplitStrength (coupling).
-    // Weak measurement → mwSplitStrength≈0 → sf≈0 → no split drawn.
+    // Weak measurement + no coarse detector → mwSplitStrength=0 → sf=0 → no split drawn.
+    // Weak measurement + coarse detector → mwSplitStrength=1 → split shown.
     const sf  = Math.min(sepFrac * 1.5, 1) * mwSplitStrength;
 
     ctx.fillStyle = "#020812"; ctx.fillRect(0, 0, W, H);
@@ -1547,7 +1548,7 @@ function fmtYVal(v, step) {
 // ── Y-marginal panel: ∫|Ψ(x,y)|²dx  vs  y  (vertical strip right of 2D) ─────
 // The canvas is drawn with y mapping vertically (bottom=yLo, top=yHi).
 // The density curve fills horizontally (density → rightward).
-function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFade, sampledPointerY, bY, bX, bIsTransmit, xT, xR, sigX, isPW, interp, sepFrac, ptrOverlap, showProj, yLo, yHi, fixedT, yTFinal, tickStep: extTickStep }) {
+function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFade, sampledPointerY, bY, bX, bIsTransmit, xT, xR, sigX, isPW, interp, sepFrac, ptrOverlap, showProj, showCoarse, yLo, yHi, fixedT, yTFinal, tickStep: extTickStep }) {
   // yRFixed: the R (not-transmitted) blob display position — kept in sync with 2D shader uYR.
   // yR itself (-lam*dtA) is only used for chi-weighting in x-panel (not drawing here).
   if (!canvas) return;
@@ -1675,7 +1676,7 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
     };
 
     drawDensityY(y => (1 - bl) * gauss(y, yRFixed, sigY), "#88aaff", DENSITY_OFF);
-    const mwStrong = isMW && (ptrOverlap ?? 1) < 0.01;
+    const mwStrong = isMW && ((ptrOverlap ?? 1) < 0.01 || showCoarse);
     if (isMW && bl > 0.05) {
       if (mwStrong) {
         // ── Many-Worlds strong: split Y-panel into two worlds ─────────────
@@ -2597,7 +2598,7 @@ export default function App() {
             const effLam_rec = s.detectorOn ? s.lam : 0;
             const dY_rec = 4 * effLam_rec * gW_rec;
             const overlap_rec = Math.exp(-dY_rec * dY_rec / (4 * s.sigY * s.sigY));
-            const isStrong_rec = effLam_rec > 0 && overlap_rec < 0.01;
+            const isStrong_rec = effLam_rec > 0 && (overlap_rec < 0.01 || s.showCoarse);
             // Pre-compute MW weak pointer sample so both outcome and needle blocks use same value
             const yRF = s.lastYRFixed ?? 0;
             let mwWeakSample = null, mwWeakIsT = false;
@@ -2911,7 +2912,7 @@ export default function App() {
       // ── Many-Worlds overlay ────────────────────────────────────────────────
       // Branching happens at measurement (detector entanglement), not at the barrier
       const sepFracMW = effLam > 0 ? clamp(dtP / 3.0, 0, 1) : 0;
-      const mwStrong3D = isMW && ptrOverlap < 0.01;
+      const mwStrong3D = isMW && (ptrOverlap < 0.01 || s.showCoarse);
       Tr.mwOverlay.visible = isMW;
       Tr.mwDivLine.visible = mwStrong3D && sepFracMW > 0.05;
       Tr.lblMW1.visible    = mwStrong3D && sepFracMW > 0.08;
@@ -2994,6 +2995,7 @@ export default function App() {
         sepFrac,
         ptrOverlap,
         showProj: s.showProj,
+        showCoarse: s.showCoarse,
         fixedT: s.fixedT,
         yTFinal: yTFinal_g,
         tickStep: gaugeTickStep_g,
@@ -3059,7 +3061,7 @@ export default function App() {
         }
 
         const needles = [];
-        const mwStrong = isMW && ptrOverlap < 0.01;
+        const mwStrong = isMW && (ptrOverlap < 0.01 || s.showCoarse);
         // Progress scalar 0→1 as detector traversal completes
         const progress = clamp(dtPShown / gWindow, 0, 1);
         // Needle target from sampled Y — grows toward sampledFrac over traversal time
