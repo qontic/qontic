@@ -1,0 +1,760 @@
+1 of 10
+
+RE: Q-Ontic Meeting
+
+Subject: RE: Q-On c Mee ng
+From: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>
+Date: 5/13/2026, 11:09 AM
+To: Lazarovici Dus n <dus n@technion.ac.il>, Pablo Yepes <yepes@rice.edu>
+Hi Dus n,
+The GREAT merits of Pablo’s app are:
+1.- There is a con nuous transi on between a weak (small coupling and large width) measurement and a strong (large coupling and small width) measurement. There are scenarios where the parameters (middle coupling) of the simula on are not clearly in the weak or strong regime, but such scenarios also occur in the
+laboratory, and we must be able to implement them.
+2.- What is done in the Bohmian measurement in Pablo’s app is the same for both weak and strong measurements. Basically, the pointer is following the y Bohmian posi on (as it should). Of course, a measuring apparatus is not just a “y” degree of freedom, but a macroscopic object. However, everybody models the
+measurement in this way, basically because you cannot simulate a pointer as a full macroscopic object.
+>In the weak measurement regime, the coupling is in general too weak for an individual measurement to produce a clearly discernible shi of the >pointer, even if the interac on has taken place. Unless the model implements sta s cs (where weak measurements become informa ve through >averages over many runs),
+one may simply show the pointer as not visibly moving at all. Alterna vely, one could show the pointer ji ering around i>ts ready posi on, with measurement-induced shi s that are (in general) small compared to that noise. But this gets more complicated.
+Pablo has already introduced the sta s cs you men oned (the same for weak and strong measurements), because it is assumed that the y trajectories are in quantum equilibrium in the distribu on of the y direc on.
+>I guess one could implement some model in which the pointer always shi s visibly, while the shi is only weakly correlated with the measured >quan ty... But that just doesn't seem to be the setup here.
+Perhaps you are arguing that the “observable” being transmi ed or reﬂected only has two outputs, not inﬁnite posi ons as it has now. What you are sugges ng would require an addi onal step: introducing a line in the detector at the middle posi on between the transmi ed and reﬂected regions. If the pointer (y
+posi on) is above this middle line, the par cle is measured as transmi ed; if it is below, it is measured as reﬂected. Then the average number of transmi ed par cles according to the pointer will be T (the transmission coeﬃcient), and the number of par cles detected as reﬂected will be propor onal to the reﬂec on
+coeﬃcient of the x par cles.
+In any case, I like as it is now, seeing all the noise, which is in fact not noise but valuable informa on when taking averages. But, I have no big problem in having only two outputs in the detector (ON =transmi ed and OFF=reﬂected) respec ng the sta s cs of the Y.
+>In any case, while there might have been some miscommunica on via email, this is about the input I can give and I don't feel the need to discuss >much more via Zoom. I'm happy to step back and let you decide what implementa on you want. My only ask is, again, not to show stuﬀ that >makes people believe there is
+some obvious way to empirically dis nguish Bohmian mechanics from standard quantum mechanics.
+Now, what the orthodox approach is doing with the pointer is EXACTLY the same as the Bohmian one. THERE ARE NO EMPIRICAL DIFFERENCES.
+My point in the previous email was about the word “collapse”. The orthodox collapse can be deﬁned as “a wave packet disappearing”, which is diﬃcult to discuss. But I suggest deﬁning “collapse” instead as “the pointer is moving”, which is much easier to discuss. If you move the pointer is because the Y degree of
+freedom have been measured (stringly) in the orthodox picture.
+What do you think?
+All the best,
+Xavier Oriols
+__________________________________
+Dr. Dustin Lazarovici
+Assistant Professor of Philosophy
+Humanities and Arts Department
+Tel: +972 48293817
+dustin@technion.ac.il
+www.technion.ac.il \ dustinlazarovici.com
+
+Von: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>
+Gesendet: Mi woch, 13. Mai 2026 11:03
+An: Dus n Lazarovici <dus n@technion.ac.il>; Pablo Yepes <yepes@rice.edu>
+Betreﬀ: RE: Q-On c Mee ng
+Hi Dus n and Pablo,
+I suggest that we (Dus n, Pablo, and Xavier) have an online mee ng someday soon to discuss what exactly we want to implement regarding the strong and weak measurements. I think that if we con nue only by exchanging emails, we will not clarify things properly, and we may end up driving Pablo crazy.
+In par cular, the point that worries me about Dus n’s argument is the possibility of presen ng weak measurements as a measurement that does not move the pointer.
+“A cruder strategy (but one that one could also implement in a consistent way) is not to show the pointer moving at all unless there's a clear separa on (a couple of \sigma) in y.”
+A weak measurement always has an outcome! i.e., a pointer moving!! The real issue is whether this outcome is well correlated with the system or not. In a strong measurement, there is a perfect correla on between the measurement outcome and the property of the system. In a weak measurement, however, the
+correla on can be very poor. For example, the par cle may actually be reﬂected while the pointer indicates transmission.
+The merit of the weak measurement is that if you collect all the outcomes of weak measurement (because weak measurements always have outcomes!!!) and make an average with them, you will get a perfect correla on between expecta on values of the system and the expecta on values of the weak outcomes of the
+pointer. And, in my opinion, this merit is shown now in the Apps in a wonderful way!!!
+Can we arrange an online mee ng among us (Dus n, Pablo, and Xavier) to clarify these points in person?
+Best,
+Xavier Oriols
+
+From: Lazarovici Dus n <dus n@technion.ac.il>
+Sent: Wednesday, May 13, 2026 9:22 AM
+To: Pablo Yepes <yepes@rice.edu>; Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; jean.bricmont@uclouvain.be; js84@rice.edu; laf230@rutgers.edu; shadit@math.rutgers.edu; Anssi Kuha <Anssi.Kuha@metropolia.ﬁ>
+Subject: Re: Q-On c Mee ng
+
+Dear Pablo,
+Thank you, this is evolving really nicely. But the visualiza on of weak measurements s ll doesn't look quite right to me.
+The main issue (and this is almost certainly related to Xavier's point) is that one sees the pointer moving in the "Orthodox" view, even if there is no collapse.
+A secondary issue is that there are instances of measurements described as "weak" where the Bohmian condi onal wave func on seems collapse but there is no collapse in the orthodox view. This can be a ributed to the vagueness of the orthodox view, but my worry is again that it suggests a
+concrete dis nc on between the two "theories" that just isn't there under a more sophis cated understanding of standard QM.
+One possible solu on, as Xavier suggests, is to always apply some collapse of the pointer state. I'm not sure how Xavier would implement that, but for me it's essen ally the GRW mechanics: in the pointer coordinate y, the wave func on becomes localized on a certain scale (that corresponds
+roughly to the width of the ini al pointer state). In the weak measurement regime, the transmi ed and reﬂected branch have signiﬁcant overlap in y, so (parts of) both would survive this localiza on. In a strong measurement regime, only one branch survives.
+A cruder strategy (but one that one could also implement in a consistent way) is not to show the pointer moving at all unless there's a clear separa on (a couple of \sigma) in y. One aspect that the current visualiza on doesn't capture is that there is a coarse-graining involved in transla ng the
+y-coordinate to microscopically discernible pointer posi ons. Also from the point of view of Bohmian mechanics, nearby y-conﬁgura ons would be indiscernible on a macroscopic scale.
+In principle, the most complete/sophis cated model would take both aspects into account (coarse-graining and collapse of the pointer state), but I think this gets too complicated.
+In any case (but especially if the pointer is always moving), it may be counterproduc ve to make the markers "R" and "T" on the scale variable as in the current implementa on. The point of a weak measurement is that one cannot tell with any certainty (from an individual measurement)
+whether the par cle was transmi ed or reﬂected.
+All the best,
+Dus n
+
+__________________________________
+Dr. Dustin Lazarovici
+Assistant Professor of Philosophy
+Humanities and Arts Department
+Tel: +972 48293817
+dustin@technion.ac.il
+www.technion.ac.il \ dustinlazarovici.com
+
+Von: Pablo Yepes <yepes@rice.edu>
+Gesendet: Dienstag, 12. Mai 2026 18:26
+An: Dus n Lazarovici <dus n@technion.ac.il>; Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; jean.bricmont@uclouvain.be <jean.bricmont@uclouvain.be>; js84@rice.edu <js84@rice.edu>; laf230@rutgers.edu <laf230@rutgers.edu>; shadit@math.rutgers.edu <shadit@math.rutgers.edu>; Anssi Kuha
+<Anssi.Kuha@metropolia.ﬁ>
+Betreﬀ: Re: Q-On c Mee ng
+
+Dear Xavier and Dus n,
+
+5/13/2026, 1:46 PM
+
+2 of 10
+
+RE: Q-Ontic Meeting
+I’ve gone through Xavier’s points and tried to address each of them. Thank you again for the detailed feedback and for the graphics—they were very helpful.
+I’ve relabeled the collapse op on as “Orthodox,” since that’s the terminology we’ve been using. Even if we wish it weren’t the orthodox or dominant view, that’s the landscape we’re working within. I’ve also moved most controls under the expert panel. The default view is
+now a beginner mode with only a few essen al controls, which I hope feels less in mida ng for ﬁrst- me users.
+The expected value for the transmi ed wave on the detector now updates according to the coupling strength, and I’ve marked it with a green ck.
+I removed the weak/strong measurement bu ons. The interac on strength is now determined directly by the coupling and by the width of the pointer wave func on (control added). A weak interac on occurs when the T/R pointer wave func ons overlap by more than 1%.
+That cutoﬀ is arbitrary, of course—we can adjust it or expose it as a parameter if that seems useful.
+For the Orthodox and MW views, the pointer posi on on the dial detector is selected randomly within psi^2 of the relevant wave func on: the selected branch for strong measurements, or the overlapping region for weak ones. In weak measurements, there is no collapse in
+the Orthodox view and no world-spli ng in MW. For MW with strong measurements, two pointers are shown, corresponding to the diﬀerent worlds.
+I also ﬁxed a couple of bugs: in the previous version, the T/R status for the PW model depended incorrectly on the detector’s y-posi on rather than the actual x-posi on.
+I hope this version illustrates weak measurement behavior a bit more clearly. I’m very open to developing a separate simula on if you think a more focused treatment would help. Sugges ons are always welcome.
+As ever,
+Pablo
+
+Dear Xavier and Dus n,
+Xavier, Thank you for your detail answer and the graphics. I have tried to address your various points brought up.
+I changed the label of the collapse to "Orthodox", a er all that is the language we are using. Even though, we would like that it would not be the orthodox and unique view, that is the reality. I have also hidden most the controls under the expert op on. The default view is a
+beginner view with very few controls. I hope that makes less in mida ng for ﬁrst-comers.
+The value expected for the transmi ed wave changes on the detector according to the strength of the coupling and it is marked with a green ck.
+I have suppressed the Weak/strong measurements bu ons. Now, whether the interac on is strong/weak is determined by the strength of the coupling and the width of the pointer wave func on. A weak interac on occurs when the pointer T/R wave func ons overlap more
+than 1%. That is an arbitrary cutoﬀ and we could change or introduce a parameter to control it.
+For the Orthodox and MW (many-worlds), the posi on of the pointer on the dial detector is selected randomly within psi^2 of the selected (strong measurement) or overlapping wave func ons (weak measurement). For weak measurements there is no collapse for the
+Orthodox view and no split of worlds in MW. For MW and strong measurements two pointers are shown, corresponding to the diﬀerent worlds.
+I also corrected a couple of bugs, in the previous simula on the T/R status for PW (pilot wave) depended on the y (detector) posi on rather than the par cular posi on (x).
+I hope this illustrates the weak measurement a bit be er. But I'll be happy to develop another simula on whether the weak measurement was more clearly illustrated. I am certainly open to sugges ons.
+As ever,
+Pablo
+On 5/7/2026 4:42 PM, Lazarovici Dus n wrote:
+Dear Xavier,
+Thanks, I agree with what you're saying and think this is indeed the best way of understanding weak measurements in standard QM.
+I am a bit worried about adding too much complexity to the simula on that might overwhelm or confuse beginners, but if Pablo is willing to take this on, I'd be happy to see the ﬁnal product.
+Best,
+Dus n
+Sent from Outlook for Android
+From: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>
+Sent: Friday, May 8, 2026 12:16:20 AM
+To: Pablo Yepes <yepes@rice.edu>; Dus n Lazarovici <dus n@technion.ac.il>; jean.bricmont@uclouvain.be <jean.bricmont@uclouvain.be>; js84@rice.edu <js84@rice.edu>; laf230@rutgers.edu <laf230@rutgers.edu>; shadit@math.rutgers.edu <shadit@math.rutgers.edu>; Anssi Kuha
+<Anssi.Kuha@metropolia.ﬁ>
+Subject: RE: Q-On c Mee ng
+Dear Pablo and Dus n,
+I basically agree with the drawbacks men oned by Dus n regarding the apps, but I think the solu on is not to eliminate the capability to discuss weak and strong measurements, but rather to correct the drawbacks men oned by Dus n.
+Apart from their own intrinsic interest, the ability to discuss weak and strong measurements will also allow us to develop another app for an experiment that, to my knowledge, does not yet exist as an app: the measurement of a weak value. The most famous weak value is obtained by performing a weak
+measurement of the posi on and, a er a short me, a strong measurement of the posi on (together with some post-selec on). This weak value gives the Bohmian velocity!!! In my opinion, if we are able to make an app represen ng weak values (a consecu ve weak and strong measurement), we will bring
+the Q-on c project to a signiﬁcantly higher level!!!
+However, before deciding whether we want to develop an app for weak values or not, we ﬁrst need to correct the drawbacks in the current weak and strong measurement app men oned by Dus n. I a ach two ﬁgures to explain my point of view on what should be represented in the apps. Mainly, what has
+to be corrected in the app corresponds to points 1, 2, and 3 below:
+*** FIGURE 1: *** In ﬁgure 1, I plot a unitary evolu on on how the system x is coupled to the system y. S ll no collapse. But, this unitary evolu on has some drawbacks if we want to model the unitary evolu on of a weak and a strong measurement.
+1.- There are two widths ((\sigma)) in the unitrary evolu on: the width of the wave packet in the (x)-direc on, which is rela vely irrelevant, and the width of the wave packet in the (y)-direc on, which is very relevant AND NOW IT CANNOT BE CHANGED. I think it would be be er if these two sigmas could be
+changed and selected independently.
+2.- The labels (R) and (T) in the detector should not always be ﬁxed, but should instead indicate the central posi on of the wave packet in the (y)-direc on (for the reﬂected and transmi ed parts). See the plots in ﬁgure 1.
+*** FIGURE 2: ***
+I a ach Figure 2, where I explain the “collapse” in weak and strong measurements. To understand what the “collapse” is doing, it is important to no ce that a WEAK measurement of the system is, in fact, a STRONG measurement of the ancilla. The ancilla is our Hilbert space (y). Technically, we would need a
+new degree of freedom (z) to measure the ancilla (y), but we usually ignore it. The STRONG measurement of the ancilla has not yet been performed in ﬁgure 1 (only unitary evolu on as a pre-measurement). I explain the “collapse” in Figure 2:
+3.- In the Bohmian case, the state of the system a er the weak measurement of the system (i.e. a strong measurement of the ancilla y) is simply the condi onal wave func on \Psi(x,Y(t)). In ﬁgure 2, we see that some mes it is only one wave packet and some mes two wave packets. In the orthodox case,
+we reproduce what has been explained within Bohmian theory, but without trajectories. This, I think, is in agreement with Dus n’s previous comments that:
+(i) Orthodox theory is not even a complete theory because it does not explain what happens during a measurement, and
+(ii) Orthodox results are always equivalent to Bohmian ones.
+What do you think? The problem of represen ng the “measurement” here is because the wave func on is indeed \psi(x,y,z) not \psi(x,y). But, we have ignored the process of strongly measuring the ancilla (y degree of freedom)
+If anything needs to be explained more clearly, please let me know.
+Finally, I want to repeat that this eﬀort to include weak and strong measurements properly opens the door to a truly high-level app: a weak value “measuring” the Bohmian velocity.
+Best regards,
+Xavier Oriols
+
+From: Pablo Yepes <yepes@rice.edu>
+Sent: Thursday, May 7, 2026 7:14 PM
+To: Lazarovici Dus n <dus n@technion.ac.il>; Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; jean.bricmont@uclouvain.be; js84@rice.edu; laf230@rutgers.edu; shadit@math.rutgers.edu; Anssi Kuha <Anssi.Kuha@metropolia.ﬁ>
+Subject: Re: Q-On c Mee ng
+
+Du n,
+I have addressed 1 and 2. I hope it makes more sense now.
+Xavier,
+I am not sure how to handle 3 and 4. What does a weak-measurement mean in this context? In standard QM where is the transi on between a weak (no-collapse) and strong (collapse) measurement? Maybe we should just remove the weak and strong bu ons.
+What do you think?
+
+Cheers,
+
+Pablo
+
+5/13/2026, 1:46 PM
+
+3 of 10
+
+RE: Q-Ontic Meeting
+On 5/7/2026 6:22 AM, Lazarovici Dus n wrote:
+Hi Pablo,
+I'm not sure I fully understand what the concept is, but allow me to make a few observa ons:
+1. In the "Projec on Postulate" view, the behavior of the pointer is diﬀerent than in the "Pilot Wave" or "Many-Worlds" view. This might falsely suggest that one could empirically dis nguish this "theory" simply by observing how far the pointer moves.
+2. The "strength" of the measurement depends not only on the coupling constant but also on the dura on of the measurement interac on. Currently, it looks like that interac on persists from the moment the wave func on reaches the detector surface to the end
+of the simula on (and thus depends on the placement of the detector). It might be be er to remove that variable by ﬁxing a me window for the interac on between par cle and measurement device.
+3. With the current default se ngs for "weak", we are not in what I would consider the weak measurement regime. For me, a "weak measurement" looks more like 5% coupling (in the pilot wave view). That is, from an individual weak measurement, one cannot tell
+with any certainty whether the par cle was transmi ed or reﬂected and the (condi onal) wave func on wouldn't fully collapse.
+4. The same is true in standard quantum mechanics: A single weak measurement (in the technical sense of "weak measurement") wouldn't really collapse the wave func on. But I'm not sure exactly what view "Projec on Postulate" is supposed to represent, and a
+weak measurement just isn't a projec ve measurement to begin with. So perhaps Xavier should say what visualiza on he had in mind here. For me, it's just important not to give the false impression that one could empirically dis nguish standard QM from BM by
+showing diﬀerences that don't really exist under a somewhat sophis cated understanding of standard QM.
+Best,
+Dus n
+
+__________________________________
+Dr. Dustin Lazarovici
+Assistant Professor of Philosophy
+Humanities and Arts Department
+Tel: +972 48293817
+dustin@technion.ac.il
+https://protect.checkpoint.com/v2/r02/
+___www.technion.ac.il___.YzJlOnRlY2huaW9uOmM6bzpmODE3ZWViOGVhYWMwNjMzYzgyY2U2ODgyY2UxNjQwMTo3OjE2MWQ6MGU0NjM2ODM5ZDc1YzE3MjE5ZDhlZGVkYTFjMGM5ODZhNThlNTgyM2E2MzVlYWUwOTY3OTI2MjE2YzFmYmE1YTp0OlQ6Rg
+\ dustinlazarovici.com
+
+Von: Pablo Yepes <yepes@rice.edu>
+Gesendet: Mi woch, 6. Mai 2026 05:13
+An: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; Dus n Lazarovici <dus n@technion.ac.il>; jean.bricmont@uclouvain.be <jean.bricmont@uclouvain.be>; js84@rice.edu <js84@rice.edu>; laf230@rutgers.edu <laf230@rutgers.edu>; shadit@math.rutgers.edu <shadit@math.rutgers.edu>;
+Anssi Kuha <Anssi.Kuha@metropolia.ﬁ>
+Betreﬀ: Re: Q-On c Mee ng
+
+Xavier,
+Check the new version, I think it has all you suggested: h ps://protect.checkpoint.com/v2/r02/___h ps://qon clab.rice.edu/
+measurement___.YzJlOnRlY2huaW9uOmM6bzpmMGJkY2MzMmY0ZDc3MDkzYjM5YjY3YTJlMzY2ZDU3ZDo3OjQzN2Q6MjA2MTQxZDBlMzZiYzgxNTZhMmU2NGZmN2EzZWQ4ZjlkMjVlMWNlZDE5OGM0ZjI2YTFjODk5ZmQwZjM0NTAzODp0OlQ6Rg. I do think
+that the more we work on it, the be er the apps will be. This is an itera ve process...
+I also implemented your 2D simula ons from the Matlab code. Have a look at h ps://protect.checkpoint.com/v2/r02/___h ps://qon clab.rice.edu/
+dev___.YzJlOnRlY2huaW9uOmM6bzpmMGJkY2MzMmY0ZDc3MDkzYjM5YjY3YTJlMzY2ZDU3ZDo3OjY1MzA6MGNlMjAyZGY2MDVmMTFmMmViYjRjNWJmY2YyMTZiOTllMGU0MDUxZmVkY2VjMjhjMWQ0OTc0Y2VmNjVhYjU0MTp0OlQ6Rg.
+All,
+I added a page with everyone in the collabora on: h ps://protect.checkpoint.com/v2/r02/___h ps://qon clab.rice.edu/
+collaborators.html___.YzJlOnRlY2huaW9uOmM6bzpmMGJkY2MzMmY0ZDc3MDkzYjM5YjY3YTJlMzY2ZDU3ZDo3OjVhNDg6ZWY1YTY1MzNkNmNmZjgxMjA1Yzg1OTgzYjAxNGNjZDVjOGI4MWNmMTBiOTk3NjRhZGY0NjVmODlkZDRjOTI4ODp0OlQ6Rg. Please
+let me know if you are ok with it. Right, it can be accessed from the bo om of the main page. We are listed in alphabe c order. Some pictures may need an update...
+Anssi,
+I'll be happy to add you if you would like to be included.
+Cheers,
+Pablo
+On 5/4/2026 5:28 PM, Xavier Oriols Pladevall wrote:
+Hi Pablo,
+I like very much how the setup looks now.
+Since you are always asking for sugges ons—and you have not complained (yet) that wri ng sugges ons is much easier than ﬁnally implemen ng them in the app —I will add one more for you to decide whether it makes sense.
+It is about the role of the coupling parameter that, together with the wave-packet width, allows one to eﬀec vely simulate both strong and weak measurements:
+1. Strong measurement: A strong measurement corresponds to a small pointer wave-packet width together with a large coupling. In this design, there is a clear separa on between the pointer states associated with the transmi ed and reﬂected components.
+2. Weak measurement: A weak measurement corresponds to a small coupling and a large pointer wave-packet width. In this regime, there is a signiﬁcant overlap between the pointer wave packets corresponding to transmi ed and reﬂected components, so one cannot determine
+with certainty whether the par cle was transmi ed or reﬂected.
+I think this ability of the app to reproduce the design of both strong and weak measurement apparatuses is a very nice feature. If we decide that this weak and strong visualiza on is worthwhile, then I believe the following points should be modiﬁed:
+
+a. The movement of the detector arrow (i.e., its angle of rota on during the measurement) should be directly propor onal to the pointer par cle’s mo on in the ver cal direc on. In other words, a small ver cal displacement of the pointer par cle should correspond to a
+small change in the detector angle.
+
+b. The diﬀerence between the angles deﬁned as “transmi ed” and “reﬂected” in the detector should be propor onal to the separa on between the central posi ons of the pointer wave packets corresponding to transmi ed and reﬂected events in the ver cal direc on.
+With these modiﬁca ons, users of the app will understand that some mes a measurement apparatus is not suﬃciently accurate—for example, due to wave-packet pointer overlap, a weak measurement may lead to incorrect iden ﬁca on of the Bohmian par cle’s behavior. This
+will not happen in a strong measurement, where the correla on between the par cle’s behavior and the detector’s indica on is perfect.
+In fact, with the proposed modiﬁca on of the pointer’s angular response, we recover what Dus n is expec ng: a small coupling leads to a small displacement in the ver cal direc on and, consequently, a small movement of the pointer angle.
+Sorry for the long email.
+All the best,
+Xavier Oriols
+P.S. Regarding collapse, I was ini ally thinking about con nuous collapse—i.e., a sequence of POVM-type collapses occurring at diﬀerent mes during the visualiza on, not only at one me (where the POVM collapse does not eliminate one of the wave packets, but instead
+gradually increases the probability of one of them and reduce the other)—but I fully agree that it is be er to forget about it
+From: Pablo Yepes <yepes@rice.edu>
+Sent: Monday, May 4, 2026 10:08 PM
+To: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; Lazarovici Dus n <dus n@technion.ac.il>; jean.bricmont@uclouvain.be; js84@rice.edu; laf230@rutgers.edu; shadit@math.rutgers.edu; Anssi Kuha <Anssi.Kuha@metropolia.ﬁ>
+Subject: Re: Q-On c Mee ng
+
+Xavier,
+I’ve implemented your sugges ons 1 and 2.
+On point 3, I’ve labeled it “Projec on Postulate” and added a tool p explaining the meaning. I’m hesitant to call it “Orthodox” or “Textbook” QM, since part of the project’s aim is precisely to unse le that framing. As you showed in an earlier
+dra , I also experimented with a 1-D representa on of the measurement process for the Copenhagen view, but the results weren’t very sa sfying. If you have a more concrete sugges on—or a Matlab implementa on—I’d be glad to try it.
+Dus n,
+Regarding your sugges on to include a spontaneous-collapse op on: I worry it may introduce more confusion than clarity. Although it is conceptually dis nct from Copenhagen, the visual behavior would be nearly iden cal in this interface.
+Further comments and sugges ons are very welcome.
+Pablo
+On 5/1/2026 1:25 PM, Xavier Oriols Pladevall wrote:
+Dear All,
+I like the app for measurement that Pablo developed. Just a few ideas that perhaps (not sure) could be useful:
+
+1. I think it could be enlightening if, in the app, it were possible to choose (i) whether the barrier is present or not, and (ii) whether the measuring apparatus is present or not, and then run the simula ons accordingly. See the a ached videos as examples. It makes
+clear that the act of measurement is not just “seeing” the par cles, you have to include a new apparatus!
+
+2. It would be nice if the degree of freedom of the pointer (ver cal direc on on the right) could be represented as a moving arrow of a measuring apparatus. In addi on to the (condi onal) wave packet in the ver cal axes, it would be useful to also show an arrow
+represen ng the measuring device. If the arrow does not move, you detect nothing!
+
+3. I think the name “Copenhagen/Collapse” is s ll ambiguous. Spontaneous collapse theories (GRW) are not “Copenhagen/Collapse” and they provide a well-deﬁned mechanism for collapse. Perhaps (not sure) we could refer to what is now named “Copenhagen/
+Collapse” as “standard University interpreta on” or something similar, to make it clear that what we are really is what is taught in (almost) all universi es. Spontaneous collapse could also be added as a separate op on.
+On the other hand, I have developed a MATLAB code for the app that Pablo has created. It is not polished, but I've a ached it too if needed. I also a ach three videos created with the matlab code:
+
+5/13/2026, 1:46 PM
+
+4 of 10
+
+RE: Q-Ontic Meeting
+1. wavepacket_evolu on_barrier.gif: where you see 1D tunneling in a 2D scenario.
+2. wavepacket_evolu on_barrier_measurement.gif: where you see 1D tunneling including a detector of charge a er the barrier.
+3. wavepacket_evolu on_measurement.gif: a detector without a barrier. You will see that some (very few) par cles are not detected due to the presence of the detector: the detector makes the par cle to be reﬂected! (I think some Bohmian researchers may
+ﬁnd this result interes ng, while others may not. See why in : h ps://protect.checkpoint.com/v2/r02/___h ps://link.springer.com/ar cle/10.1007/s10701-024-00798y___.YzJlOnRlY2huaW9uOmM6bzpmMGJkY2MzMmY0ZDc3MDkzYjM5YjY3YTJlMzY2ZDU3ZDo3OmQyOWI6NjNkYzU4NGQ3ZTc2YmM5MzA0OGFlYjBlOWViZTM0Y2NmYmFkOWNjYTUyZmJjODE5NDM4ZjI5NjA1ODU5YWY2MDp0OlQ6Rg ).
+All the best,
+Xavier Oriols
+
+From: Pablo Yepes <yepes@rice.edu>
+Sent: Tuesday, April 28, 2026 10:11 PM
+To: Lazarovici Dus n <dus n@technion.ac.il>; Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be; js84@rice.edu; laf230@rutgers.edu; shadit@math.rutgers.edu
+Subject: Re: Q-On c Mee ng
+
+Dear all,
+I have updated the measurement app: h ps://protect.checkpoint.com/v2/r02/___h ps://qon clab.rice.edu/
+measurement___.YzJlOnRlY2huaW9uOmM6bzpmMGJkY2MzMmY0ZDc3MDkzYjM5YjY3YTJlMzY2ZDU3ZDo3OmEwY2Y6ZTY2NjE0OGM1Mjk3M2E4ODQyNzE2NjEzOWVkNjkwMmEwMTNiYThjOGZlNTM1ZDEwODg0YTFmOTVkODIwZj
+IyODp0OlQ6Rg. The changes are:
+1) Introduce a detector a er the barrier
+2) Eliminated the 1d (operator) simula on.
+3) Change the name of Copenhagen view to "Copenhagen/Collapse". I hope that works for everyone. The collapse now happens when the par cle hits the detector.
+
+Please let me know what you think.
+
+Thank you,
+
+Pablo
+
+On 4/23/2026 4:44 AM, Lazarovici Dus n wrote:
+Dear Pablo,
+Great, this looks much be er and it also displays pre y well on my phone!
+I'm not sure what it means to simulate an "operator view" and whether that simula on is instruc ve.
+But one sugges on: Why don't we turn what is now "Copenhagen + Apparatus" into a simula on of spontaneous collapse? It would look essen ally the same -only that the collapse should set in sooner, I think (but perhaps it should
+do so anyway).
+Then the "Copenhagen" or "orthodox" view can be whatever Xavier says it is (Bohr would probably say that one shouldn't try to visualize the wave func on in the ﬁrst place), and the view of standard QM that makes sense to me
+would essen ally be illustrated by "spontaneous collapse".
+Best,
+Dus n
+
+__________________________________
+Dr. Dustin Lazarovici
+Assistant Professor of Philosophy
+Humanities and Arts Department
+Tel: +972 48293817
+dustin@technion.ac.il
+https://protect.checkpoint.com/v2/r02/
+___www.technion.ac.il___.YzJlOnRlY2huaW9uOmM6bzpmMGJkY2MzMmY0ZDc3MDkzYjM5YjY3YTJlMzY2ZDU3ZDo3OjM3NDk6NjEzYjgzMTJiMTAyNWE0NzkzZDI5YTZkZjA1NWZkM2YwNDVmNjhjZDA4NWIyMTQzZDMxMDVlNGNjNDM3YzdkMzp0OlQ6Rg
+\ dustinlazarovici.com
+
+From: Pablo Yepes <yepes@rice.edu>
+Sent: Wednesday, April 22, 2026 23:49
+To: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; Dus n Lazarovici <dus n@technion.ac.il>; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be <jean.bricmont@uclouvain.be>; js84@rice.edu <js84@rice.edu>;
+laf230@rutgers.edu <laf230@rutgers.edu>; shadit@math.rutgers.edu <shadit@math.rutgers.edu>
+Subject: Re: Q-On c Mee ng
+
+Dus n, Xavier,
+Thank you for your comments and feedback.
+Dus n,
+I think I have address all your four points. I also try to make it responsive, and I was successful to some degree. You can see it on your phone in horizontal mode, however in portrait, it s ll cuts the canvas. I have also
+added a QM operator version of the measurement. I also added a many-world op on. I hope it has not become too complicated. Please have a look at the new version online: h ps://protect.checkpoint.com/v2/r02/
+___h ps://qon clab.rice.edu/
+measurement___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OjNmNmI6NTRhNmE2ODZmYzA1YzMyODQ0NTBlNWIxNTNmMDY0ODBmOTliZmUxOWMyNWY2Njg4ZjRlYW
+NhNDkxZjQ1ZDc0YTp0OlQ6Rg.
+Xavier,
+Concerning modeling the measurement for a non-spa al variable, as you said, we already have the simula on of Stern-Gerlarch, which seems to be close. I would have to think speciﬁcally how to implement the
+measurement process explicitly. Certainly MATLAB programs to implement more realis c simula ons of the measurement problem would be very helpful.
+As ever,
+Pablo
+PS: Concernig the ontology of the 3D (condidional) wave func on, a parallel argument applies to the nomological reading of Bohmian mechanics advanced by Dürr, Goldstein, and Zanghì. In that framework, the only
+ontological primi ves are par cle posi ons, and the universal wave func on Ψ plays a nomological role — it governs par cle mo on without itself being a material ﬁeld. Yet par cle trajectories depend on Ψ just as fully
+as the 3D wave func ons do: without Ψ, the guidance equa on has no content. One might object that par cle posi ons are more primi ve because they are simpler — just three numbers rather than a ﬁeld. But this is
+a diﬀerence in mathema cal complexity, not a diﬀerence in kind. A par cle posi on can itself be understood as extracted from the full conﬁgura on by ﬁxing all other coordinates, just as the 3D wave func on is
+obtained by condi oning Ψ on the actual posi ons of the remaining par cles. In both cases, the mathema cal object used to deﬁne or govern the ontological primi ve is not thereby forced into the ontology. The
+dependency objec on therefore carries no more force against the idea of gran ng ontology to the 3D wave func ons than it does against the par cle-only ontology of DGZ.
+
+On 4/20/2026 4:41 AM, Xavier Oriols Pladevall wrote:
+Hi Pablo,
+
+I like the applet very much. Apart from Dus n’s comments, I would like to add the following:
+
+1. In the orthodox Copenhagen picture, measurements are typically described in 1D, not in 2D. This means that, in most QM textbooks, the measurement is not modeled by a physical measuring apparatus, but rather by an operator (a
+projector, or a POVM). Therefore, I think it would be nice if this operator-based picture of measurement could also be visualized in a purely 1D se ng, which is what students usually learn. (This comment is linked to the idea of “naïve
+realism about operators.”)
+
+2. In the app, the measurement essen ally corresponds to detec ng transmission or reﬂec on, which ul mately amounts to measuring posi on. In other words, from the very beginning, one is measuring a quan ty (the posi on) that is
+
+5/13/2026, 1:46 PM
+
+5 of 10
+
+RE: Q-Ontic Meeting
+
+already well deﬁned in Bohmian mechanics. However, this is not always the case. For example, one may measure the energy of a system prepared in a superposi on of diﬀerent energy eigenstates, or measure spin of a system prepared as a
+sum of spin up and down. In such cases, the value of the “measured” energy or spin is not a pre-exis ng value, but rather one that is created by the measurement process itself. We could also include this type of measurement. I think the
+Stern–Gerlach app is very close to what I say here.
+
+3. If needed, I could try to provide a MATLAB program, similar to the ones we have developed before for the double-slit experiment, to implement more realis c simula ons of the measurement process. Since 2D simula ons are comparable
+in complexity to those we have already developed, it seems feasible that such a program could run eﬃciently.
+
+All the best,
+Xavier Oriols
+
+P.S.
+“It looks to me that in the end, BM explains the measurement problem and eﬀec ve collapse of the wave func on when looking at the condi onal wave func ons. But isn't that somehow giving a more prominent ontological role to the
+condi onal wave func ons than to the conﬁgura on space wave func on?”
+The 1D condi onal wave func on requires the 2D conﬁgura on-space wave func on in order to be deﬁned, whereas the 2D conﬁgura on-space wave func on does not require the 1D one. This seems to be an argument against your
+sugges on, although I am not sure how strong my argument above really is. (Bohmian trajectories also require the full conﬁgura on-space wave func on.)
+
+From: Pablo Yepes <yepes@rice.edu>
+Sent: Friday, April 17, 2026 4:35 PM
+To: Lazarovici Dus n <dus n@technion.ac.il>; Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be; js84@rice.edu; laf230@rutgers.edu; shadit@math.rutgers.edu
+Subject: Re: Q-On c Mee ng
+
+Dear all,
+Have a look at h ps://protect.checkpoint.com/v2/r02/___h ps://qon clab.rice.edu/measurement/
+___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OmNmOWY6ZWQ1ZGM0OTI0MGE5NDFhMzQ2MDM2ZGVkNTIzMzU4M2M0YmViZDQ5OGZhZjVlZjUzNmUyZjJ
+kYjVjNGFhNTVhNDp0OlQ6Rg. It tries to replicate Xavier's PowerPoint. I am not fully sa sﬁed by how the wave is split between reﬂected and transmi ed, though. Please let me know whether this gets the
+idea and what needs to be improved.
+It looks to me that in the end, BM explains the measurement problem and eﬀec ve collapse of the wave func on when looking at the condi onal wave func ons. But isn't that somehow giving a more
+prominent ontological role to the condi onal wave func ons than to the conﬁgura on space wave func on.
+
+As ever,
+
+Pablo
+
+On 4/16/2026 7:24 AM, Lazarovici Dus n wrote:
+Hi Xavier,
+
+Okay, let's bracket was has been said or not said. I s ll don't think it is a good idea to include collapse dynamics in the double-slit simula on.
+
+First of all, to really simulate the Bohmian collapse, one would need a full quantum-mechanical model of the screen. This is extremely diﬃcult. In fact, no one really knows how to do it in a
+somewhat realis c manner; it's an open research problem that I and (from a somewhat diﬀerent perspec ve) Larry are working on.
+
+One could put in some collapse by hand — maybe we'll have to do that anyhow to illustrate spontaneous collapse theories. But I don't see much pedagogical value in showing that, if one looks
+very closely, the collapse in BM looks a li le more gradual than in orthodox QM. I don't think a user would understand what this means, why it ma ers, or what problem it's supposed to solve.
+We need dedicated applica ons showing the measurement process on conﬁgura on space to explain Bohmian concepts like condi onal wave func ons and eﬀec ve collapse.
+
+Finally, it's not clear if illustra ng such a diﬀerence between BM and orthodox QM is even correct. As you said yourself, standard QM doesn't really make compe ng predic ons about the collapse
+dynamics - it's just notoriously vague about it. But if one cares about me-scales, a sophis cated "orthodox" physicists would probably try es ma ng/modeling decoherence mes, and then it
+looks again pre y much the same as in Bohmian mechanics.
+
+The exis ng simula ons don't include an "orthodox view" at all, and I think that's for good reason. When it comes to the details, it's unclear what this "view" is actually supposed to look like in a
+simula on. From a Bohmian perspec ve, I would say that "orthodox QM" or "standard QM" is not a compe ng theory (in fact, it's no serious theory at all) but just an FAPP descrip on of the
+measurement formalism that can be derived from, and made precise within, Bohmian mechanics. From this perspec ve, trying to show things that look diﬀerently in BM and QM is also oﬀ-target
+because QM really is BM.
+
+Best,
+
+Dus n
+
+__________________________________
+
+Dr. Dustin Lazarovici
+Assistant Professor of Philosophy
+Humanities and Arts Department
+
+Tel: +972 48293817
+dustin@technion.ac.il
+https://protect.checkpoint.com/v2/r02/
+___www.technion.ac.il___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OmMwNDc6NzYxZWUzNjU0MGVmMzRmYjFhNTQxN2FjMTRkZTEyZGU3NmE2NWY0MGU4NWUwMzY2MWEzYjUyNTYwYzhjZDBiNTp0OlQ6Rg
+\ dustinlazarovici.com
+
+5/13/2026, 1:46 PM
+
+6 of 10
+
+RE: Q-Ontic Meeting
+
+From: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>
+Sent: Wednesday, April 15, 2026 12:37
+To: Dus n Lazarovici <dus n@technion.ac.il>; Pablo Yepes <yepes@rice.edu>; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be <jean.bricmont@uclouvain.be>; js84@rice.edu
+<js84@rice.edu>; laf230@rutgers.edu <laf230@rutgers.edu>; shadit@math.rutgers.edu <shadit@math.rutgers.edu>
+Subject: RE: Q-On c Mee ng
+
+Hi Dus n,
+
+Thanks for the email. First of all, I apologize if any of my comments made you feel uncomfortable or if it seemed like “I objected to a bunch of stuﬀ you didn't say.” The main mo va on of my E.mails was to discuss pedagogical
+aspects of the apps we are developing.
+
+In this regard, I think your sentence — “If the simula on only shows the par cle wave func on, it would look FAPP the same in BM and in standard QM” — opens a quite relevant pedagogical discussion on how to treat collapse
+in the applets. I elaborate on this:
+
+1.- In my own words, your sentence means that, in the double-slit experiment, the collapse occurs on such a fast mescale that “it would look FAPP the same in BM and in standard QM.” I fully agree that this is true for all
+prac cal purposes (FAPP), but I am arguing that the statement is not necessarily true for fundamental purposes. If we try to look at the mescales at which collapse occurs in BM and in standard QM, they would not look “the
+same,” because the me-evolu on process of collapse is undeﬁned in standard QM.
+
+2.- My main pedagogical interest is to present Bohmian theory as clearly and eﬀec vely as possible, which for me (although I understand this second point may not be shared by everyone) also involves highligh ng the
+important drawbacks of standard QM. The most important example of this drawback is the wave func on collapse in orthodox QM.
+
+I would be glad if the collapse problem of standard QM could be visually manifested in all apps. Against this preference, I recall the comment by Lawrence Frolov that trying to show too many things may end up making the apps
+impossible to understand.
+
+• Is it possible to visually manifest, within the double-slit experiment, the problems of the orthodox collapse? For example, by introducing a me “zoom” to compare Bohmian and orthodox collapses? The condi onal wave
+func on in the Bohmian case and ¿? in the orthodox case because the orthodox theory has not condi onal wave func on.
+• Would it be be er to illustrate the issue of standard QM collapse in other experiments where the measurement process (branching) is not so fast on the simula on mescale, such as the Stern–Gerlach experiment?
+
+Again, I apologize if any my comments made you feel uncomfortable. When you have me, I would be happy to hear your opinion on the visualiza on of BM and SM collapse in the apps.
+
+All the best,
+
+Xavier Oriols
+
+From: Lazarovici Dus n <dus n@technion.ac.il>
+Sent: Tuesday, April 14, 2026 10:15 AM
+To: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; Pablo Yepes <yepes@rice.edu>; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be; js84@rice.edu; laf230@rutgers.edu; shadit@math.rutgers.edu
+Subject: Re: Q-On c Mee ng
+
+Hi Xavier,
+
+I don't see how this is responding at all to what I wrote. I was reac ng to your proposal to include the orthodox collapse in the exis ng simula on of the double-slit experiment, in order to
+illustrate how "the wave func on, which occupies all space during many me of the simula on, is “suddenly” transformed into a wave func on localized only around the posi on where the par cle is detected on the
+screen." I was poin ng out that — in this exis ng simula on, which doesn't show the wave func on on conﬁgura on space — the Bohmian collapse would look essen ally the same.
+
+Then you object to a bunch of stuﬀ I didn't say.
+
+I agreed with the idea of crea ng other apps to show how BM handles measurement and collapse; in fact, I had suggested that from the very beginning, hence the slides.
+
+Best,
+Dus n
+
+__________________________________
+
+Dr. Dustin Lazarovici
+Assistant Professor of Philosophy
+Humanities and Arts Department
+
+Tel: +972 48293817
+dustin@technion.ac.il
+https://protect.checkpoint.com/v2/r02/
+___www.technion.ac.il___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OjQyOWI6ODNiMzcxZTQ1ZmY5MDFiMjY4M2E0MDJlZjBhNDM3NTc4ZGQxZTMyY2NjZDc3NTk2NDFjMWIwYTcyNDRjY2Y3Mjp0OlQ6Rg
+
+5/13/2026, 1:46 PM
+
+7 of 10
+
+RE: Q-Ontic Meeting
+\ dustinlazarovici.com
+
+From: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>
+Sent: Monday, April 13, 2026 16:01
+To: Dus n Lazarovici <dus n@technion.ac.il>; Pablo Yepes <yepes@rice.edu>; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be <jean.bricmont@uclouvain.be>;
+js84@rice.edu <js84@rice.edu>; laf230@rutgers.edu <laf230@rutgers.edu>; shadit@math.rutgers.edu <shadit@math.rutgers.edu>
+Subject: RE: Q-On c Mee ng
+
+Hi Dus n,
+
+Thanks for your comments. I would like to respond to them:
+
+>But regarding your second point - showing the "miracle of collapse" in the exis ng simula ons - the issue is that in Bohmian mechanics, the wave func on of the par cle, strictly speaking, collapses as well. Only >that it's not a
+miracle; it follows in >a precise way from the deﬁni on of condi onal wave func ons. But to show that, one really needs to look at the wave func on of par cle + detector on conﬁgura on space.
+
+Yes, we fully agree. If you look at the third slide of my PowerPoint, you will see the wave func on of the par cle + detector in conﬁgura on space, as well as two (condi onal) wave func ons: one for the reﬂected par cle and
+another for the transmi ed one.
+
+>If the simula on only shows the par cle wave func on, it would look FAPP the same in BM and in standard QM.
+
+I think your sentence is somewhat misleading because it compares apples and oranges. They may look similar for all prac cal purposes (FAPP), but if one looks at the details, they are totally diﬀerent:
+
+1. “Oranges” (standard QM): there is no explana on of the detailed mechanism of collapse of the wave func on (when it occurs, over what mescale, or what kind of wave func on change is involved). The theory simply
+does not address these details.
+
+1. “Apples” (Bohmian mechanics): on the contrary, in Bohmian mechanics all details of the eﬀec ve collapse are fully determined and, in principle, predictable (when it happens, over what mescale, and the precise form
+of the resul ng wave func on).
+
+I ﬁnd it unfair to say that BM and standard QM describe the same “par cle wave func on” evolu on during the measurement because standard quantum mechanics does not describe the collapse, just postulates how it ends.
+In fact, strictly speaking, your statement is not only unfair but also, in my view, incorrect. The “eﬀec vely collapsed” (condi onal) Bohmian wave func on sa sﬁes a non-unitary Schrödinger-like equa on (the equa on of
+mo on of the condi onal wave func on), whereas there is no corresponding non-unitary Schrödinger equa on for the par cle wave func on in standard quantum mechanics. So how can the two wave func ons be the same if
+their equa ons of mo on are diﬀerent? That does not seem possible.
+
+I am quite sure we also agree on this, and it would be nice if a “collapse as a miracle occurs” could be somehow represented in the apps.
+
+All the best,
+
+Xavier Oriols
+
+From: Lazarovici Dus n <dus n@technion.ac.il>
+Sent: Monday, April 13, 2026 1:56 PM
+To: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; Pablo Yepes <yepes@rice.edu>; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be; js84@rice.edu; laf230@rutgers.edu; shadit@math.rutgers.edu
+Subject: Re: Q-On c Mee ng
+
+Hi Xavier,
+
+I very much agree with the goal of showing that BM is about more than adding trajectories.
+
+I resend the slides I shared a while back, which also contain some anima ons that could be turned into a simula on. There is also this nice video that Stefan Teufel created many years ago:
+h ps://protect.checkpoint.com/v2/r02/___h ps://www.youtube.com/watch?
+v=fNFbkLMljMc&t=308s___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OjA5NTI6YjM3ZDU5YzBjZjk0MjFmMjJlMTZkODdjN2Y2ODdkMDA3ODBhYjU
+zNDY3MjI1YzQzOTY3NWUzOGU1NGUxYWZjNzp0OlQ6Rg
+
+But regarding your second point - showing the "miracle of collapse" in the exis ng simula ons - the issue is that in Bohmian mechanics, the wave func on of the par cle, strictly speaking,
+collapses as well. Only that it's not a miracle; it follows in a precise way from the deﬁni on of condi onal wave func ons. But to show that, one really needs to look at the wave func on of
+par cle + detector on conﬁgura on space. If the simula on only shows the par cle wave func on, it would look FAPP the same in BM and in standard QM.
+
+Best,
+Dus n
+
+__________________________________
+
+Dr. Dustin Lazarovici
+Assistant Professor of Philosophy
+Humanities and Arts Department
+
+Tel: +972 48293817
+dustin@technion.ac.il
+https://protect.checkpoint.com/v2/r02/
+___www.technion.ac.il___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OjA2NmE6NGU2NGZjOTllNzBjNjY5ZWIxZWNlYjNlNzIxYThkNDg5N2Y1YmNlZjRiZjYyZmUzYTM4MDg0NTJiNzJmNzc3ZTp0OlQ6Rg
+\ dustinlazarovici.com
+
+5/13/2026, 1:46 PM
+
+8 of 10
+
+RE: Q-Ontic Meeting
+
+Von: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>
+Gesendet: Montag, 13. April 2026 14:21
+An: Pablo Yepes <yepes@rice.edu>; Dus n Lazarovici <dus n@technion.ac.il>; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be <jean.bricmont@uclouvain.be>; js84@rice.edu <js84@rice.edu>;
+laf230@rutgers.edu <laf230@rutgers.edu>; shadit@math.rutgers.edu <shadit@math.rutgers.edu>
+Betreﬀ: RE: Q-On c Mee ng
+
+Dear all,
+
+In our last mee ng, we discuss that it would be a pity if all the eﬀort we are pu ng into developing the apps ended up conveying the message that Bohmian mechanics is simply about adding trajectories on top of the wave
+func on to reproduce the same evolu on already described by the wave func on (with diﬀerent colors). This is, to some extent, how Bohmian mechanics is o en presented, but it is not a very compelling way to convince
+people about its merits. We also discussed that one of the best ways to appreciate the merits of Bohmian theory is through how it explains measurement and clariﬁes some of the “miracles” required in the orthodox
+formula on. Regarding this point, I have two comments:
+
+Comment 1:
+I a ach three slides from PowerPoint material that are intended only as inspira on for developing an applica on based on these ideas. The example involves the measurement of a par cle that is either transmi ed or reﬂected.
+In the Copenhagen picture, the wave func on splits into transmi ed and reﬂected parts, and at some point a “miracle” occurs in which the par cle is found in one outcome or the other, but not both. In contrast, in the
+Bohmian framework, no such miracle is needed: one simply solves the Schrödinger equa on in 2D, including the measuring apparatus, and the diﬀerent outcome follows naturally in the 1D eﬀec ve space. To my knowledge,
+this is something that is largely absent from public explana ons and YouTube content on Bohmian mechanics, so it could be quite impac ul. We do not need to focus on this par cular example, it just wants to be an inspira on/
+mo va on.
+
+Comment 2:
+In the apps that Pablo has already developed for the two-slit experiment, it would be wonderful if we could also illustrate the orthodox “miracle (i.e. collapse)” in the simula on. By this, I mean that the wave func on, which
+occupies all space during many me of the simula on, is “suddenly” transformed into a wave func on localized only around the posi on where the par cle is detected on the screen. The simula on will look quite bizarre, with
+the wave func on randomly collapsing from everywhere into a point, but this is not our fault; it is simply how orthodox quantum mechanics is formulated.
+
+All the best,
+Xavier Oriols
+P.S. Later, I will send the improved versions of the word documents on the special issue we have discussed.
+
+From: Pablo Yepes <yepes@rice.edu>
+Sent: Tuesday, March 31, 2026 5:51 PM
+To: Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>; dus n@technion.ac.il; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be; js84@rice.edu; laf230@rutgers.edu; shadit@math.rutgers.edu
+Subject: Re: Q-On c Mee ng
+
+Dear Xavier,
+I think the email and ra onale are in good shape. Here are a few sugges ons that might strengthen the case.
+In the ra onale, the opening men ons the second quantum revolu on but then drops it. There is a powerful argument there that is worth spelling out: students being trained for quantum
+compu ng, cryptography, and sensing arguably need a deeper ontological grasp of what they are engineering, not just calcula onal ﬂuency. Making that connec on explicit would sharpen the
+mo va on considerably.
+The paragraph on "shut up and calculate" is your strongest moment. You could reinforce it by no ng that physics educa on research has consistently shown that conceptual understanding — not
+just problem-solving — is what dis nguishes expert from novice physicists. That gives the cri que an empirical grounding rather than a purely philosophical one.
+You should also preempt the obvious objec on: a skep cal editor will immediately wonder whether exposing students to contested interpreta ons will just confuse them. A sentence or two
+clarifying that the goal is pluralism and cri cal thinking — not replacing one orthodoxy with another — would disarm that before it arises.
+On Bell: the phrase "largely unsuccessfully" undersells him. Something like "nearly 50 years ago, John Bell had the foresight to raise this ques on — a debate that, despite his eﬀorts, never fully
+took hold in mainstream curricula" reframes his role as visionary rather than simply unsuccessful, and makes the special issue feel like a long-overdue vindica on rather than a revival of a failed
+project.
+In the email itself, the oﬀer to guest-edit is a bit hedged. Sta ng clearly that we are proposing to serve as guest editors, and brieﬂy no ng why the group is well posi oned — the breadth across
+applied, fundamental, and educa onal exper se is a genuine strength — would read with more conﬁdence.
+I wonder if it would help to indicate that we think a good number of authors would contribute to the special issue.
+Best,
+Pablo
+On 3/31/2026 7:22 AM, Xavier Oriols Pladevall wrote:
+Dear all,
+
+Yes, there is another topic that we s ll have ongoing and not yet completed, which is the special issue we discussed.
+
+I have looked into the best way to submit the proposal. In reviewing several of the consul ng editors listed for the American Journal of Physics, it is clear that there are few of them who are highly knowledgeable in
+quantum mechanics—who have even wri en books on quantum mechanics and quantum ﬁeld theory. For example, the three listed below
+
+David J. Griﬃths (AJP Consul ng Editor)
+Well-known textbook author (Introduc on to Quantum Mechanics and Introduc on to Quantum Electrodynamics) and long- me contributor to AJP.
+h ps://protect.checkpoint.com/v2/r02/___h ps://www.reed.edu/physics/faculty/griﬃths/
+___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OjJiZTg6OTRmMDQzMmQxMGZmYTE0NWVjMTk3YmEwN2I5NzdkMGJhMGUyMjIzNzk4Njk1Y2EwZGJlNzYwYjI3NjZlM
+DcwYTp0OlQ6Rg
+
+Daniel V. Schroeder (AJP Consul ng Editor)
+Co-author of Quantum Field Theory textbooks and a respected physics educator.
+h ps://protect.checkpoint.com/v2/r02/___h ps://physics.weber.edu/schroeder/
+___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OjU5MGI6NDMwNDQxYzViMmI3ZWM5NjY3MmQ5Mjk5MjM5MWI4MmFmYjA2MWFhNWIwMjM4ZmFhNDA4YjYyYz
+UzZTYzZWM1ZTp0OlQ6Rg
+
+John L. Bohn (AJP Consul ng Editor)
+h ps://protect.checkpoint.com/v2/r02/___h ps://www.colorado.edu/physics/johnbohn___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OjVjZWE6MzY1NjE5YjAzMGI3NjQzM2E2NmJiYTNhZTUzMGRmMDk5MTE5NjVkMjQ5ZTI3MzQzMGMwNjFlODE3
+MDQ0ZDAzMDp0OlQ6Rg
+
+However, I am not sure that they would be very recep ve to these realis c (hidden-variables) interpreta ons of quantum mechanics. Perhaps yes, but not sure. Another possibility is wri en directly to the editorial
+oﬃce and wait for their response.
+
+5/13/2026, 1:46 PM
+
+9 of 10
+
+RE: Q-Ontic Meeting
+
+AJP Editorial Oﬃce:
+Professor Beth Parks
+Department of Physics and Astronomy
+Colgate University
+Hamilton, NY 13346
+ajpeo@aip.org
+
+If we ﬁnally decide to E,mail the editorial oﬃce, I am including here a dra of the email, along with the previous text we had already discussed regarding the special issue. I have also updated the tle to make it
+more engaging.
+
+I would appreciate it if we could discuss this issue this a ernoon to decide how ﬁnally proceed.
+
+All the best,
+
+Xavier Oriols
+
+From: Pablo Yepes <yepes@rice.edu>
+Sent: Monday, March 30, 2026 11:41 PM
+To: dus n@technion.ac.il; e.tang@rice.edu <et50@rice.edu>; jean.bricmont@uclouvain.be; js84@rice.edu; laf230@rutgers.edu; shadit@math.rutgers.edu; Xavier Oriols Pladevall <Xavier.Oriols@uab.cat>
+Subject: Re: Q-On c Mee ng
+
+You can see a development website at: h ps://protect.checkpoint.com/v2/r02/___h ps://qon clab.rice.edu/
+dev___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OmM1N2E6NmJlMjEzNjMwOGNkOTUxMTc3MDQ3ZDFjZTY5YjE1ZTlkYTliMTE1MjQ1
+OWNjYjUxNGNjNTQ0YzQ3OTA4NGJiZTp0OlQ6Rg .
+It has an addi onal app for the free par cle and at the end a link to a page with the collaborators.
+Talk to you tomorrow,
+Pablo
+On 3/30/2026 9:01 AM, Pablo Yepes wrote:
+Dear all,
+This is a friendly reminder that we are mee ng tomorrow, March 31, at 8 AM CDT.
+Please let me know if there is any topic you would like to bring up.
+I can give you an update on where we are:
+1) Website: Please take a look at h ps://protect.checkpoint.com/v2/r02/___h ps://
+qon clab.rice.edu___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OmMyNzM6ZDJhNzA4OTI2ODNlMzk4YzJiYzExMTgyNzAxY
+mFlNThmMTc4YzdlYTY2OWRlMDZiNDY2NWI1MjY3MzMwZDk1Mzp0OlQ6Rg — we’ve added several new simula ons. We are s ll working on one on Bells correla ons and
+one on tunneling. I’m leaning toward rebuilding each simula on from scratch with AI assistance, which seems easier and more ﬂexible than con nuing to develop the
+universal QFT framework we started, but the decision isn’t ﬁnal yet. We also have a list of simula ons we want to implement here. We should probably start implemen ng
+them systema cally.
+I’d also like to add a collaborators page to the Qon c site. Please tell me if you’re happy to be included.
+2) We have interviewed four postdoc candidates, and have one interview pending; two candidates look very strong. We are also hiring a undergrad to contribute to the
+project over the summer. We have received the funding from FEHE (suppor ve founda on).
+3) Jared and I would appreciate your experience and advice on teaching pilot-wave theory to undergrads. We are considering a course on the various ontologies of
+quantum mechanics, including pilot-wave theory.
+4) We did not submit a proposal for a session in the PERC 2026, but most probably will submit an abstract.
+As ever,
+Pablo
+On 2/23/2026 1:16 PM, Pablo Yepes wrote:
+Q-On c M ee ng
+
+Reminder, we have a mee ng tomorrow at 8 AM CST. Proposed agenda: 1) Special Issue: Dus n, Xavier; 2) Numerical waves: Xavier ; 3) Update on qsf-v1 and qsf-v2. You can see version 2 at: h ps://protect.checkpoint.com/v2/r02/
+___h ps://qon clab.rice.edu/
+qsfv2___.YzJlOnRlY2huaW9uOmM6bzo0NGM3MGM2OTI1MjhjMTVmOTk3OTY0NTIxYjJmOGQ2MTo3OjlmMjM6OGFjM2FhM2NiNDg1ZTRhYzMxNjY4ZjFmOGEzMzBkYWRmNzQ3NmU5MzkzOGVhZDZhYjMxMGYwYjE2NTJlMmJiNjp0OlQ6Rg.
+S ll pre y shaky, but in case you want to see it on your own and play with it. It is essen ally a 3D version of v1, and much more ﬂexible.
+
+5/13/2026, 1:46 PM
+
+10 of 10
+
+RE: Q-Ontic Meeting
+
+Mee ng Q-On c
+(Chicago - Time Central ) am9 – am8 ⋅ 2026 ,24 Feb Tuesday
+
+Loca on
+https://riceuniversity.zoom.us/j/5139091298?pwd=YXE0MGNKVGNEeU1Db0VUUlBNWVkrdz09
+map View
+
+Guests
+organizer - Yepes Pablo
+dustin@technion.ac.il
+js84@rice.edu
+e.tang@rice.edu
+jean.bricmont@uclouvain.be
+shadit@math.rutgers.edu
+xavier.oriols@uab.cat
+laf230@rutgers.edu
+
+External e-mail, be judicious when opening a achments or links
+External e-mail, be judicious when opening a achments or links
+External e-mail, be judicious when opening a achments or links
+External e-mail, be judicious when opening a achments or links
+External e-mail, be judicious when opening a achments or links
+External e-mail, be judicious when opening a achments or links
+External e-mail, be judicious when opening a achments or links
+External e-mail, be judicious when opening a achments or links
+
+5/13/2026, 1:46 PM
+
+

@@ -523,12 +523,12 @@ const VIEWS      = ["cpn","pw","mw"];
 const VIEW_LABEL = { cpn:"Orthodox", pw:"Pilot-Wave", mw:"Many Worlds" };
 const VIEW_COLOR = { cpn:"#ff9966",    pw:"#44ddff",   mw:"#cc88ff" };
 const VIEW_TIP   = {
-  cpn: "Orthodox QM (von Neumann collapse):\nThe wavefunction collapses onto one branch when the\npointer states become sufficiently distinguishable.\nThe outcome is random with Born-rule probabilities.\nNo physical mechanism for collapse is specified —\nit is an additional postulate. Whether collapse occurs\ndepends on pointer overlap: if T and R branches still\noverlap significantly the measurement is too weak to\ntrigger collapse.",
+  cpn: "Orthodox QM (von Neumann collapse):\nCollapse means the pointer acquires a definite position —\nthe needle always moves, weak or strong.\nStrong measurement: pointer branches are well-separated;\nthe losing branch disappears and the outcome is unambiguous.\nWeak measurement: branches overlap; both survive in the\npointer wavefunction, but the needle still lands at a definite\ny — just with poor signal-to-noise. Repeated weak measurements\nstill converge to the correct Born-rule statistics.",
   pw:  "Pilot-Wave / de Broglie–Bohm:\nThe particle always has a definite position, guided\nby the wavefunction via the guidance equation.\nNo collapse ever occurs. Randomness arises solely\nfrom uncertainty in the particle's initial position.\nThe x-projection shows ψ_cond(x|Y(t)) = Ψ(x, Y(t)) —\nthe conditional wavefunction at the actual pointer position.\nWeak coupling: both T and R peaks survive (pointer branches\noverlap at Y(t)). Strong coupling: only the particle's branch\nsurvives as the pointer branches separate.",
   mw:  "Many-Worlds (Everett):\nThe wavefunction never collapses. Every outcome\noccurs — in separate, non-communicating branches\nof a universal wavefunction. There is no preferred\noutcome and no randomness beyond branch indexing.",
 };
 const VIEW_DESC  = {
-  cpn: "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). The 2D canvas shows the full configuration space: x = particle position, y = pointer of the measuring device. When the wave reaches the detector (yellow line), measurement occurs — but only if the pointer states are sufficiently separated (overlap < 1%). In a weak measurement the branches remain in superposition; in a strong measurement one branch collapses.",
+  cpn: "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). The 2D canvas shows the full configuration space: x = particle position, y = pointer of the measuring device. The pointer always acquires a definite reading (white marker on the y-panel) when the wave reaches the detector. In a strong measurement the branches are resolved and one disappears; in a weak measurement both branches survive but the pointer reading is noisy. Statistics always converge to the Born-rule T/R probabilities.",
   pw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Same global |Ψ(x,y)|² plus the Bohmian particle (X,Y) that rides one branch. Below: conditional wavefunction ψ_cond(x,Y(t)) and the two marginals.",
   mw:  "A quantum particle hits a potential barrier — it tunnels through (T) or reflects (R). Both branches persist — the universe splits. World 1: particle transmitted. World 2: particle reflected. Neither world 'knows about' the other.",
 };
@@ -557,6 +557,17 @@ function PointerDistFloat({ needleHistory, deltaY, sigY, Tp }) {
   const [pos, setPos] = React.useState(posRef.current);
   const cvRef = React.useRef(null);
   const Rp = 1 - Tp;
+  const sizeRef = React.useRef({ w: 210, h: 130 });
+  const [size, setSize] = React.useState(sizeRef.current);
+
+  const onResizeMouseDown = (e) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    const sx = e.clientX - sizeRef.current.w, sy = e.clientY - sizeRef.current.h;
+    const onMove = (ev) => { const next = { w: Math.max(150, ev.clientX - sx), h: Math.max(80, ev.clientY - sy) }; sizeRef.current = next; setSize({ ...next }); };
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+  };
 
   const onTitleMouseDown = (e) => {
     if (e.button !== 0) return;
@@ -581,60 +592,129 @@ function PointerDistFloat({ needleHistory, deltaY, sigY, Tp }) {
     const ctx = cv.getContext("2d");
     ctx.clearRect(0, 0, W, H);
 
-    const ml = 6, mr = 6, mt = 8, mb = 18;
+    const ml = 8, mr = 6, mt = 8, mb = 20;
     const pw = W - ml - mr, ph = H - mt - mb;
 
+    // ρ(y) = T·N(Δy,σ) + R·N(0,σ)  — already normalised to 1
     const gauss = (x, mu, sig) =>
       Math.exp(-0.5 * ((x - mu) / sig) ** 2) / (sig * Math.sqrt(2 * Math.PI));
+    const rhoT   = (y) => Tp * gauss(y, deltaY, sigY);
+    const rhoR   = (y) => Rp * gauss(y, 0,      sigY);
+    const rhoTot = (y) => rhoT(y) + rhoR(y);
 
     const yLo = Math.min(0, deltaY) - 3.2 * sigY;
     const yHi = Math.max(0, deltaY) + 3.2 * sigY;
     const ySpan = yHi - yLo || 1;
-    const toX = (dy) => ml + (dy - yLo) / ySpan * pw;
+    const toX = (y) => ml + (y - yLo) / ySpan * pw;
 
-    // Scale: find peak of the mixed distribution
+    // --- Empirical histogram -----------------------------------------------
+    const N = needleHistory.length;
+    const nBins = Math.max(8, Math.min(24, Math.round(Math.sqrt(N) * 1.5 + 4)));
+    const binW  = ySpan / nBins;
+    const binsT = new Float64Array(nBins);
+    const binsR = new Float64Array(nBins);
+    needleHistory.forEach(({ dy, isT }) => {
+      const b = Math.floor((dy - yLo) / binW);
+      if (b >= 0 && b < nBins) { if (isT) binsT[b]++; else binsR[b]++; }
+    });
+    // Normalise: divide by (N * binW) → proper probability density
+    const normFactor = N > 0 ? 1 / (N * binW) : 0;
+    const binsTn = binsT.map(v => v * normFactor);
+    const binsRn = binsR.map(v => v * normFactor);
+
+    // Peak density for y-scale (max of theoretical)
     let maxD = 0;
-    for (let i = 0; i <= 300; i++) {
-      const dy = yLo + ySpan * i / 300;
-      const d = Tp * gauss(dy, deltaY, sigY) + Rp * gauss(dy, 0, sigY);
+    for (let i = 0; i <= 400; i++) {
+      const d = rhoTot(yLo + ySpan * i / 400);
       if (d > maxD) maxD = d;
+    }
+    if (N > 0) {
+      for (let b = 0; b < nBins; b++) {
+        const d = (binsTn[b] + binsRn[b]);
+        if (d > maxD) maxD = d;
+      }
     }
     if (maxD === 0) maxD = 1;
     const toY = (d) => mt + ph - (d / maxD) * ph;
 
-    const drawCurve = (fn, color, fill) => {
-      if (fill) {
-        ctx.beginPath();
-        for (let i = 0; i <= 300; i++) {
-          const dy = yLo + ySpan * i / 300;
-          const cx = toX(dy), cy = toY(fn(dy));
-          i === 0 ? ctx.moveTo(cx, mt + ph) : undefined;
-          ctx.lineTo(cx, cy);
-        }
-        ctx.lineTo(toX(yHi), mt + ph);
-        ctx.closePath();
-        ctx.fillStyle = fill; ctx.fill();
+    // Posterior color helper — T=green (#22ee88), R=orange (#ff7744), midpoint=white.
+    // Blending routes through white (w=0.5) so we avoid muddy yellow.
+    const posteriorTbin = (y) => {
+      const pT = Tp * gauss(y, deltaY, sigY);
+      const pR = Rp * gauss(y, 0,      sigY);
+      const tot = pT + pR;
+      return tot < 1e-30 ? 0.5 : pT / tot;
+    };
+    const posteriorBlend = (w, alpha = 0.95) => {
+      // w=1 → green, w=0 → orange, w=0.5 → white
+      let r, g, b;
+      if (w >= 0.5) {
+        const t = (w - 0.5) * 2;          // 0..1, 0=white 1=green
+        r = Math.round(255 + (34  - 255) * t);
+        g = Math.round(255 + (238 - 255) * t);
+        b = Math.round(255 + (136 - 255) * t);
+      } else {
+        const t = (0.5 - w) * 2;          // 0..1, 0=white 1=orange
+        r = Math.round(255 + (255 - 255) * t);
+        g = Math.round(255 + (119 - 255) * t);
+        b = Math.round(255 + ( 68 - 255) * t);
       }
+      return `rgba(${r},${g},${b},${alpha})`;
+    };
+    const blendColorBin = (y) => {
+      const w = posteriorTbin(y);
+      return { dot: posteriorBlend(w, 0.95), bar: posteriorBlend(w, 0.60) };
+    };
+    // --- Empirical dots with ±1σ Poisson error bars (one per bin) -----------
+    if (N > 0) {
+      for (let b = 0; b < nBins; b++) {
+        const countB = binsT[b] + binsR[b];
+        if (countB === 0) continue;
+        const density = countB * normFactor;
+        const sigma   = Math.sqrt(countB) * normFactor;
+        const xMid = ml + (b + 0.5) * pw / nBins;
+        const yCtr  = toY(density);
+        const yUp   = toY(density + sigma);
+        const yDn   = toY(density - sigma);
+        const yBinCentre = yLo + (b + 0.5) * binW;
+        const { dot: dotCol, bar: barCol } = blendColorBin(yBinCentre);
+        // Error bar
+        ctx.strokeStyle = barCol;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(xMid, yUp); ctx.lineTo(xMid, yDn);
+        ctx.moveTo(xMid - 3, yUp); ctx.lineTo(xMid + 3, yUp);
+        ctx.moveTo(xMid - 3, yDn); ctx.lineTo(xMid + 3, yDn);
+        ctx.stroke();
+        // Dot at bin density
+        ctx.beginPath();
+        ctx.arc(xMid, yCtr, 3, 0, 2 * Math.PI);
+        ctx.fillStyle = dotCol;
+        ctx.fill();
+      }
+    }
+
+    // --- Theoretical curves (normalized to 1) --------------------------------
+    const drawCurve = (fn, color, lineW) => {
       ctx.beginPath();
-      for (let i = 0; i <= 300; i++) {
-        const dy = yLo + ySpan * i / 300;
-        const cx = toX(dy), cy = toY(fn(dy));
+      for (let i = 0; i <= 400; i++) {
+        const y  = yLo + ySpan * i / 400;
+        const cx = toX(y), cy = toY(fn(y));
         i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
       }
-      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.strokeStyle = color; ctx.lineWidth = lineW; ctx.stroke();
     };
+    drawCurve(rhoT,   "rgba(68,238,136,0.90)", 2.0);
+    drawCurve(rhoR,   "rgba(255,119,68,0.90)", 2.0);
+    drawCurve(rhoTot, "rgba(180,210,255,0.60)", 1.5);
 
-    drawCurve(dy => Tp * gauss(dy, deltaY, sigY), "rgba(68,238,136,0.85)",  "rgba(68,238,136,0.10)");
-    drawCurve(dy => Rp * gauss(dy, 0,      sigY), "rgba(255,119,68,0.85)", "rgba(255,119,68,0.10)");
-    drawCurve(dy => Tp * gauss(dy, deltaY, sigY) + Rp * gauss(dy, 0, sigY), "rgba(160,190,255,0.4)", null);
-
-    // x-axis
+    // --- x-axis --------------------------------------------------------------
     ctx.strokeStyle = "rgba(50,80,140,0.5)"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(ml, mt + ph); ctx.lineTo(ml + pw, mt + ph); ctx.stroke();
 
-    // Vertical reference lines at R=0 and T=deltaY
+    // Reference lines at R=0 and T=deltaY
     ctx.setLineDash([2, 3]);
-    [{ x: 0, c: "rgba(255,119,68,0.4)" }, { x: deltaY, c: "rgba(68,238,136,0.4)" }].forEach(({ x, c }) => {
+    [{ x: 0, c: "rgba(255,119,68,0.35)" }, { x: deltaY, c: "rgba(68,238,136,0.35)" }].forEach(({ x, c }) => {
       const cx = toX(x);
       if (cx >= ml && cx <= ml + pw) {
         ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(cx, mt); ctx.lineTo(cx, mt + ph); ctx.stroke();
@@ -642,28 +722,37 @@ function PointerDistFloat({ needleHistory, deltaY, sigY, Tp }) {
     });
     ctx.setLineDash([]);
 
-    // Rug plot — each recorded reading as a small tick below x-axis
-    const rugY0 = mt + ph + 2, rugY1 = mt + ph + 9;
-    needleHistory.forEach(({ dy, isT }, idx) => {
+    // --- Dots: each reading as a small circle just below x-axis -------------
+    // Color by posterior P(T|y): green=T, orange=R, white=ambiguous overlap.
+    const posteriorT = (dy) => {
+      const pT = Tp * gauss(dy, deltaY, sigY);
+      const pR = Rp * gauss(dy, 0,      sigY);
+      const tot = pT + pR;
+      return tot < 1e-30 ? 0.5 : pT / tot;
+    };
+    const blendColorDot = (dy) => posteriorBlend(posteriorT(dy), 0.85);
+    const dotY = mt + ph + 7;
+    needleHistory.forEach(({ dy }) => {
       const cx = toX(dy);
       if (cx < ml || cx > ml + pw) return;
-      const opacity = (0.25 + 0.7 * (idx / Math.max(needleHistory.length - 1, 1))).toFixed(2);
-      ctx.strokeStyle = isT ? `rgba(68,238,136,${opacity})` : `rgba(255,119,68,${opacity})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(cx, rugY0); ctx.lineTo(cx, rugY1); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, dotY, 2.5, 0, 2 * Math.PI);
+      ctx.fillStyle = blendColorDot(dy);
+      ctx.fill();
     });
 
+    // --- x-axis label --------------------------------------------------------
     ctx.fillStyle = "rgba(70,100,150,0.7)";
     ctx.font = "8px 'JetBrains Mono',monospace";
     ctx.textAlign = "center";
     ctx.fillText("pointer y", ml + pw / 2, H - 2);
-  }, [needleHistory, deltaY, sigY, Tp, minimized]);
+  }, [needleHistory, deltaY, sigY, Tp, minimized, size]);
 
   return ReactDOM.createPortal(
     <div style={{
       position: "fixed", left: pos.x, top: pos.y, zIndex: 9999,
-      width: minimized ? "auto" : 190,
-      minWidth: minimized ? 150 : 190,
+      width: minimized ? "auto" : size.w,
+      minWidth: minimized ? 150 : size.w,
       background: "rgba(4,10,30,0.90)",
       border: "1px solid rgba(60,110,220,0.45)",
       borderRadius: 7,
@@ -679,7 +768,7 @@ function PointerDistFloat({ needleHistory, deltaY, sigY, Tp }) {
           borderRadius: minimized ? 7 : "7px 7px 0 0",
           borderBottom: minimized ? "none" : "1px solid rgba(60,110,220,0.3)" }}>
         <span style={{ fontSize:10, color:"#8ab0e0", fontWeight:700, letterSpacing:"0.07em" }}>
-          POINTER DIST  N={needleHistory.length}
+          FINE POINTER DIST  N={needleHistory.length}
         </span>
         <button
           onMouseDown={(e) => e.stopPropagation()}
@@ -692,17 +781,24 @@ function PointerDistFloat({ needleHistory, deltaY, sigY, Tp }) {
         </button>
       </div>
       {!minimized && (
-        <div style={{ padding:"5px 6px 4px" }}>
+        <div style={{ padding:"5px 6px 4px", position:"relative" }}>
           <div style={{ display:"flex", gap:10, marginBottom:3, fontSize:9 }}>
             <span style={{ color:"#44ee88" }}>■ T  {Math.round(Tp*100)}%</span>
             <span style={{ color:"#ff7744" }}>■ R  {Math.round(Rp*100)}%</span>
             <span style={{ color:"rgba(160,190,255,0.55)" }}>— total</span>
+            <span style={{ color:"rgba(160,190,255,0.55)" }}>dots: <span style={{color:"#22ee88"}}>T</span>/<span style={{color:"#ff7744"}}>R</span>/white=mix</span>
           </div>
-          <canvas ref={cvRef} width={178} height={110}
+          <canvas ref={cvRef} width={size.w - 12} height={size.h}
             style={{ display:"block", width:"100%", height:"auto" }} />
           <div style={{ fontSize:9, color:"#304560", textAlign:"center", marginTop:2 }}>
             {needleHistory.length === 0 ? "waiting for outcomes…" : `${needleHistory.length} readings`}
           </div>
+          <div
+            onMouseDown={onResizeMouseDown}
+            style={{ position:"absolute", right:0, bottom:0, width:14, height:14,
+              cursor:"nwse-resize",
+              background:"linear-gradient(135deg, transparent 50%, rgba(80,120,200,0.45) 50%)",
+              borderBottomRightRadius:7 }} />
         </div>
       )}
     </div>,
@@ -778,7 +874,7 @@ function HistogramFloat({ histT, histR, histTotal, Tp }) {
           borderRadius: minimized ? 7 : "7px 7px 0 0",
           borderBottom: minimized ? "none" : "1px solid rgba(60,110,220,0.3)" }}>
         <span style={{ fontSize:10, color:"#8ab0e0", fontWeight:700, letterSpacing:"0.07em" }}>
-          OUTCOMES  N={histTotal}
+          COARSE POINTER DIST  N={Math.round(histTotal)}
         </span>
         <button
           onMouseDown={(e) => e.stopPropagation()}
@@ -802,7 +898,7 @@ function HistogramFloat({ histT, histR, histTotal, Tp }) {
             {/* T bar */}
             <div style={{ marginBottom:5 }}>
               <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, marginBottom:2 }}>
-                <span style={{ color:"#44ee88" }}>T  {histT}</span>
+                <span style={{ color:"#44ee88" }}>T  {Number.isInteger(histT) ? histT : histT.toFixed(2)}</span>
                 <span style={{ color:"#44ee88" }}>{Math.round(fT*100)}%</span>
               </div>
               <div style={{ position:"relative", height:9, background:"rgba(15,30,70,0.7)", borderRadius:3, overflow:"visible" }}>
@@ -817,7 +913,7 @@ function HistogramFloat({ histT, histR, histTotal, Tp }) {
             {/* R bar */}
             <div style={{ marginBottom:4 }}>
               <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, marginBottom:2 }}>
-                <span style={{ color:"#ff7744" }}>R  {histR}</span>
+                <span style={{ color:"#ff7744" }}>R  {Number.isInteger(histR) ? histR : histR.toFixed(2)}</span>
                 <span style={{ color:"#ff7744" }}>{Math.round(fR*100)}%</span>
               </div>
               <div style={{ height:9, background:"rgba(15,30,70,0.7)", borderRadius:3, overflow:"hidden" }}>
@@ -853,6 +949,8 @@ const SimPanel = React.memo(({
   showWave, setShowWave,
   showTraj, setShowTraj,
   showProj, setShowProj,
+  showCoarse, setShowCoarse,
+  fixedT, setFixedT,
   running, setRunning,
   barrierOn, setBarrierOn,
   detectorOn, setDetectorOn,
@@ -996,7 +1094,9 @@ const SimPanel = React.memo(({
           <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
             {[
               { key:"barrier",  label:"Barrier",  on:barrierOn,  fn:setBarrierOn,  tip:"Toggle the potential barrier.\nOff = 100% transmission (free particle)." },
-              { key:"detector", label:"Detector", on:detectorOn, fn:setDetectorOn, tip:"Toggle the measuring device.\nOff = no coupling, pointer stays at rest." },
+              { key:"detector", label:"Detector",      on:detectorOn,  fn:setDetectorOn,  tip:"Toggle the measuring device.\nOff = no coupling, pointer stays at rest." },
+              { key:"coarse",   label:"Coarse det.",   on:showCoarse,  fn:setShowCoarse,  tip:"Show a second coarse-grained detector (binary T/R).\n\nThe fine detector (left) shows the quantum pointer — a continuous Gaussian wavepacket.\nThe coarse detector (right) amplifies that reading into a definite T or R click.\n\nIn weak regime the fine pointer is ambiguous; the coarse register makes the outcome definite." },
+              { key:"fixedT",   label:"Lock T pos.",    on:fixedT,      fn:setFixedT,      tip:"Lock the T pointer position on the dial and the y-panel.\n\nOff: T marker moves as coupling λ changes; the y-axis scale is fixed.\nOn: T marker stays at a fixed position; the y-axis scale adjusts so T is always at the same height. The y-value labels on the axis and dial change to reflect the actual pointer separation." },
             ].map(({ key, label, on, fn, tip }) => (
               <Tip key={key} text={tip}>
                 <button onClick={() => fn(!on)} style={{
@@ -1423,10 +1523,31 @@ const XMarginalPanel = React.forwardRef(function XMarginalPanel(_, ref) {
 });
 
 
+// ── Utility: nice tick step & values ────────────────────────────────────────
+function niceStep(lo, hi, targetCount = 5) {
+  const span = Math.abs(hi - lo);
+  if (span < 1e-9) return 1;
+  const raw = span / (targetCount - 1);
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  return norm <= 1.5 ? mag : norm <= 3 ? 2 * mag : norm <= 7 ? 5 * mag : 10 * mag;
+}
+function ticksInRange(lo, hi, step) {
+  const vals = [];
+  const start = Math.ceil((lo - step * 1e-6) / step) * step;
+  for (let v = start; v <= hi + step * 1e-6; v += step)
+    vals.push(Math.round(v / step) * step);
+  return vals;
+}
+function fmtYVal(v, step) {
+  const d = step >= 1 ? 0 : step >= 0.1 ? 1 : step >= 0.01 ? 2 : 3;
+  return v.toFixed(d);
+}
+
 // ── Y-marginal panel: ∫|Ψ(x,y)|²dx  vs  y  (vertical strip right of 2D) ─────
 // The canvas is drawn with y mapping vertically (bottom=yLo, top=yHi).
 // The density curve fills horizontally (density → rightward).
-function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFade, bY, bX, bIsTransmit, xT, xR, sigX, isPW, interp, sepFrac, ptrOverlap, showProj, yLo, yHi }) {
+function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFade, sampledPointerY, bY, bX, bIsTransmit, xT, xR, sigX, isPW, interp, sepFrac, ptrOverlap, showProj, yLo, yHi, fixedT, yTFinal, tickStep: extTickStep }) {
   // yRFixed: the R (not-transmitted) blob display position — kept in sync with 2D shader uYR.
   // yR itself (-lam*dtA) is only used for chi-weighting in x-panel (not drawing here).
   if (!canvas) return;
@@ -1441,30 +1562,89 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
     ctx.fillStyle = "#020812";
     ctx.fillRect(0, 0, W, H);
 
-    const YLO = yLo, YHI = yHi;
+    // In fixedT mode, pin yT at ~83% from the bottom by choosing a range relative to Δy.
+    // In normal mode, use the full camera range (yLo/yHi) so the display matches the 2D canvas.
+    let YLO, YHI;
+    const deltaY_dial = yT - yRFixed;   // current T separation (animated)
+    if (fixedT && (yTFinal ?? yT) - yRFixed > 1e-3) {
+      // Use final (stable) T position so the axis doesn't creep during traversal
+      const yTStable = yTFinal ?? yT;
+      const margin = 0.2 * (yTStable - yRFixed);
+      YLO = yRFixed - margin;
+      YHI = yTStable + margin;
+    } else {
+      YLO = yLo; YHI = yHi;
+    }
     // yRFixed comes from animation loop: camY - halfH*0.6 (20% up from bottom), matches 2D shader
     const yRDisplay = yRFixed;
     // y → vertical pixel (top = YHI, bottom = YLO)
     const wy = y => (1 - (y - YLO) / (YHI - YLO)) * H;
 
-    // Axis (left edge)
-    ctx.strokeStyle = "rgba(60,100,200,0.25)";
+    // ── Y-axis: uniform tick ruler (0 = R position = yRFixed) ─────────────
+    const TICK_MAJOR_LEN = 7, TICK_MINOR_LEN = 4;
+    const TICK_FONT_PX = Math.max(6, Math.round(W * 0.115));
+    // Step: use caller-supplied step (from dial range) if provided, else auto
+    const tickStep = extTickStep && extTickStep > 0
+      ? extTickStep
+      : niceStep(YLO, YHI, 6);
+    const subStep = tickStep / 5;  // minor ticks at 1/5 of major step
+    const majorVals = ticksInRange(YLO, YHI, tickStep);
+    const minorVals = ticksInRange(YLO, YHI, subStep);
+    // Relative label: 0 = R (yRFixed), positive = toward T
+    const relLabel = v => fmtYVal(v - yRFixed, tickStep);
+    // Measure widest label to place axis line to the right of it
+    ctx.font = `${TICK_FONT_PX}px 'JetBrains Mono',monospace`;
+    const labelW = majorVals.length
+      ? Math.max(...majorVals.map(v => ctx.measureText(relLabel(v)).width))
+      : ctx.measureText("0").width;
+    // Axis sits to the right of labels; labels are right-aligned just left of the axis
+    const AXIS_X = Math.round(3 + labelW);
+    const DENSITY_OFF = AXIS_X + TICK_MAJOR_LEN + 2;
+    // Minor ticks
+    ctx.strokeStyle = "rgba(80,110,200,0.30)";
+    ctx.lineWidth = 0.8;
+    minorVals.forEach(v => {
+      if (majorVals.some(m => Math.abs(m - v) < subStep * 0.01)) return;
+      const py = wy(v);
+      if (py < 1 || py > H - 1) return;
+      ctx.beginPath(); ctx.moveTo(AXIS_X, py); ctx.lineTo(AXIS_X + TICK_MINOR_LEN, py); ctx.stroke();
+    });
+    // Major ticks + labels (right-aligned LEFT of the axis line)
+    ctx.textBaseline = "middle"; ctx.textAlign = "right";
+    majorVals.forEach(v => {
+      const py = wy(v);
+      if (py < 3 || py > H - 3) return;
+      ctx.strokeStyle = "rgba(140,170,255,0.60)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(AXIS_X, py); ctx.lineTo(AXIS_X + TICK_MAJOR_LEN, py); ctx.stroke();
+      ctx.fillStyle = "rgba(120,155,230,0.75)";
+      ctx.fillText(relLabel(v), AXIS_X - 2, py);
+    });
+    // Axis line
+    ctx.strokeStyle = "rgba(60,100,200,0.45)";
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(2, H); ctx.stroke();
-    // y=0 line
-    ctx.strokeStyle = "rgba(0,200,255,0.2)";
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(0, wy(0)); ctx.lineTo(W, wy(0)); ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(AXIS_X, 0); ctx.lineTo(AXIS_X, H); ctx.stroke();
+    // Dashed guideline at R position (relative 0)
+    const wyR0 = wy(yRFixed);
+    if (wyR0 > 1 && wyR0 < H - 1) {
+      ctx.strokeStyle = "rgba(255,100,60,0.22)";
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(0, wyR0); ctx.lineTo(W, wyR0); ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
-    const fadeT = colBranch === -1 ? colFade : 0;
-    const fadeR = colBranch ===  1 ? colFade : 0;
+    // In weak ORT (large pointer overlap) both branches remain — no fade.
+    // Fade only applies in the strong regime where branches are resolved.
+    const isWeakORT = !isPW && !isMW && (ptrOverlap ?? 1) >= 0.01;
+    const fadeT = isWeakORT ? 0 : (colBranch === -1 ? colFade : 0);
+    const fadeR = isWeakORT ? 0 : (colBranch ===  1 ? colFade : 0);
     // Post-scatter amplitudes (without bl weighting — handled in blend)
     const ampT = Tp * (1 - fadeT);
     const ampR = Rp * (1 - fadeR);
 
     const N = 350;
-    const SCALE = (W - 6) * 0.88;
+    // DENSITY_OFF computed above from actual label width; SCALE fills remaining width
+    const SCALE = Math.max(10, (W - DENSITY_OFF - 4)) * 0.68;
 
     const drawDensityY = (getDensity, color, xOff = 4, scale = SCALE) => {
       ctx.beginPath();
@@ -1494,7 +1674,7 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       ctx.stroke();
     };
 
-    drawDensityY(y => (1 - bl) * gauss(y, yRFixed, sigY), "#88aaff");
+    drawDensityY(y => (1 - bl) * gauss(y, yRFixed, sigY), "#88aaff", DENSITY_OFF);
     const mwStrong = isMW && (ptrOverlap ?? 1) < 0.01;
     if (isMW && bl > 0.05) {
       if (mwStrong) {
@@ -1512,19 +1692,19 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
         // World 1 density clipped to left half (cyan)
         if (ampT > 0.001) {
           ctx.save(); ctx.beginPath(); ctx.rect(0, 0, pxMid, H); ctx.clip();
-          drawDensityY(y => bl * ampT * gauss(y, yT, sigY), "#00e5ff", 4, (pxMid - 6) * 0.88);
+          drawDensityY(y => bl * ampT * gauss(y, yT, sigY), "#00e5ff", DENSITY_OFF, (pxMid - DENSITY_OFF - 4) * 0.68);
           ctx.restore();
         }
         // World 2 density clipped to right half (magenta)
         if (ampR > 0.001) {
           ctx.save(); ctx.beginPath(); ctx.rect(pxMid, 0, W - pxMid, H); ctx.clip();
-          drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ee14d2", pxMid + 2, (W - pxMid - 6) * 0.88);
+          drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ee14d2", pxMid + 2, (W - pxMid - 6) * 0.68);
           ctx.restore();
         }
       } else {
         // ── Many-Worlds weak: single panel, overlapping T (green) + R (orange) ─
-        if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,        sigY), "#22ee88");
-        if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744");
+        if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,        sigY), "#22ee88", DENSITY_OFF);
+        if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744", DENSITY_OFF);
       }
     } else if (isPW && bl > 0.05) {
       // Conditional wavefunction: split into T (green) and R (orange) components,
@@ -1533,16 +1713,30 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       const gXatBX_R = gauss(bX, xR, sigX);
       const maxGX = Math.max(gXatBX_T, gXatBX_R, 1e-8);
       if (ampT > 0.001) drawDensityY(
-        y => bl * Tp * (gXatBX_T/maxGX) * gauss(y, yT, sigY), "#22ee88");
+        y => bl * Tp * (gXatBX_T/maxGX) * gauss(y, yT, sigY), "#22ee88", DENSITY_OFF);
       if (ampR > 0.001) drawDensityY(
-        y => bl * Rp * (gXatBX_R/maxGX) * gauss(y, yRDisplay, sigY), "#ff7744");
+        y => bl * Rp * (gXatBX_R/maxGX) * gauss(y, yRDisplay, sigY), "#ff7744", DENSITY_OFF);
       if (showProj) {
-        if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,       sigY), "rgba(34,238,136,0.35)");
-        if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "rgba(255,119,68,0.35)");
+        if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,       sigY), "rgba(34,238,136,0.35)", DENSITY_OFF);
+        if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "rgba(255,119,68,0.35)", DENSITY_OFF);
       }
     } else if (!isPW && !isMW) {
-      if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,       sigY), "#22ee88");
-      if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744");
+      if (ampT > 0.001) drawDensityY(y => bl * ampT * gauss(y, yT,       sigY), "#22ee88", DENSITY_OFF);
+      if (ampR > 0.001) drawDensityY(y => bl * ampR * gauss(y, yRDisplay, sigY), "#ff7744", DENSITY_OFF);
+      // Total ρ(y) = T·χ_T + R·χ_R — stroke-only line matching the pointer-dist inset
+      if (bl > 0.05 && (ampT > 0.001 || ampR > 0.001)) {
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(180,210,255,0.70)";
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i <= N; i++) {
+          const y  = YLO + (YHI - YLO) * i / N;
+          const py = wy(y);
+          const density = bl * (ampT * gauss(y, yT, sigY) + ampR * gauss(y, yRDisplay, sigY));
+          const px = DENSITY_OFF + density * SCALE;
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
     }
 
     // PW: horizontal marker line at Y(t)
@@ -1551,10 +1745,42 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       ctx.strokeStyle = "rgba(255,255,255,0.65)";
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 3]);
-      ctx.beginPath(); ctx.moveTo(4, py); ctx.lineTo(W, py); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(DENSITY_OFF, py); ctx.lineTo(W, py); ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = "#ffffff";
-      ctx.beginPath(); ctx.arc(4 + 3, py, 3, 0, 2 * Math.PI); ctx.fill();
+      ctx.beginPath(); ctx.arc(DENSITY_OFF + 2, py, 3, 0, 2 * Math.PI); ctx.fill();
+    }
+    // ORT: marker at sampled pointer position — color by posterior P(T|y).
+    // Green = landed in T branch, orange = R branch, white = ambiguous overlap.
+    if (!isMW && !isPW && sampledPointerY != null) {
+      const py = wy(sampledPointerY);
+      const pTy = Tp * gauss(sampledPointerY, yT, sigY);
+      const pRy = Rp * gauss(sampledPointerY, yRFixed, sigY);
+      const totY = pTy + pRy;
+      const wT = totY < 1e-30 ? 0.5 : pTy / totY;
+      let mr2, mg2, mb2;
+      if (wT >= 0.5) {
+        const t = (wT - 0.5) * 2;
+        mr2 = Math.round(255 + (34  - 255) * t);
+        mg2 = Math.round(255 + (238 - 255) * t);
+        mb2 = Math.round(255 + (136 - 255) * t);
+      } else {
+        const t = (0.5 - wT) * 2;
+        mr2 = 255;
+        mg2 = Math.round(255 + (119 - 255) * t);
+        mb2 = Math.round(255 + ( 68 - 255) * t);
+      }
+      const markerColor = `rgba(${mr2},${mg2},${mb2},0.95)`;
+      ctx.strokeStyle = markerColor;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 3]);
+      ctx.beginPath(); ctx.moveTo(DENSITY_OFF, py); ctx.lineTo(W, py); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = markerColor;
+      ctx.beginPath(); ctx.arc(DENSITY_OFF + 3, py, 4, 0, 2 * Math.PI); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(DENSITY_OFF + 3, py, 4, 0, 2 * Math.PI); ctx.stroke();
     }
 
     // ── Curve labels (horizontal, at each blob centre) ────────────────────
@@ -1562,11 +1788,12 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       const fsL = Math.max(8, Math.round(W * 0.17));
       ctx.font = `bold ${fsL}px 'JetBrains Mono', monospace`;
       ctx.textAlign = "left";
-      const labelX = 5;
+      const labelX = DENSITY_OFF + 2;
       // For PW: show only the branch the Bohmian particle is actually in.
-      // For CPN: show only the winning branch post-collapse (colBranch 0 = both, 1 = T, -1 = R).
-      const showT = isPW ? (bl > 0.05 && bIsTransmit) : colBranch >= 0;
-      const showR = isPW ? (bl > 0.05 && !bIsTransmit) : colBranch <= 0;
+      // For CPN: in weak regime (large overlap, small colFade) both labels remain; in strong only the winner.
+      const ortBothVisible = !isPW && (ptrOverlap ?? 1) >= 0.01;
+      const showT = isPW ? (bl > 0.05 && bIsTransmit) : (ortBothVisible || colBranch >= 0);
+      const showR = isPW ? (bl > 0.05 && !bIsTransmit) : (ortBothVisible || colBranch <= 0);
       if (bl > 0.12 && ampT > 0.05 && showT) {
         ctx.fillStyle = `rgba(34,238,136,${Math.min(bl * 1.5, 0.9)})`;
         ctx.fillText("T", labelX, wy(yT) - 4);
@@ -1577,11 +1804,11 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
       }
     }
 
-    // Rotated axis label — short form only (full label is in the HTML between panels)
+    // Rotated axis label — short form only
     ctx.save();
-    ctx.translate(W - 4, H / 2);
-    ctx.rotate(-Math.PI / 2);
     const fsY = Math.max(9, Math.round(W * 0.16));
+    ctx.translate(W - Math.ceil(fsY * 0.75), H / 2);
+    ctx.rotate(-Math.PI / 2);
     ctx.font = `${fsY}px 'JetBrains Mono', monospace`;
     ctx.fillStyle = "rgba(100,160,255,0.5)";
     ctx.textAlign = "center";
@@ -1641,17 +1868,19 @@ function MathPanel({ interp }) {
       {eq("ρ(x,t) = ∫|Ψ(x,y,t)|²dy  ≈  T·|ψ_T(x)|² + R·|ψ_R(x)|²\n\nρ(y,t) = ∫|Ψ(x,y,t)|²dx  ≈  T·|χ_T(y)|² + R·|χ_R(y)|²")}
 
       {interp === "cpn" && (<>
-        {sec("Orthodox QM — collapse criterion")}
-        {txt("After the detector interaction, each branch has a pointer state. Collapse requires these to be orthogonal — the von Neumann criterion:")}
-        {eq("O = ⟨χ_T|χ_R⟩ = exp(−Δy² / 4σ_p²)\n\nΔy = 4λ·(detector width / v₀)   — total pointer separation\nσ_p                          — pointer wavepacket width\n\nCollapse fires  iff  O ≈ 0   (in practice O < 1%)")}
-        {txt("When collapse occurs, one branch is selected with Born-rule probability:")}
+        {sec("Orthodox QM — collapse")}
+        {txt("After the detector interaction the global state is entangled. The von Neumann chain ends when the pointer is read: one branch is selected with Born-rule probability, the other is discarded. This happens at every cycle — weak or strong:")}
         {eq("Ψ(x,y,t*)  →  ψ_T · χ_T   with prob T\n            →  ψ_R · χ_R   with prob R = 1 − T")}
-        {txt("The pointer gauge shows a position sampled from the winning branch's Gaussian — not the exact branch centre. This reflects the spread of the pointer wavepacket: even after collapse, the recorded pointer value is distributed as N(y_branch, σ_p).")}
-        {txt("When O is not negligible (weak measurement), the global state Ψ = √T·ψ_T·χ_T + √R·ψ_R·χ_R remains entangled. The particle alone is in a mixed state — the pointer has shifted, but no definite outcome has occurred.")}
-        {txt("Note: Orthodox QM provides no microscopic derivation of the collapse rule — it is an axiom. The von Neumann criterion (orthogonal pointer states) gives the most precise operational version of 'when a measurement is complete'.")}
+        {txt("The pointer snaps to a position sampled from the winning branch's Gaussian — not the exact branch centre — reflecting the spread of the pointer wavepacket:")}
+        {eq("y_outcome ~ N(y_branch, σ_p)\n\ny_T = yR + Δy   (T branch centre)\ny_R = yR        (R branch centre)")}
+        {txt("What changes with coupling strength is how much information the pointer carries about the outcome, measured by the overlap of the two pointer states:")}
+        {eq("O = ⟨χ_T|χ_R⟩ = exp(−Δy² / 4σ_p²)\n\nΔy = 4λ·(detector width / v₀)   — pointer separation\nσ_p                          — pointer wavepacket width")}
+        {txt("Strong (O ≈ 0): the two pointer states are nearly orthogonal. A single shot unambiguously identifies the branch — the pointer lands clearly in the T or R peak.")}
+        {txt("Weak (O ≈ 1): the pointer states nearly coincide. Collapse still occurs and a definite outcome is registered, but the distributions overlap so heavily that a single shot gives almost no information about which branch was selected. The statistics still converge to Tp/Rp over many shots — individual outcomes are just very noisy.")}
+        {txt("Note: Orthodox QM provides no microscopic derivation of collapse — it is an axiom. Placing the cut at the pointer interaction (as here) is the standard von Neumann treatment.")}
       </>)}
 
-      {interp === "mw" && (<>
+        {interp === "mw" && (<>
         {sec("Many Worlds — no collapse")}
         {txt("The wavefunction evolves unitarily forever. After scattering, the global state is:")}
         {eq("Ψ(x,y,t) = √T · ψ_T(x,t) · χ_T(y,t)\n         + √R · ψ_R(x,t) · χ_R(y,t)")}
@@ -1659,8 +1888,12 @@ function MathPanel({ interp }) {
         {eq("World 1:  ψ_T · χ_T   (particle transmitted, pointer deflected up)\nWorld 2:  ψ_R · χ_R   (particle reflected, pointer at rest)")}
         {txt("The vertical dividing line at x=0 in the simulation marks the separation between the two worlds in configuration space. Right of the line (x>0) belongs to World 1; left (x<0) belongs to World 2.")}
         {txt("The x- and y-projection panels are each split in two: the cyan half shows World 1 (transmitted), the magenta half shows World 2 (reflected).")}
-        {txt("Probabilities emerge from the Born rule applied to the branch amplitudes — but in MW this is a derived (and debated) result, not a postulate.")}
-        {eq("P(World 1) = ‖√T ψ_T χ_T‖² = T\nP(World 2) = ‖√R ψ_R χ_R‖² = R")}
+        {txt("Strong measurement (O < 1%): pointer states are orthogonal, worlds are fully resolved. The Coarse Pointer Dist inlet records +T and +R (Deutsch-Wallace weights) per cycle — both worlds counted every shot:")}
+        {eq("Per cycle:  ΔN_T = T,   ΔN_R = R = 1−T,   ΔN_total = 1\n\nAfter N cycles:  N_T/N → T,   N_R/N → R")}
+        {txt("This recovers the correct Born-rule frequencies via the Deutsch-Wallace amplitude-squared measure (Deutsch 1999, Wallace 2010). The weights T = |√T|² and R = |√R|² are a mathematical fact about the wavefunction; whether they count as 'probabilities' in a deterministic branching universe is the central open problem.")}
+        {txt("Weak measurement (O ≥ 1%): pointer states overlap heavily — the worlds have not yet branched into distinguishable copies. A single noisy sample y is drawn from the mixed distribution ρ(y) = T·χ_T² + R·χ_R² and thresholded at the midpoint to give a T or R reading. This is a classical post-processing step, not a physical branching event.")}
+        {eq("y ~ T·N(y_T, σ_p) + R·N(y_R, σ_p)\n\noutcome = T  if y ≥ (y_T + y_R)/2\n        = R  otherwise")}
+        {txt("The coarse gauge reflects this: in weak MW it parks at centre (ambiguous) rather than snapping to T or R, since no genuine branching has occurred.")}
       </>)}
 
       {interp === "pw" && (<>
@@ -1673,9 +1906,17 @@ function MathPanel({ interp }) {
       </>)}
 
       {sec("Measurement strength")}
-      {txt("The quality of a measurement depends on whether the pointer states for T and R are distinguishable. The pointer overlap quantifies this:")}
-      {eq("O = ⟨χ_T|χ_R⟩ = exp(−Δy² / 4σ_p²)\n\nΔy = 4λ·(w / v₀)   — total pointer separation (w = detector width)\nσ_p             — pointer wavepacket width\n\nO → 0  (strong):  branches orthogonal, unambiguous readout, collapse fires\nO → 1  (weak):    branches indistinguishable, no information gained, no collapse")}
-      {txt("In Orthodox mode, collapse fires when O < 1% (branches effectively orthogonal). Above that the global system+pointer state remains entangled; the particle alone is in a mixed state. In Pilot-Wave / Many-Worlds, the wavefunction never collapses regardless of the overlap.")}
+      {txt("The pointer overlap quantifies how much information a single shot carries:")}
+      {eq("O = ⟨χ_T|χ_R⟩ = exp(−Δy² / 4σ_p²)\n\nΔy = 4λ·(w / v₀)   — pointer separation (w = detector width)\nσ_p             — pointer wavepacket width\n\nO → 0  (strong):  orthogonal pointer states — each shot is unambiguous\nO → 1  (weak):    overlapping pointer states — each shot carries little info")}
+      {txt("In Orthodox mode, collapse fires every cycle regardless of O. In a strong measurement the pointer lands clearly in one peak; in a weak measurement both peaks overlap and the outcome is nearly random — but statistics still converge to Tp / Rp.")}
+      {txt("In Pilot-Wave the wavefunction never collapses. The particle always has a definite trajectory so the outcome is always definite, weak or strong.")}
+      {txt("In Many-Worlds the wavefunction never collapses. Strong measurement: worlds are resolved, Deutsch-Wallace weighting applies. Weak measurement: worlds have not branched — no definite outcome exists from the pointer alone.")}
+
+      {sec("Two-stage detection")}
+      {txt("Real detectors are amplification chains: a quantum pointer (fine) feeds a macroscopic register (coarse). The simulation shows both.")}
+      {txt("Fine gauge (left): the quantum pointer — a Gaussian wavepacket with width σ_p. Continuous y-reading. Can be weak. Needle tracks the pointer wavepacket in real time.")}
+      {txt("Coarse gauge (right, toggle in Advanced › Physics): a binary register — two macroscopic states T and R, always orthogonal by construction. Needle snaps to T or R at pointer-hit time. In MW weak, no branching has occurred so the coarse register is not physically defined — the gauge parks at centre.")}
+      {eq("Coarse outcome:  T  if y_fine ≥ (y_T + y_R)/2\n                R  otherwise\n\n(threshold at midpoint between T and R pointer centres)")}
 
       {sec("Animation")}
       {txt("Units: ℏ = m = 1. Velocity v₀ = k₀. The simulation rescales physical time to fit the canvas. The barrier occupies |x| < 0.5.")}
@@ -1691,7 +1932,7 @@ function MathPanel({ interp }) {
 // labelFracs: { r: 0..1, t: 0..1 } — fixed arc positions marking where each branch's
 // pointer rests once coupling is fully applied. Determined by coupling strength alone,
 // not the current animation frame. R is always 0; T = lamScale (effLam / LAM_MAX).
-function drawGaugeFace(gCtx, W, H, needles, labelFracs) {
+function drawGaugeFace(gCtx, W, H, needles, labelFracs, title, yAxisTicks = null) {
   gCtx.clearRect(0, 0, W, H);
   const cx = W / 2, cy = H / 2;
   const R  = Math.min(cx, cy) - 3;
@@ -1713,31 +1954,84 @@ function drawGaugeFace(gCtx, W, H, needles, labelFracs) {
   gCtx.lineWidth   = 5;
   gCtx.stroke();
 
-  // Tick marks
-  const nTicks = 6;
-  for (let i = 0; i <= nTicks; i++) {
-    const frac  = i / nTicks;
-    const angle = -Math.PI / 2 + (frac - 0.5) * 2 * sweepHalf;
-    const isMain = i === 0 || i === nTicks || i === nTicks / 2;
-    const tLen  = isMain ? R * 0.22 : R * 0.13;
-    gCtx.strokeStyle = isMain ? "rgba(200,210,255,0.8)" : "rgba(140,160,210,0.4)";
-    gCtx.lineWidth   = isMain ? 2 : 1;
-    gCtx.beginPath();
-    gCtx.moveTo(cx + Math.cos(angle) * (R - tLen - 2), cy + Math.sin(angle) * (R - tLen - 2));
-    gCtx.lineTo(cx + Math.cos(angle) * (R - 3),        cy + Math.sin(angle) * (R - 3));
-    gCtx.stroke();
+  // Optional title (e.g. "COARSE")
+  if (title) {
+    gCtx.font = `bold ${Math.round(R * 0.19)}px 'JetBrains Mono',monospace`;
+    gCtx.textAlign = "center"; gCtx.textBaseline = "middle";
+    gCtx.fillStyle = "rgba(180,200,255,0.6)";
+    gCtx.fillText(title, cx, cy + R * 0.55);
   }
 
-  // R / T labels — fixed at the final resting positions for each branch given
-  // the current coupling strength. R never deflects (always fraction 0);
-  // T deflects to lamScale = effLam / LAM_MAX.
+  // Tick marks — uniform y-value scale when yAxisTicks provided, else plain fractions
   const lf = labelFracs || { r: 0, t: 1 };
+  if (yAxisTicks && yAxisTicks.step > 0) {
+    // yAxisTicks: { step, yMin (=yRFixed), yMax (=yRFixed+yMaxDeflect) }
+    const { step, yMin, yMax } = yAxisTicks;
+    const ySpan = yMax - yMin;
+    const fmt = fmtYVal;
+    const subStep = step / 5;
+    const majorVals = ticksInRange(yMin, yMax, step);
+    const minorVals = ticksInRange(yMin, yMax, subStep);
+    const fracOf = y => (y - yMin) / ySpan;
+    const angOf  = f => -Math.PI / 2 + (f - 0.5) * 2 * sweepHalf;
+    const TICK_INNER_MAJOR = R * 0.22;
+    const TICK_INNER_MINOR = R * 0.12;
+    const LABEL_INNER = R * 0.44;   // label radius (inside arc)
+    // Minor ticks (no label)
+    gCtx.strokeStyle = "rgba(100,130,220,0.35)";
+    gCtx.lineWidth = 0.8;
+    minorVals.forEach(v => {
+      if (majorVals.some(m => Math.abs(m - v) < subStep * 0.01)) return;
+      const f = fracOf(v);
+      if (f < 0 || f > 1) return;
+      const ang = angOf(f);
+      gCtx.beginPath();
+      gCtx.moveTo(cx + Math.cos(ang) * (R - TICK_INNER_MINOR - 2), cy + Math.sin(ang) * (R - TICK_INNER_MINOR - 2));
+      gCtx.lineTo(cx + Math.cos(ang) * (R - 3), cy + Math.sin(ang) * (R - 3));
+      gCtx.stroke();
+    });
+    // Major ticks + labels
+    gCtx.font = `${Math.round(R * 0.185)}px 'JetBrains Mono',monospace`;
+    gCtx.textAlign = "center"; gCtx.textBaseline = "middle";
+    majorVals.forEach(v => {
+      const f = fracOf(v);
+      if (f < 0 || f > 1) return;
+      const ang = angOf(f);
+      gCtx.strokeStyle = "rgba(170,190,255,0.70)";
+      gCtx.lineWidth = 1.5;
+      gCtx.beginPath();
+      gCtx.moveTo(cx + Math.cos(ang) * (R - TICK_INNER_MAJOR - 2), cy + Math.sin(ang) * (R - TICK_INNER_MAJOR - 2));
+      gCtx.lineTo(cx + Math.cos(ang) * (R - 3), cy + Math.sin(ang) * (R - 3));
+      gCtx.stroke();
+      // Label placed inside arc, centred on tick direction
+      const lr = LABEL_INNER;
+      gCtx.fillStyle = "rgba(150,175,255,0.80)";
+      gCtx.fillText(fmt(v - yMin, step), cx + Math.cos(ang) * lr, cy + Math.sin(ang) * lr);
+    });
+  } else {
+    // Fallback: plain fraction ticks (no y-values)
+    const nTicks = 6;
+    for (let i = 0; i <= nTicks; i++) {
+      const frac  = i / nTicks;
+      const angle = -Math.PI / 2 + (frac - 0.5) * 2 * sweepHalf;
+      const isMain = i === 0 || i === nTicks || i === nTicks / 2;
+      const tLen  = isMain ? R * 0.22 : R * 0.13;
+      gCtx.strokeStyle = isMain ? "rgba(200,210,255,0.8)" : "rgba(140,160,210,0.4)";
+      gCtx.lineWidth   = isMain ? 2 : 1;
+      gCtx.beginPath();
+      gCtx.moveTo(cx + Math.cos(angle) * (R - tLen - 2), cy + Math.sin(angle) * (R - tLen - 2));
+      gCtx.lineTo(cx + Math.cos(angle) * (R - 3),        cy + Math.sin(angle) * (R - 3));
+      gCtx.stroke();
+    }
+  }
+
+  // R / T labels at their branch positions
   const lR   = R * 0.67;
   const angR = -Math.PI / 2 + (lf.r - 0.5) * 2 * sweepHalf;
   const angT = -Math.PI / 2 + (lf.t - 0.5) * 2 * sweepHalf;
 
   // Green tick on the arc marking the T resting position
-  if (lf.t > 0) {
+  if (lf.t > 0 && lf.t <= 1) {
     gCtx.beginPath();
     gCtx.moveTo(cx + Math.cos(angT) * (R - R * 0.28), cy + Math.sin(angT) * (R - R * 0.28));
     gCtx.lineTo(cx + Math.cos(angT) * (R - 3),        cy + Math.sin(angT) * (R - 3));
@@ -1776,6 +2070,66 @@ function drawGaugeFace(gCtx, W, H, needles, labelFracs) {
     gCtx.beginPath(); gCtx.arc(cx, cy, 4, 0, 2 * Math.PI); gCtx.fill();
     gCtx.restore();
   });
+}
+
+// ── Coarse-detector indicator: two LED bulbs (T=green top, R=red bottom) ────
+// stateT, stateR: "on" | "off" | "ambig"
+function drawCoarseLights(ctx, W, H, stateT, stateR) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(8,16,40,0.92)";
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(1, 1, W - 2, H - 2, 10);
+  else { ctx.rect(1, 1, W - 2, H - 2); }
+  ctx.fill();
+  ctx.strokeStyle = "rgba(60,100,220,0.45)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  const drawBulb = (cx, cy, r, label, state) => {
+    const isOn    = state === "on";
+    const isAmbig = state === "ambig";
+    const col = label === "T" ? [34, 238, 136] : label === "?" ? [255, 170, 60] : [255, 80, 50];
+    const ambigCol = [255, 170, 60];
+    const c = isAmbig ? ambigCol : col;
+    if (isOn || isAmbig) {
+      const gr = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r * 2.4);
+      gr.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},0.38)`);
+      gr.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+      ctx.fillStyle = gr;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 2.4, 0, Math.PI * 2); ctx.fill();
+    }
+    const bg = ctx.createRadialGradient(cx - r * 0.28, cy - r * 0.28, r * 0.05, cx, cy, r);
+    if (isOn) {
+      bg.addColorStop(0, "#ffffff");
+      bg.addColorStop(0.28, `rgba(${c[0]},${c[1]},${c[2]},1)`);
+      bg.addColorStop(1, `rgba(${Math.round(c[0]*0.35)},${Math.round(c[1]*0.35)},${Math.round(c[2]*0.35)},1)`);
+    } else if (isAmbig) {
+      bg.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},0.55)`);
+      bg.addColorStop(1, `rgba(${Math.round(c[0]*0.25)},${Math.round(c[1]*0.25)},${Math.round(c[2]*0.25)},0.55)`);
+    } else {
+      bg.addColorStop(0, "rgba(38,50,88,1)");
+      bg.addColorStop(1, "rgba(14,20,42,1)");
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = bg; ctx.fill();
+    ctx.strokeStyle = isOn
+      ? `rgba(${c[0]},${c[1]},${c[2]},0.95)`
+      : isAmbig
+        ? `rgba(${c[0]},${c[1]},${c[2]},0.45)`
+        : "rgba(50,70,120,0.45)";
+    ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.font = `bold ${Math.round(r * 0.78)}px "JetBrains Mono", monospace`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = isOn
+      ? "#ffffff"
+      : isAmbig
+        ? `rgba(${c[0]},${c[1]},${c[2]},0.9)`
+        : "rgba(55,75,130,0.75)";
+    ctx.fillText(label, cx, cy);
+  };
+
+  drawBulb(W / 2, H * 0.28, 24, "T", stateT);
+  drawBulb(W / 2, H * 0.72, 24, "R", stateR);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1817,12 +2171,12 @@ export default function App() {
 
   const S = useRef({
     interp:"cpn",
-    k0:4.0, V0:invertT(0.5,4.0), tTarget:0.5, lam:3.0, sigX:0.5, sigY:0.3,
+    k0:4.0, V0:invertT(0.5,4.0), tTarget:0.5, lam:0.6, sigX:0.5, sigY:0.3,
     xPointer: 4.0,
     detWidth: 2.0,
     speed:0.5,
     collapseThreshold:0.01, // von Neumann criterion — fixed, not user-adjustable
-    showWave:true, showTraj:true, showProj:false, running:true,
+    showWave:true, showTraj:true, showProj:false, showCoarse:false, fixedT:false, running:true,
     tick:0, dirty:true,
     pauseUntil:0,  // wall-clock ms to hold before restarting cycle
     pauseHoldMs:1000, // duration of end-of-cycle pause in ms
@@ -1835,6 +2189,7 @@ export default function App() {
     sampledPointerY: null,  // Y sampled from ρ(y) on first pointer hit — drives needle
     sampledPointerY_T: null,  // Y sampled from χ_T² for MW strong world-1 needle
     sampledPointerY_R: null,  // Y sampled from χ_R² for MW strong world-2 needle
+    coarseIsT: null,          // binary coarse-detector outcome (null until pointer hit)
     barrierOn:true,
     detectorOn:true,
     // Outcome histogram: counts of T/R outcomes across cycles
@@ -1851,7 +2206,7 @@ export default function App() {
 
   const [interp,    setInterpUI]    = useState("cpn");
   const [tTarget,   setTTargetUI]   = useState(0.5);
-  const [lam,       setLamUI]       = useState(3.0);
+  const [lam,       setLamUI]       = useState(0.6);
   const [xPointer,  setXPointerUI]  = useState(4.0);
   const [detWidth,   setDetWidthUI]  = useState(2.0);
   const [sigX,     setSigXUI]     = useState(0.5);
@@ -1863,6 +2218,8 @@ export default function App() {
   const [showWave, setShowWaveUI] = useState(true);
   const [showTraj, setShowTrajUI] = useState(true);
   const [showProj, setShowProjUI] = useState(false);
+  const [showCoarse, setShowCoarseUI] = useState(false);
+  const [fixedT,     setFixedTUI]     = useState(false);
   const [running,  setRunningUI]  = useState(true);
   const [barrierOn,  setBarrierOnUI]  = useState(true);
   const [detectorOn, setDetectorOnUI] = useState(true);
@@ -1894,16 +2251,30 @@ export default function App() {
     setTTargetUI(v); setTpUI(v); setRpUI(1 - v);
     if (tTargetRef.current) tTargetRef.current.value = Math.round(v * 100);
   };
-  const setLam = useCallback(v => { S.current.lam = v; S.current.dirty=true; setLamUI(v); if(lamRef.current) lamRef.current.value=v; }, []);
+  const setLam = useCallback(v => {
+    S.current.lam = v; S.current.dirty = true; setLamUI(v); if (lamRef.current) lamRef.current.value = v;
+    S.current.histT = 0; S.current.histR = 0; S.current.histTotal = 0; S.current.needleHistory = [];
+    setHistT(0); setHistR(0); setHistTotal(0); setNeedleHistory([]);
+  }, []);
   const setXPointer = v => { S.current.xPointer = v; setXPointerUI(v); if(xPointerRef.current) xPointerRef.current.value=v; };
   const setDetWidth  = v => { S.current.detWidth = v; setDetWidthUI(v); if(detWidthRef.current) detWidthRef.current.value=v; };
-  const setSigX= v => { S.current.sigX=v; S.current.dirty=true; setSigXUI(v); if(sigXRef.current) sigXRef.current.value=v; };
-  const setSigY= v => { S.current.sigY=v; S.current.dirty=true; setSigYUI(v); if(sigYRef.current) sigYRef.current.value=v; };
+  const setSigX = v => {
+    S.current.sigX = v; S.current.dirty = true; setSigXUI(v); if (sigXRef.current) sigXRef.current.value = v;
+    S.current.histT = 0; S.current.histR = 0; S.current.histTotal = 0; S.current.needleHistory = [];
+    setHistT(0); setHistR(0); setHistTotal(0); setNeedleHistory([]);
+  };
+  const setSigY = v => {
+    S.current.sigY = v; S.current.dirty = true; setSigYUI(v); if (sigYRef.current) sigYRef.current.value = v;
+    S.current.histT = 0; S.current.histR = 0; S.current.histTotal = 0; S.current.needleHistory = [];
+    setHistT(0); setHistR(0); setHistTotal(0); setNeedleHistory([]);
+  };
   const setSpeed= v => { S.current.speed=v; setSpeedUI(v); if(speedRef.current) speedRef.current.value=v; };
   const setPauseHoldMs = v => { S.current.pauseHoldMs=v; setPauseHoldMsUI(v); if(pauseHoldMsRef.current) pauseHoldMsRef.current.value=v; };
-  const setShowWave = v => { S.current.showWave=v; setShowWaveUI(v); };
-  const setShowTraj = v => { S.current.showTraj=v; setShowTrajUI(v); };
-  const setShowProj = v => { S.current.showProj=v; setShowProjUI(v); };
+  const setShowWave   = v => { S.current.showWave=v;   setShowWaveUI(v); };
+  const setShowTraj   = v => { S.current.showTraj=v;   setShowTrajUI(v); };
+  const setShowProj   = v => { S.current.showProj=v;   setShowProjUI(v); };
+  const setShowCoarse = v => { S.current.showCoarse=v; setShowCoarseUI(v); };
+  const setFixedT     = v => { S.current.fixedT=v;    setFixedTUI(v); };
   const setRunning   = v => { S.current.running=v;  setRunningUI(v);  };
   const setBarrierOn  = v => { S.current.barrierOn=v;  S.current.dirty=true; setBarrierOnUI(v);  };
   const setDetectorOn = v => { S.current.detectorOn=v; S.current.dirty=true; setDetectorOnUI(v); };
@@ -2172,6 +2543,17 @@ export default function App() {
     );
     scene.add(gaugeSprite);
 
+    // ── Coarse gauge sprite (binary T/R snap, optional) ──────────────────────
+    const coarseCanvas = document.createElement("canvas");
+    coarseCanvas.width = 128; coarseCanvas.height = 128;
+    const coarseCtx = coarseCanvas.getContext("2d");
+    const coarseTex = new THREE.CanvasTexture(coarseCanvas);
+    const coarseSprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: coarseTex, transparent: true, depthWrite: false })
+    );
+    coarseSprite.visible = false;
+    scene.add(coarseSprite);
+
     T.current = {
       scene, camera, renderer, heatUni, heatMesh,
       fLines, fDots, fGlows, lblT, lblR,
@@ -2179,6 +2561,7 @@ export default function App() {
       ptrLine, ptrLine2, detFill, lblPointer, lblBarrier,
       bLine1, bLine2, bFill,
       gaugeCanvas, gCtx: gaugeCtx, gaugeTex, gaugeSprite,
+      coarseCanvas, cCtx: coarseCtx, coarseTex, coarseSprite,
       rebuild, trajs:()=>trajs, updateCam,
     };
 
@@ -2215,24 +2598,45 @@ export default function App() {
             const dY_rec = 4 * effLam_rec * gW_rec;
             const overlap_rec = Math.exp(-dY_rec * dY_rec / (4 * s.sigY * s.sigY));
             const isStrong_rec = effLam_rec > 0 && overlap_rec < 0.01;
+            // Pre-compute MW weak pointer sample so both outcome and needle blocks use same value
+            const yRF = s.lastYRFixed ?? 0;
+            let mwWeakSample = null, mwWeakIsT = false;
+            if (isMW_rec && effLam_rec > 0 && !isStrong_rec) {
+              const yT_mw = yRF + 4 * effLam_rec * gW_rec;
+              const u1 = Math.max(1e-10, Math.random()), v1 = Math.random();
+              const g1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * v1);
+              const yMixed = (Math.random() < Tprob_now ? yT_mw : yRF) + g1 * s.sigY;
+              mwWeakSample = yMixed;
+              mwWeakIsT = yMixed >= (yT_mw + yRF) / 2;
+            }
+
             if (isMW_rec && isStrong_rec) {
-              // MW strong: both worlds occurred
-              s.histT += 1; s.histR += 1; s.histTotal += 2;
+              // MW strong: worlds have split — Deutsch-Wallace weighting, both worlds counted
+              s.histT += Tprob_now; s.histR += 1 - Tprob_now; s.histTotal += 1;
+            } else if (isMW_rec && effLam_rec > 0) {
+              // MW weak: worlds not split — one noisy outcome per cycle, same as ORT
+              if (mwWeakIsT) s.histT++; else s.histR++;
+              s.histTotal++;
+            } else if (isMW_rec && effLam_rec === 0) {
+              // No detector: accumulate Born-rule weights (no pointer, no split)
+              s.histT += Tprob_now; s.histR += 1 - Tprob_now; s.histTotal += 1;
             } else if (isPW_rec) {
               // PW: always a definite outcome
               if (s.lastBIsTransmit) s.histT++; else s.histR++;
               s.histTotal++;
             } else if (isCPN_rec && s.colTriggered && s.colBranch !== 0) {
-              // Orthodox strong: definite collapse
+              // Orthodox: always a definite outcome (weak or strong)
               if (s.colBranch > 0) s.histT++; else s.histR++;
               s.histTotal++;
             }
-            // Orthodox weak / MW weak: no definite outcome — don't record
             // Record pointer position for distribution plot (relative to R center)
-            const yRF = s.lastYRFixed;
             if (isMW_rec && isStrong_rec) {
+              // MW strong: two worlds, each with its own definite pointer reading
               if (s.sampledPointerY_T !== null) s.needleHistory.push({ dy: s.sampledPointerY_T - yRF, isT: true });
               if (s.sampledPointerY_R !== null) s.needleHistory.push({ dy: s.sampledPointerY_R - yRF, isT: false });
+            } else if (isMW_rec && effLam_rec > 0 && mwWeakSample !== null) {
+              // MW weak: one noisy reading from full ρ(y)
+              s.needleHistory.push({ dy: mwWeakSample - yRF, isT: mwWeakIsT });
             } else if (isPW_rec) {
               s.needleHistory.push({ dy: s.lastBY - yRF, isT: s.lastBIsTransmit });
             } else if (isCPN_rec && s.colTriggered && s.colBranch !== 0) {
@@ -2245,6 +2649,7 @@ export default function App() {
             s.sampledPointerY = null;  // fresh sample next cycle
             s.sampledPointerY_T = null;
             s.sampledPointerY_R = null;
+            s.coarseIsT = null;        // reset coarse outcome
             s.dirty = true;  // rebuild trajectory with new random initial conditions
           }
           // else: don't advance tick
@@ -2342,7 +2747,7 @@ export default function App() {
       if (s.interp === "cpn" && s.detectorOn && effLam > 0) {
         // Compute final pointer overlap (at full interaction time) to decide if
         // the measurement is strong enough to trigger collapse.
-        const collapseAllowed = ptrOverlap < 0.01; // von Neumann criterion: collapse when pointer states effectively orthogonal
+        const collapseAllowed = true; // Orthodox: collapse always occurs — kept for documentation
         // New cycle: restore pre-collapse superposition so both branches are visible
         // again until the transmitted branch reaches the detector.
         if (tFrac < 0.02 && s.colTriggered) {
@@ -2356,25 +2761,31 @@ export default function App() {
         }
         if (!s.colTriggered && tPhys >= tPointerHit) {
           s.colTriggered = true;
-          if (collapseAllowed) {
-            s.colBranch = Math.random() < Tprob ? 1 : -1;
-            // Re-draw sampledPointerY from the winning branch so needle agrees with collapse.
-            // Box-Muller Gaussian sample from the correct pointer wavepacket.
-            const yT_final = yRFixed + 4 * effLam * gWindow;
-            const u = Math.max(1e-10, Math.random()), vv = Math.random();
-            const g = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * vv);
-            s.sampledPointerY = (s.colBranch > 0 ? yT_final : yRFixed) + g * s.sigY;
-            // Capture jump at detector-triggered collapse, then hold y constant.
-            s.colYHold = Math.max(dtP, 1.0);
-            s.colFade   = 0;
-            s.colStartMs = performance.now();
-            s.colPhase = 0;
-            s._flashPending = true;
-          }
-          // If weak (collapseAllowed = false): colBranch stays 0, no flash, no fade.
+          // Sample pointer Y from the FULL mixed distribution Tp·N(yT,σ) + Rp·N(yR,σ).
+          // This is physically correct: the pointer state is an entangled superposition;
+          // collapse picks the branch based on where the pointer reading lands.
+          const yT_final = yRFixed + 4 * effLam * gWindow;
+          const u1 = Math.max(1e-10, Math.random()), v1 = Math.random();
+          const g1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * v1);
+          // Choose which Gaussian to sample from with amplitude² weight
+          const sampleFromT = Math.random() < Tprob;
+          const yMixed = (sampleFromT ? yT_final : yRFixed) + g1 * s.sigY;
+          s.sampledPointerY = yMixed;
+          // Classify outcome: pointer above midpoint → T, below → R
+          const yMid = (yT_final + yRFixed) / 2;
+          s.colBranch = yMixed >= yMid ? 1 : -1;
+          // Collapse fade strength scales with branch separation:
+          // weak (large overlap) → barely fade; strong (small overlap) → full fade.
+          s._colFadeMax = 1 - ptrOverlap;  // 0 when fully overlapping, 1 when resolved
+          s.colYHold = Math.max(dtP, 1.0);
+          s.colFade   = 0;
+          s.colStartMs = performance.now();
+          s.colPhase = 0;
+          s._flashPending = true;
         }
         if (s.colTriggered && s.colBranch !== 0) {
-          s.colFade = Math.min(s.colFade + 0.08, 1);
+          const fadeMax = s._colFadeMax ?? 1;
+          s.colFade = Math.min(s.colFade + 0.08, fadeMax);
         }
         // Reset is handled by the pause-restart cycle above
       } else {
@@ -2472,8 +2883,12 @@ export default function App() {
         u.uXin.value=xIn; u.uXT.value=xT; u.uXR.value=xR;
         u.uYT.value=yT; u.uYR.value=yRFixed;
         u.uSigX.value=s.sigX; u.uSigY.value=s.sigY;
-        u.uColBranch.value=s.colBranch;
-        u.uColFade.value=s.colFade;
+        u.uColBranch.value = s.colBranch;
+        // In weak ORT (large pointer overlap) suppress the branch fade in the shader too —
+        // both lobes should remain visible on the 2D canvas just as in the Y-marginal panel.
+        const shaderFade = (s.interp !== "pw" && s.interp !== "mw" && ptrOverlap >= 0.01)
+          ? 0 : s.colFade;
+        u.uColFade.value = shaderFade;
         u.uIsPW.value = s.interp === "pw" ? 1 : 0;
         u.uBY.value = bY;
       }
@@ -2553,6 +2968,16 @@ export default function App() {
         }
       }
 
+      // ── Gauge range: compute once, shared by margData and gauge block ─────
+      const LAM_MAX_G = 3.0;
+      const yMaxDeflect_g = s.fixedT
+        ? (effLam > 0 ? 4 * effLam * gWindow : 1e-6)
+        : 4 * LAM_MAX_G * gWindow;
+      const yTFinal_g    = yRFixed + yMaxDeflect_g;
+      const gaugeTickStep_g = niceStep(yRFixed, yTFinal_g, 5);
+      const gaugeRange_g    = (Math.ceil(yMaxDeflect_g / gaugeTickStep_g) + 1) * gaugeTickStep_g;
+      const gF = y => clamp((y - yRFixed) / gaugeRange_g, -0.05, 1.05);
+
       // ── Draw projection panels directly (no throttle, matches heatmap) ─────
       const margData = {
         Tp: Tprob, Rp: Rprob,
@@ -2560,6 +2985,7 @@ export default function App() {
         sigX: s.sigX, sigY: s.sigY,
         bl,
         colBranch: s.colBranch, colFade: s.colFade,
+        sampledPointerY: s.sampledPointerY,
         bX, bY, bIsTransmit,
         isPW: s.interp === "pw",
         interp: s.interp,
@@ -2568,6 +2994,9 @@ export default function App() {
         sepFrac,
         ptrOverlap,
         showProj: s.showProj,
+        fixedT: s.fixedT,
+        yTFinal: yTFinal_g,
+        tickStep: gaugeTickStep_g,
         // x-panel: use camera's actual visible range so particle position matches 2D canvas exactly
         xLo: s.camX - halfW,
         xHi: s.camX + halfW,
@@ -2594,8 +3023,14 @@ export default function App() {
         // Gate on dtPShown: before the wave reaches the detector the pointer is at rest.
         const pointerHit = dtPShown > 0.02 && effLam > 0;
         const LAM_MAX = 3.0;
-        const lamScale = effLam / LAM_MAX;
-        const gFrac = (effLam > 0) ? clamp(dtPShown / gWindow, 0, 1) * lamScale : 0;
+        // fixedT mode: T is always at fraction < 1 in extended scale; yMaxDeflect = final T separation.
+        // Normal mode: T fraction is lamScaleExt in extended scale.
+        const yT_dial = yRFixed + 4 * effLam * gWindow;   // current T position in y-units
+        const yMaxDeflect = yMaxDeflect_g;  // from pre-computed block above
+        // Extended gauge scale (adds 1 tick step beyond T so numbers go past the max)
+        const gaugeRange = gaugeRange_g;
+        const lamScaleExt = gF(yRFixed + yMaxDeflect);  // T fraction in extended scale
+        const gFracExt = (effLam > 0) ? clamp(dtPShown / gWindow, 0, 1) * lamScaleExt : 0;
 
         // Sample pointer position from ρ(y) = T·χ_T² + R·χ_R² once, on first pointer hit.
         // Stored in s.sampledPointerY; cleared each cycle reset for a fresh draw.
@@ -2611,12 +3046,17 @@ export default function App() {
           // Per-world samples: each drawn independently from its own χ²
           s.sampledPointerY_T = yT_final + randn() * s.sigY;
           s.sampledPointerY_R = yRFixed  + randn() * s.sigY;
+          // (coarseIsT will be set in the unified block below)
         }
-        // Convert sampled Y to gauge fraction [0..1], normalised by max possible deflection.
-        const yMaxDeflect = 4 * LAM_MAX * gWindow;
-        const sampledFrac = (s.sampledPointerY !== null && yMaxDeflect > 0)
-          ? clamp((s.sampledPointerY - yRFixed) / yMaxDeflect, -0.05, 1.05)
-          : 0;
+        // Convert sampled Y to gauge fraction in extended scale
+        const sampledFrac = s.sampledPointerY !== null ? gF(s.sampledPointerY) : 0;
+
+        // Coarse outcome: set whenever sampledPointerY is known (may have been set
+        // by ORT collapse block above, or by the gauge block below for other interps)
+        if (s.sampledPointerY !== null && s.coarseIsT === null) {
+          const yT_coarse = yRFixed + 4 * effLam * gWindow;
+          s.coarseIsT = s.sampledPointerY >= (yT_coarse + yRFixed) / 2;
+        }
 
         const needles = [];
         const mwStrong = isMW && ptrOverlap < 0.01;
@@ -2631,11 +3071,9 @@ export default function App() {
         } else if (mwStrong) {
           // Many-Worlds strong: two resolved worlds, each needle at a position sampled
           // from its own pointer wavepacket N(y_branch, σ_p) — not the exact centre.
-          const sf = Math.min(gFrac * 2, 1);
-          const tFracSampled = (s.sampledPointerY_T !== null && yMaxDeflect > 0)
-            ? clamp((s.sampledPointerY_T - yRFixed) / yMaxDeflect, -0.05, 1.05) : gFrac;
-          const rFracSampled = (s.sampledPointerY_R !== null && yMaxDeflect > 0)
-            ? clamp((s.sampledPointerY_R - yRFixed) / yMaxDeflect, -0.05, 1.05) : 0;
+          const sf = Math.min(gFracExt * 2, 1);
+          const tFracSampled = s.sampledPointerY_T !== null ? gF(s.sampledPointerY_T) : gFracExt;
+          const rFracSampled = s.sampledPointerY_R !== null ? gF(s.sampledPointerY_R) : 0;
           needles.push({ fraction: progress * tFracSampled, color: "#22ee88", alpha: sf * 0.88 });
           needles.push({ fraction: progress * rFracSampled, color: "#ff7744", alpha: sf * 0.88 });
         } else if (isMW) {
@@ -2645,9 +3083,7 @@ export default function App() {
           // Pilot-wave: needle tracks the actual Bohmian pointer coordinate bY —
           // the exact y-position of the pointer particle on the guidance equation,
           // which sits within the T or R pointer wavepacket (not exactly at its centre).
-          const pwFrac = pointerHit
-            ? clamp((bY - yRFixed) / yMaxDeflect, -0.05, 1.05)
-            : 0;
+          const pwFrac = pointerHit ? gF(bY) : 0;
           needles.push({ fraction: pwFrac, color: "#ffffff", alpha: 0.92 });
         } else {
           // Copenhagen — needle always tracks the sampled position from ρ(y).
@@ -2655,10 +3091,47 @@ export default function App() {
           // so it sits within the wavepacket, not exactly at T or R — even post-collapse.
           needles.push({ fraction: sampledNeedle, color: "#88aaff", alpha: s.colBranch !== 0 ? 0.95 : 0.82 });
         }
-        drawGaugeFace(Tr.gCtx, 128, 128, needles, { r: 0, t: lamScale });
+        drawGaugeFace(Tr.gCtx, 128, 128, needles, { r: 0, t: lamScaleExt }, null,
+          { step: gaugeTickStep_g, yMin: yRFixed, yMax: yRFixed + gaugeRange });
         Tr.gaugeTex.needsUpdate = true;
+
+        // ── Coarse indicator lights ─────────────────────────────────────────
+        if (s.showCoarse) {
+          const coarseSize = gaugeSize;
+          Tr.coarseSprite.scale.set(coarseSize, coarseSize, 1);
+          Tr.coarseSprite.position.set(
+            s.xPointer + gaugeSize * 1.05,
+            s.camY + halfH - coarseSize * 0.5 - 1.15,
+            0.4
+          );
+          Tr.coarseSprite.visible = true;
+          let stateT, stateR;
+          if (!pointerHit) {
+            stateT = "off"; stateR = "off";
+          } else if (isMW && mwStrong) {
+            // Both worlds equally real
+            stateT = "on"; stateR = "on";
+          } else if (s.interp === "pw") {
+            const pwIsT = bY > (yRFixed + 4 * effLam * gWindow + yRFixed) / 2;
+            stateT = pwIsT ? "on" : "off";
+            stateR = pwIsT ? "off" : "on";
+          } else if (isMW && !mwStrong) {
+            // MW weak: no branching — ambiguous
+            stateT = "ambig"; stateR = "ambig";
+          } else if (s.coarseIsT === null) {
+            stateT = "off"; stateR = "off";
+          } else {
+            stateT = s.coarseIsT ? "on" : "off";
+            stateR = s.coarseIsT ? "off" : "on";
+          }
+          drawCoarseLights(Tr.cCtx, 128, 128, stateT, stateR);
+          Tr.coarseTex.needsUpdate = true;
+        } else {
+          Tr.coarseSprite.visible = false;
+        }
       } else if (Tr.gaugeSprite) {
         Tr.gaugeSprite.visible = false;
+        if (Tr.coarseSprite) Tr.coarseSprite.visible = false;
       }
 
       Tr.renderer.render(Tr.scene, Tr.camera);
@@ -2754,12 +3227,12 @@ export default function App() {
                   <div style={{ fontSize: isMobile ? 18 : 28, fontWeight:700, color: flashColor,
                     letterSpacing:"0.18em",
                     fontFamily:"'JetBrains Mono','Courier New',monospace",
-                    textShadow:`0 0 30px ${flashColor}, 0 0 60px ${flashColor}66` }}>COLLAPSE</div>
+                    textShadow:`0 0 30px ${flashColor}, 0 0 60px ${flashColor}66` }}>COLLAPSE ⚡🎲</div>
                 </div>
               );
             })()}
-            {/* Outcome histogram + pointer distribution — floating panels */}
-            {canvasTab === "sim" && (<>
+            {/* Outcome histogram + pointer distribution — floating panels, expert only */}
+            {canvasTab === "sim" && advMode && (<>
               <HistogramFloat histT={histT} histR={histR} histTotal={histTotal} Tp={Tp} />
               <PointerDistFloat
                 needleHistory={needleHistory}
@@ -2842,11 +3315,12 @@ export default function App() {
               "Before the barrier, the wavefunction is a single two-dimensional blob moving horizontally — the particle drifts toward the barrier while the pointer stays at rest.",
               "At the barrier, the wavefunction splits into two branches. The transmitted branch moves to the upper right — the particle passes through and the pointer deflects upward. The reflected branch moves to the lower left — the particle bounces back and the pointer stays near rest. The projection panels on the sides show the resulting two-peaked distributions.",
               "What happens next depends on your view of quantum mechanics.",
-              "Orthodox QM: The wavefunction collapses to a single branch when the two pointer states become orthogonal — that is, when their overlap ⟨χ_T|χ_R⟩ drops to essentially zero. This is the von Neumann orthogonality criterion: the device has unambiguously recorded a result. If the coupling is too weak or the pointer too broad, the overlap stays high, no collapse occurs, and the system remains in an entangled superposition. The Pointer overlap readout in the Advanced panel tracks this live.",
-              "Many Worlds (Everett): The wavefunction never collapses. Both branches continue to exist in separate, non-communicating worlds — one where the particle transmitted, one where it reflected. Whether the worlds are distinguishable depends on the measurement strength. In a strong measurement (pointer overlap < 1%), the two worlds are resolved: the simulation shows the cyan/magenta split and labels World 1 / World 2. In a weak measurement, the pointer states still overlap; the worlds have not yet branched into distinguishable copies, and the simulation shows a single superposed distribution. There is no randomness in the dynamics; the appearance of probability arises from counting branches.",
+              "Orthodox QM: The wavefunction collapses to a single branch at every cycle — the moment the pointer is read, one outcome is selected with Born-rule probability and the other branch is discarded. This happens regardless of whether the measurement is weak or strong. What changes with coupling strength is not whether collapse occurs, but how much the pointer moves: in a strong measurement (large coupling, narrow pointer) the two pointer states are nearly orthogonal and a single shot unambiguously identifies the branch; in a weak measurement the pointer barely moves, the T and R distributions heavily overlap, and a single shot gives almost no information. Many shots are needed to recover the Born-rule statistics — but each shot is still a definite, collapsed outcome. The Pointer overlap readout in the Advanced panel tracks the overlap ⟨χ_T|χ_R⟩ live.",
+              "Many Worlds (Everett): The wavefunction never collapses. Both branches continue to exist in separate, non-communicating worlds. In a strong measurement (pointer overlap < 1%) the two worlds are well resolved: the simulation shows the cyan/magenta split and labels World 1 / World 2. Each cycle both worlds are counted with Deutsch-Wallace amplitude-squared weights (+T and +R) — naive branch counting would give 50/50 regardless of amplitude, so the weights implement the Born-rule measure. In a weak measurement the pointer states still overlap heavily — the worlds have not yet branched into distinguishable copies. A single noisy pointer reading y is drawn from the mixed distribution and thresholded to T or R, but this is a classical post-processing step, not a physical branching event. The coarse gauge shows this: it parks at centre (ambiguous) in the weak regime.",
               "Pilot-Wave (Bohmian mechanics): The wavefunction never collapses either, but the particle always has a definite position, guided by the wave. The white dot traces this trajectory. It enters one branch and never crosses to the other. The other branch — the empty wave — continues to propagate but carries no particle and has no further physical effect on the outcome.",
               "All three views make identical experimental predictions. The difference is ontological: what they claim is really happening between measurements.",
-              "A strong measurement uses a large coupling and a narrow pointer so the T and R pointer states end up well separated and orthogonal — collapse fires every cycle in Orthodox mode. A weak measurement uses a small coupling or a wide pointer: the pointer states overlap significantly, the device cannot distinguish the two outcomes, and no definite result is recorded. Switch to Advanced mode to adjust these parameters and watch the Pointer overlap change in real time.",
+              "A strong measurement uses a large coupling and a narrow pointer so the T and R pointer states end up well separated and orthogonal — collapse fires every cycle in Orthodox mode. A weak measurement uses a small coupling or a wide pointer: the pointer states overlap significantly, the device cannot distinguish the two outcomes in a single shot, and many shots are needed to recover the Born-rule statistics. Switch to Advanced mode to adjust these parameters and watch the Pointer overlap change in real time.",
+              "The simulation shows two detector gauges side by side (enable Coarse det. in Advanced › Physics). The left Fine gauge shows the quantum pointer — a continuous Gaussian wavepacket that entangles with the particle. The right Coarse gauge shows a binary register that amplifies the fine reading into a definite T or R click. Together they illustrate the two-stage amplification chain that turns a quantum superposition into a macroscopic outcome. In the Many-Worlds weak regime, the fine pointer is ambiguous and the coarse gauge parks at centre — no branching, no definite click.",
             ].map((para, i) => (
               <p key={i} style={{
                 marginBottom:"1.2em",
@@ -2889,6 +3363,8 @@ export default function App() {
           showWave={showWave} setShowWave={setShowWave}
           showTraj={showTraj} setShowTraj={setShowTraj}
           showProj={showProj} setShowProj={setShowProj}
+          showCoarse={showCoarse} setShowCoarse={setShowCoarse}
+          fixedT={fixedT} setFixedT={setFixedT}
           running={running} setRunning={setRunning}
           barrierOn={barrierOn} setBarrierOn={setBarrierOn}
           detectorOn={detectorOn} setDetectorOn={setDetectorOn}
