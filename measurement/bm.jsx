@@ -3031,7 +3031,10 @@ export default function App() {
         const yMaxDeflect = yMaxDeflect_g;  // from pre-computed block above
         // Extended gauge scale (adds 1 tick step beyond T so numbers go past the max)
         const gaugeRange = gaugeRange_g;
-        const lamScaleExt = gF(yRFixed + yMaxDeflect);  // T fraction in extended scale
+        // T fraction: gF(yT_dial) is the actual T position in the current scale.
+        // When fixedT=true: scale adjusts so T is always at this fraction (~0.85).
+        // When fixedT=false: scale is fixed (LAM_MAX range), so this moves with λ.
+        const lamScaleExt = gF(yT_dial);
         const gFracExt = (effLam > 0) ? clamp(dtPShown / gWindow, 0, 1) * lamScaleExt : 0;
 
         // Sample pointer position from ρ(y) = T·χ_T² + R·χ_R² once, on first pointer hit.
