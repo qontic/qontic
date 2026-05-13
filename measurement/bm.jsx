@@ -1096,7 +1096,7 @@ const SimPanel = React.memo(({
               { key:"barrier",  label:"Barrier",  on:barrierOn,  fn:setBarrierOn,  tip:"Toggle the potential barrier.\nOff = 100% transmission (free particle)." },
               { key:"detector", label:"Detector",      on:detectorOn,  fn:setDetectorOn,  tip:"Toggle the measuring device.\nOff = no coupling, pointer stays at rest." },
               { key:"coarse",   label:"Coarse det.",   on:showCoarse,  fn:setShowCoarse,  tip:"Show a second coarse-grained detector (binary T/R).\n\nThe fine detector (left) shows the quantum pointer — a continuous Gaussian wavepacket.\nThe coarse detector (right) amplifies that reading into a definite T or R click.\n\nIn weak regime the fine pointer is ambiguous; the coarse register makes the outcome definite." },
-              { key:"fixedT",   label:"Lock T pos.",    on:fixedT,      fn:setFixedT,      tip:"Lock the T pointer position on the dial and the y-panel.\n\nOff: T marker moves as coupling λ changes; the y-axis scale is fixed.\nOn: T marker stays at a fixed position; the y-axis scale adjusts so T is always at the same height. The y-value labels on the axis and dial change to reflect the actual pointer separation." },
+              { key:"fixedT",   label:"Lock T pos.",    on:fixedT,      fn:setFixedT,      tip:"Lock the T pointer position on the gauge dial.\n\nOff: the T tick on the dial moves as coupling λ changes (scale fixed at λ_max range).\nOn: the dial scale adjusts so T always sits at the same height on the gauge. The y-value labels change to reflect the actual pointer separation.\n\nThe y-panel always matches the 2D canvas regardless of this setting." },
             ].map(({ key, label, on, fn, tip }) => (
               <Tip key={key} text={tip}>
                 <button onClick={() => fn(!on)} style={{
@@ -1563,19 +1563,9 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
     ctx.fillStyle = "#020812";
     ctx.fillRect(0, 0, W, H);
 
-    // In fixedT mode, pin yT at ~83% from the bottom by choosing a range relative to Δy.
-    // In normal mode, use the full camera range (yLo/yHi) so the display matches the 2D canvas.
-    let YLO, YHI;
-    const deltaY_dial = yT - yRFixed;   // current T separation (animated)
-    if (fixedT && (yTFinal ?? yT) - yRFixed > 1e-3) {
-      // Use final (stable) T position so the axis doesn't creep during traversal
-      const yTStable = yTFinal ?? yT;
-      const margin = 0.2 * (yTStable - yRFixed);
-      YLO = yRFixed - margin;
-      YHI = yTStable + margin;
-    } else {
-      YLO = yLo; YHI = yHi;
-    }
+    // y-panel always uses the camera range so it matches the 2D canvas exactly.
+    // fixedT only affects the gauge dial scale, not the y-panel.
+    const YLO = yLo, YHI = yHi;
     // yRFixed comes from animation loop: camY - halfH*0.6 (20% up from bottom), matches 2D shader
     const yRDisplay = yRFixed;
     // y → vertical pixel (top = YHI, bottom = YLO)
