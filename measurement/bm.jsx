@@ -966,10 +966,10 @@ const SimPanel = React.memo(({
   return (
     <div style={{ display:"flex", flexDirection:"column",
       width:"100%",
-      fontFamily:"'JetBrains Mono','Courier New',monospace", color:"#e8f2ff",
-      overflowY:"auto" }}>
+      fontFamily:"'JetBrains Mono','Courier New',monospace", color:"#e8f2ff" }}>
 
-      <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 6 : 10, padding:p }}>
+      <div style={{ display:"flex", flexDirection:"column", gap: isMobile ? 5 : 7,
+        padding: isMobile ? "6px 8px" : "8px 18px 8px 9px" }}>
 
         {/* View switcher — always visible */}
         <SL label="View" tip="Click to cycle: Orthodox → Pilot-Wave → Many Worlds&#10;&#10;Orthodox QM: collapse fires when pointer overlap drops below 1% (von Neumann criterion). Outcome random with Born-rule probabilities.&#10;&#10;Pilot-Wave (de Broglie–Bohm): particle has a definite trajectory guided by the wavefunction. No collapse; randomness comes from unknown initial positions.&#10;&#10;Many Worlds (Everett): wavefunction never collapses. All outcomes happen in branching worlds.">
@@ -1090,13 +1090,25 @@ const SimPanel = React.memo(({
             <span>0 s</span><span>5 s</span></div>
         </SL>}
 
-        {adv && <SL label="Physics">
+        {adv && (
+          <Tip text="Toggle the potential barrier. Off = 100% transmission (free particle).">
+            <button onClick={() => setBarrierOn(!barrierOn)} style={{
+              width:"100%", padding:"5px 0", marginBottom:4,
+              background: barrierOn ? "rgba(40,80,180,0.5)" : "rgba(15,30,70,0.5)",
+              border:"1px solid " + (barrierOn ? "#5588cc" : "#334466"),
+              borderRadius:5, color: barrierOn ? "#c8e8ff" : "#7090b8",
+              cursor:"pointer", fontSize:12,
+              fontFamily:"'JetBrains Mono','Courier New',monospace",
+            }}>{barrierOn ? "◉" : "○"} Barrier</button>
+          </Tip>
+        )}
+
+        {adv && <SL label="Detector">
           <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
             {[
-              { key:"barrier",  label:"Barrier",  on:barrierOn,  fn:setBarrierOn,  tip:"Toggle the potential barrier.\nOff = 100% transmission (free particle)." },
-              { key:"detector", label:"Detector",      on:detectorOn,  fn:setDetectorOn,  tip:"Toggle the measuring device.\nOff = no coupling, pointer stays at rest." },
-              { key:"coarse",   label:"Coarse det.",   on:showCoarse,  fn:setShowCoarse,  tip:"Show a second coarse-grained detector (binary T/R).\n\nThe fine detector (left) shows the quantum pointer — a continuous Gaussian wavepacket.\nThe coarse detector (right) amplifies that reading into a definite T or R click.\n\nIn weak regime the fine pointer is ambiguous; the coarse register makes the outcome definite." },
-              { key:"fixedT",   label:"Lock T pos.",    on:fixedT,      fn:setFixedT,      tip:"Lock the T pointer position on the gauge dial.\n\nOff: the T tick on the dial moves as coupling λ changes (scale fixed at λ_max range).\nOn: the dial scale adjusts so T always sits at the same height on the gauge. The y-value labels change to reflect the actual pointer separation.\n\nThe y-panel always matches the 2D canvas regardless of this setting." },
+              { key:"detector", label:"Fine",       on:detectorOn, fn:setDetectorOn, tip:"Toggle the fine detector (gauge dial).\nOff = no coupling, pointer stays at rest." },
+              { key:"coarse",   label:"Coarse",     on:showCoarse, fn:setShowCoarse, tip:"Show a second coarse-grained detector (binary T/R).\n\nThe fine detector shows the quantum pointer — a continuous Gaussian wavepacket.\nThe coarse detector amplifies that reading into a definite T or R click.\n\nIn weak regime the fine pointer is ambiguous; the coarse register makes the outcome definite." },
+              { key:"fixedT",   label:"Fix T",     on:fixedT,     fn:setFixedT,     tip:"Lock the T pointer position on the gauge dial.\n\nOff: the T tick on the dial moves as coupling λ changes (scale fixed at λ_max range).\nOn: the dial scale adjusts so T always sits at the same height on the gauge. The y-value labels change to reflect the actual pointer separation.\n\nThe y-panel always matches the 2D canvas regardless of this setting." },
             ].map(({ key, label, on, fn, tip }) => (
               <Tip key={key} text={tip}>
                 <button onClick={() => fn(!on)} style={{
@@ -1146,20 +1158,16 @@ const SimPanel = React.memo(({
         )}
 
         {!(adv && interp === "pw") && (
-        <SL label="Playback">
-          <div style={{ display:"flex", gap:4 }}>
-            <Tip text="Pause / resume">
-              <button onClick={() => setRunning(!running)} style={{
-                padding:"5px 10px",
-                background: running ? "rgba(20,55,130,0.6)" : "rgba(25,80,40,0.6)",
-                border:"1px solid " + (running ? "rgba(70,130,255,0.4)" : "rgba(60,200,80,0.35)"),
-                borderRadius:5, color: running ? "#88bbff" : "#66dd88",
-                cursor:"pointer", fontSize:12,
-                fontFamily:"'JetBrains Mono','Courier New',monospace",
-              }}>{running ? "⏸" : "▶"}</button>
-            </Tip>
-          </div>
-        </SL>
+          <Tip text="Start / stop simulation">
+            <button onClick={() => setRunning(!running)} style={{
+              width:"100%", padding:"6px 0",
+              background: running ? "rgba(60,70,90,0.6)" : "rgba(25,80,40,0.6)",
+              border:"1px solid " + (running ? "rgba(130,150,190,0.4)" : "rgba(60,200,80,0.35)"),
+              borderRadius:5, color: running ? "#a0aec0" : "#66dd88",
+              cursor:"pointer", fontSize:12,
+              fontFamily:"'JetBrains Mono','Courier New',monospace",
+            }}>{running ? "Stop" : "Start"}</button>
+          </Tip>
         )}
 
         {!isMobile && <div style={{ fontSize:10, color:"#506080",
@@ -2168,7 +2176,18 @@ export default function App() {
   }, []);
   // Sidebar: on mobile-portrait stacks below; on mobile-landscape stays right (compact)
   const sidebarBelow = isMobile && !isLandscape;
-  const sidebarW     = isLandscape ? 200 : (isMobile ? "100%" : 240);
+  const [sidebarDragW, setSidebarDragW] = useState(275);
+  const sidebarW     = isLandscape ? 200 : (isMobile ? "100%" : sidebarDragW);
+  const onSidebarDragStart = useCallback((e) => {
+    if (sidebarBelow) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = sidebarDragW;
+    const onMove = (ev) => setSidebarDragW(Math.max(160, Math.min(480, startW - (ev.clientX - startX))));
+    const onUp   = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [sidebarBelow, sidebarDragW]);
 
   const S = useRef({
     interp:"cpn",
@@ -3177,7 +3196,8 @@ export default function App() {
   return (
     <div style={{ display:"flex", flexDirection: sidebarBelow ? "column" : "row",
       width:"100%", maxWidth:"100vw",
-      minHeight: sidebarBelow ? "100dvh" : "100%",
+      height: sidebarBelow ? undefined : "100%",
+      minHeight: sidebarBelow ? "100dvh" : undefined,
       background:"#040a1c",
       overflowX:"hidden",
       overflowY: sidebarBelow ? "auto" : "hidden" }}>
@@ -3214,7 +3234,7 @@ export default function App() {
             }}
             style={{
               marginLeft:"auto", padding:"0 12px", height:"100%",
-              fontSize:10, cursor:"pointer", border:"none",
+              fontSize:14, cursor:"pointer", border:"none",
               fontFamily:"'JetBrains Mono','Courier New',monospace",
               letterSpacing:"0.06em", textTransform:"uppercase",
               background: advMode ? "rgba(80,40,160,0.35)" : "rgba(0,60,120,0.25)",
@@ -3358,15 +3378,25 @@ export default function App() {
       </div>{/* left column */}
 
       {/* Right (desktop/landscape) / Bottom (mobile-portrait): sidebar */}
+      {!sidebarBelow && (
+        <div onMouseDown={onSidebarDragStart} style={{
+          width: 5, flexShrink: 0, cursor: "col-resize",
+          background: "rgba(40,80,180,0.18)",
+          borderLeft: "1px solid rgba(40,80,180,0.35)",
+          transition: "background 0.15s",
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = "rgba(80,130,255,0.35)"}
+        onMouseLeave={e => e.currentTarget.style.background = "rgba(40,80,180,0.18)"}
+        />
+      )}
       <div style={{
         width:       sidebarBelow ? "100%" : sidebarW,
         flexShrink:  0,
         background:  "rgba(4,10,30,0.92)",
-        borderLeft:  sidebarBelow ? "none" : "1px solid rgba(40,80,180,0.35)",
         borderTop:   sidebarBelow ? "1px solid rgba(40,80,180,0.35)" : "none",
         overflowY:   "auto",
-        // On mobile-portrait, allow sidebar to grow to show all controls
-        maxHeight:   sidebarBelow ? "none" : undefined,
+        scrollbarWidth: "thin",
+        maxHeight:   sidebarBelow ? "none" : "100vh",
       }}>
         <SimPanel
           interp={interp}   setInterp={setInterp}
