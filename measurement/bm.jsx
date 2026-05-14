@@ -1574,10 +1574,9 @@ function drawYMarg(canvas, { Tp, Rp, yT, yR, yRFixed, sigY, bl, colBranch, colFa
     // ── Y-axis: uniform tick ruler (0 = R position = yRFixed) ─────────────
     const TICK_MAJOR_LEN = 7, TICK_MINOR_LEN = 4;
     const TICK_FONT_PX = Math.max(6, Math.round(W * 0.115));
-    // Step: use caller-supplied step (from dial range) if provided, else auto
-    const tickStep = extTickStep && extTickStep > 0
-      ? extTickStep
-      : niceStep(YLO, YHI, 6);
+    // Always compute tick step from the actual display range (full camera view).
+    // extTickStep is for the gauge dial only and may be far too small for the y-panel.
+    const tickStep = niceStep(YLO, YHI, 6);
     const subStep = tickStep / 5;  // minor ticks at 1/5 of major step
     const majorVals = ticksInRange(YLO, YHI, tickStep);
     const minorVals = ticksInRange(YLO, YHI, subStep);
