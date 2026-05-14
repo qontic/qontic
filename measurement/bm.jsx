@@ -1926,7 +1926,7 @@ function drawGaugeFace(gCtx, W, H, needles, labelFracs, title, yAxisTicks = null
   gCtx.clearRect(0, 0, W, H);
   const cx = W / 2, cy = H / 2;
   const R  = Math.min(cx, cy) - 3;
-  const sweepHalf = (2 * Math.PI) / 3;   // ±120° sweep
+  const sweepHalf = (5 * Math.PI) / 6;   // ±150° sweep (300° total)
 
   // Outer ring
   gCtx.beginPath();
@@ -1955,13 +1955,24 @@ function drawGaugeFace(gCtx, W, H, needles, labelFracs, title, yAxisTicks = null
   // Tick marks — uniform y-value scale when yAxisTicks provided, else plain fractions
   const lf = labelFracs || { r: 0, t: 1 };
   if (yAxisTicks && yAxisTicks.step > 0) {
-    // yAxisTicks: { step, yMin (=yRFixed), yMax (=yRFixed+yMaxDeflect) }
-    const { step, yMin, yMax } = yAxisTicks;
+    // yAxisTicks: { step, yMin, yMax, yZero }
+    // When yZero is provided ticks are anchored to yZero so labels are exact integers.
+    const { step, yMin, yMax, yZero } = yAxisTicks;
     const ySpan = yMax - yMin;
+    const yLabel = yZero !== undefined ? yZero : yMin;
     const fmt = fmtYVal;
     const subStep = step / 5;
-    const majorVals = ticksInRange(yMin, yMax, step);
-    const minorVals = ticksInRange(yMin, yMax, subStep);
+    // Anchor major ticks to yLabel so relative labels are exact integers
+    const loRel = Math.ceil((yMin - yLabel) / step - 1e-6) * step;
+    const hiRel = Math.floor((yMax - yLabel) / step + 1e-6) * step;
+    const majorVals = [];
+    for (let r = loRel; r <= hiRel + step * 1e-6; r += step)
+      majorVals.push(yLabel + Math.round(r / step) * step);
+    const loRelS = Math.ceil((yMin - yLabel) / subStep - 1e-6) * subStep;
+    const hiRelS = Math.floor((yMax - yLabel) / subStep + 1e-6) * subStep;
+    const minorVals = [];
+    for (let r = loRelS; r <= hiRelS + subStep * 1e-6; r += subStep)
+      minorVals.push(yLabel + Math.round(r / subStep) * subStep);
     const fracOf = y => (y - yMin) / ySpan;
     const angOf  = f => -Math.PI / 2 + (f - 0.5) * 2 * sweepHalf;
     const TICK_INNER_MAJOR = R * 0.22;
@@ -1973,7 +1984,7 @@ function drawGaugeFace(gCtx, W, H, needles, labelFracs, title, yAxisTicks = null
     minorVals.forEach(v => {
       if (majorVals.some(m => Math.abs(m - v) < subStep * 0.01)) return;
       const f = fracOf(v);
-      if (f < 0 || f > 1) return;
+      if (f < -0.001 || f > 1.001) return;
       const ang = angOf(f);
       gCtx.beginPath();
       gCtx.moveTo(cx + Math.cos(ang) * (R - TICK_INNER_MINOR - 2), cy + Math.sin(ang) * (R - TICK_INNER_MINOR - 2));
@@ -1985,7 +1996,7 @@ function drawGaugeFace(gCtx, W, H, needles, labelFracs, title, yAxisTicks = null
     gCtx.textAlign = "center"; gCtx.textBaseline = "middle";
     majorVals.forEach(v => {
       const f = fracOf(v);
-      if (f < 0 || f > 1) return;
+      if (f < -0.001 || f > 1.001) return;
       const ang = angOf(f);
       gCtx.strokeStyle = "rgba(170,190,255,0.70)";
       gCtx.lineWidth = 1.5;
@@ -1996,7 +2007,7 @@ function drawGaugeFace(gCtx, W, H, needles, labelFracs, title, yAxisTicks = null
       // Label placed inside arc, centred on tick direction
       const lr = LABEL_INNER;
       gCtx.fillStyle = "rgba(150,175,255,0.80)";
-      gCtx.fillText(fmt(v - yMin, step), cx + Math.cos(ang) * lr, cy + Math.sin(ang) * lr);
+      gCtx.fillText(fmt(v - yLabel, step), cx + Math.cos(ang) * lr, cy + Math.sin(ang) * lr);
     });
   } else {
     // Fallback: plain fraction ticks (no y-values)
@@ -2964,9 +2975,23 @@ export default function App() {
         ? (effLam > 0 ? 4 * effLam * gWindow : 1e-6)
         : 4 * LAM_MAX_G * gWindow;
       const yTFinal_g    = yRFixed + yMaxDeflect_g;
-      const gaugeTickStep_g = niceStep(yRFixed, yTFinal_g, 5);
-      const gaugeRange_g    = (Math.ceil(yMaxDeflect_g / gaugeTickStep_g) + 1) * gaugeTickStep_g;
-      const gF = y => clamp((y - yRFixed) / gaugeRange_g, -0.05, 1.05);
+      // Gauge range: fixed -1..7 normally; fixedT=true → dynamic scale so T stays pinned
+      let gaugeLo, gaugeHi, gaugeTickStep_g;
+      if (s.fixedT && effLam > 0) {
+        const yMaxDeflect_fixed = 4 * effLam * gWindow;
+        const yTFinalFixed = yRFixed + yMaxDeflect_fixed;
+        gaugeTickStep_g = niceStep(yRFixed, yTFinalFixed, 5);
+        const gaugeRange_dyn = (Math.ceil(yMaxDeflect_fixed / gaugeTickStep_g) + 1) * gaugeTickStep_g;
+        gaugeLo = 0;
+        gaugeHi = gaugeRange_dyn;
+      } else {
+        gaugeLo = -1;
+        gaugeHi = 7;
+        gaugeTickStep_g = 1;
+      }
+      const gaugeSpan = gaugeHi - gaugeLo;
+      const gaugeRange_g = gaugeSpan;
+      const gF = y => clamp((y - yRFixed - gaugeLo) / gaugeSpan, -0.05, 1.05);
 
       // ── Draw projection panels directly (no throttle, matches heatmap) ─────
       const margData = {
@@ -3060,8 +3085,8 @@ export default function App() {
         const sampledNeedle = progress * sampledFrac;
 
         if (!pointerHit) {
-          // Wave hasn't reached detector yet — needle at dead rest
-          needles.push({ fraction: 0, color: "#88aaff", alpha: 0.55 });
+          // Wave hasn't reached detector yet — needle at dead rest (R position)
+          needles.push({ fraction: gF(yRFixed), color: "#88aaff", alpha: 0.55 });
         } else if (mwStrong) {
           // Many-Worlds strong: two resolved worlds, each needle at a position sampled
           // from its own pointer wavepacket N(y_branch, σ_p) — not the exact centre.
@@ -3085,8 +3110,8 @@ export default function App() {
           // so it sits within the wavepacket, not exactly at T or R — even post-collapse.
           needles.push({ fraction: sampledNeedle, color: "#88aaff", alpha: s.colBranch !== 0 ? 0.95 : 0.82 });
         }
-        drawGaugeFace(Tr.gCtx, 128, 128, needles, { r: 0, t: lamScaleExt }, null,
-          { step: gaugeTickStep_g, yMin: yRFixed, yMax: yRFixed + gaugeRange });
+        drawGaugeFace(Tr.gCtx, 128, 128, needles, { r: gF(yRFixed), t: lamScaleExt }, null,
+          { step: gaugeTickStep_g, yMin: yRFixed + gaugeLo, yMax: yRFixed + gaugeHi, yZero: yRFixed });
         Tr.gaugeTex.needsUpdate = true;
 
         // ── Coarse indicator lights ─────────────────────────────────────────
