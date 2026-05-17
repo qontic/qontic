@@ -58,19 +58,47 @@ jobs:
           rm -rf _site/bohmian-tunneling
           mkdir -p _site/bohmian-tunneling
           cp -r /tmp/BohmianTunneling/* _site/bohmian-tunneling/
-          cp bohmian-tunneling/index.html _site/bohmian-tunneling/index.html
 
           git clone --depth 1 https://github.com/anssiZander/Bohmian-Free-Packet.git /tmp/Bohmian-Free-Packet
           rm -rf _site/bohmian-free-packet-2d
           mkdir -p _site/bohmian-free-packet-2d
           cp -r /tmp/Bohmian-Free-Packet/* _site/bohmian-free-packet-2d/
-          cp bohmian-free-packet-2d/index.html _site/bohmian-free-packet-2d/index.html
 
           git clone --depth 1 https://github.com/anssiZander/Bohmian-Free-3D.git /tmp/Bohmian-Free-3D
           rm -rf _site/bohmian-free-particle-box-3d
           mkdir -p _site/bohmian-free-particle-box-3d
           cp -r /tmp/Bohmian-Free-3D/* _site/bohmian-free-particle-box-3d/
-          cp bohmian-free-particle-box-3d/index.html _site/bohmian-free-particle-box-3d/index.html
+
+          python3 - <<'PY'
+          from pathlib import Path
+          demos = {
+              'bohmian-tunneling': ('BohmianTunneling', 'Bohmian Tunneling'),
+              'bohmian-free-packet-2d': ('Bohmian-Free-Packet', 'Bohmian Free Packet'),
+              'bohmian-free-particle-box-3d': ('Bohmian-Free-3D', 'Bohmian Free 3D'),
+          }
+          style = """
+          <style>
+            #qontic-credit { position:absolute; right:12px; bottom:10px; z-index:9999; color:rgba(255,255,255,0.74); background:rgba(0,0,0,0.42); border:1px solid rgba(255,255,255,0.14); border-radius:8px; padding:6px 9px; font:11px/1.35 system-ui,sans-serif; backdrop-filter:blur(5px); }
+            #qontic-credit a { color:#9fd0ff; text-decoration:none; }
+            #qontic-credit a:hover { text-decoration:underline; }
+          </style>
+          """
+          for slug, (repo, title) in demos.items():
+              path = Path('_site') / slug / 'index.html'
+              html = path.read_text(encoding='utf-8')
+              if 'id="qontic-credit"' in html:
+                  continue
+              credit = f"""
+          {style}
+          <div id="qontic-credit">
+            Adapted for Q-Ontic Lab from
+            <a href="https://github.com/anssiZander/{repo}" target="_blank" rel="noopener">{title}</a>
+            by Anssi Zander, used with permission.
+          </div>
+          """
+              html = html.replace('</body>', credit + '\n</body>')
+              path.write_text(html, encoding='utf-8')
+          PY
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
