@@ -47,6 +47,17 @@ jobs:
           mkdir -p _site/measurement
           cp -r measurement/dist/* _site/measurement/
 
+          # Ensure the homepage category dropdown can hide cards despite display:flex styling.
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('_site/index.html')
+          html = path.read_text(encoding='utf-8')
+          rule = '.sim-card[hidden]{display:none!important}'
+          if rule not in html:
+              html = html.replace('.sim-card h3{', rule + '.sim-card h3{')
+          path.write_text(html, encoding='utf-8')
+          PY
+
           # Authorized reuse: Anssi Zander gave permission to copy these demos.
           git clone --depth 1 https://github.com/anssiZander/BohmianDoubleSlit.git /tmp/BohmianDoubleSlit
           rm -rf _site/bohmian-double-slit-webgl
