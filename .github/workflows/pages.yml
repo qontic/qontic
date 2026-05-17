@@ -21,19 +21,39 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install measurement dependencies
+        working-directory: measurement
+        run: npm install
+
+      - name: Build measurement app
+        working-directory: measurement
+        run: npm run build
+
+      - name: Prepare static site
+        run: |
+          mkdir -p _site
+          rsync -av --exclude='_site' --exclude='.git' --exclude='measurement/node_modules' ./ ./_site/
+          rm -rf _site/measurement
+          mkdir -p _site/measurement
+          cp -r measurement/dist/* _site/measurement/
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: ./_site
 
       - name: Deploy to GitHub Pages
         id: deployment
