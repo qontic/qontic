@@ -25,7 +25,7 @@ const params = {
   packetSigma: 25.0,
 
   barrierX: 0.55,
-  barrierThick: 20.0,
+  barrierThick: 10.0,
   slitWidth: 25.0,
   slitSep: 60.0,
   V0: 50.0,
@@ -59,36 +59,95 @@ const params = {
   trailWidth: 5.0,
   trailBlendMode: 1,
 
-  paletteId: 5,
+  paletteId: 0,
 };
 
-const PALETTE_NAMES = [
-  "Nebula",
-  "Synthwave",
-  "Viridis-ish",
-  "Inferno-ish",
-  "Ice",
-  "Plasma Drift",
-  "Arctic Aurora",
-  "Solar Flare",
-  "Cosmic Dust",
-  "Neon Noir",
-  "Pastel Mirage"
-];
+const DEFAULT_AUTO_RESTART_MOMENTUM = params.p0;
 
-const PALETTE_COMPLEMENTS = [
-  [0.92,0.93,0.88],
-  [0.10,0.60,0.10],
-  [0.80,0.60,0.55],
-  [0.10,0.60,0.80],
-  [0.80,0.30,0.15],
-  [0.20,0.80,0.30],
-  [0.85,0.25,0.25],
-  [0.10,0.10,0.80],
-  [0.40,0.50,0.70],
-  [0.90,0.90,0.10],
-  [0.40,0.40,0.60]
-];
+const urlParams = new URLSearchParams(window.location.search);
+const isEmbedded = urlParams.get("embed") === "1";
+const preset = urlParams.get("preset");
+const oneParticlePreset = {
+  dt: 0.02,
+  simScale: 0.5,
+  stepsPerFrame: 15,
+  nParticles: 1,
+  packetX: 0.4,
+
+  packetSigma: 25.0,
+
+  guidingMode: 0,
+  guidingChoice: 0,
+  slitSep: 40.0,
+  spinSign: 1,
+  spinMagnitude: 0.0,
+  absorbPx: 50.0,
+
+  showPhase: 1,
+
+  showParticles: 1,
+  dotSize: 20.0,
+  dotGain: 2.,
+  trailWidth: 15.0,
+  trailVisGain: .3,
+  trailHalfLife: 190.0,
+  showTrail: 1,
+};
+
+const particleCountPreset = { ...oneParticlePreset };
+particleCountPreset.nParticles= 500,
+particleCountPreset.dotSize = 9.0;
+particleCountPreset.trailWidth = 7.0;
+particleCountPreset.trailVisGain = .5;
+particleCountPreset.trailGamma = .5;
+particleCountPreset.trailHalfLife = 19.0;
+
+const equivariancePreset = { ...particleCountPreset };
+equivariancePreset.showPhase = 0;
+equivariancePreset.nParticles = 5000;
+equivariancePreset.dotSize = 4.0;
+equivariancePreset.dotGain = 0.6;
+equivariancePreset.trailWidth = 1.0;
+equivariancePreset.trailVisGain = 0.2;
+equivariancePreset.trailHalfLife = 5.0;
+
+const PRESETS = {
+  // Params set preset values. They are fixed by default unless listed in adjustable.
+  "one-particle": {
+    params: oneParticlePreset,
+  },
+  "particle-count": {
+    params: particleCountPreset,
+    adjustable: ["nParticles"],
+  },
+  "equivariance": {
+    params: equivariancePreset,
+  },
+};
+
+const presetDefinition = PRESETS[preset];
+const presetParams = presetDefinition?.params;
+const adjustableControls = new Set(presetDefinition?.adjustable ?? []);
+const fixedControls = new Set(
+  presetParams
+    ? Object.keys(presetParams).filter((key) => !adjustableControls.has(key))
+    : []
+);
+
+if (presetParams) {
+  Object.assign(params, presetParams);
+}
+
+function isControlFixed(key) {
+  if (adjustableControls.has(key)) return false;
+  if (fixedControls.has(key)) return true;
+  if (key === "guidingChoice") {
+    return fixedControls.has("guidingMode") || fixedControls.has("spinSign");
+  }
+  return false;
+}
+
+const DEFAULT_PALETTE_COMPLEMENT = [0.20, 0.80, 0.30];
 
 const GUIDING_MODE_NAMES = [
   "Schrodinger",
@@ -114,6 +173,8 @@ function fmt(v) {
 }
 
 function addSlider(key, label, min, max, step, onChange = null) {
+  if (isControlFixed(key)) return;
+
   const row = document.createElement("div");
   row.className = "row";
 
@@ -145,6 +206,8 @@ function addSlider(key, label, min, max, step, onChange = null) {
 }
 
 function addToggleInt(key, label) {
+  if (isControlFixed(key)) return;
+
   const row = document.createElement("div");
   row.className = "row";
   const lab = document.createElement("label");
@@ -169,6 +232,8 @@ function addToggleInt(key, label) {
 }
 
 function addCycleButton(key, label, values, onChange = null) {
+  if (isControlFixed(key)) return;
+
   const row = document.createElement("div");
   row.className = "row";
 
@@ -200,6 +265,8 @@ function addCycleButton(key, label, values, onChange = null) {
 }
 
 function addChoiceButtons(key, label, values, onChange = null) {
+  if (isControlFixed(key)) return;
+
   const row = document.createElement("div");
   row.className = "row";
 
@@ -238,6 +305,7 @@ function addChoiceButtons(key, label, values, onChange = null) {
 
 function addSectionHeader(label) {
   const header = document.createElement("div");
+  header.className = "section-header";
   header.style.marginTop = "12px";
   header.style.marginBottom = "8px";
   header.style.fontSize = "11px";
@@ -249,18 +317,37 @@ function addSectionHeader(label) {
   controls.appendChild(header);
 }
 
+function removeEmptySectionHeaders() {
+  controls.querySelectorAll(".section-header").forEach((header) => {
+    let hasControls = false;
+    let node = header.nextElementSibling;
+
+    while (node && !node.classList.contains("section-header")) {
+      if (node.classList.contains("row")) {
+        hasControls = true;
+        break;
+      }
+      node = node.nextElementSibling;
+    }
+
+    if (!hasControls) {
+      header.remove();
+    }
+  });
+}
+
 addSectionHeader("Performance");
 addSlider("simScale", "sim scale", 0.3, 1.0, 0.1, () => rebuildSimulation());
 addSlider("stepsPerFrame", "Steps/frame", 1, 100, 1);
 
 addSectionHeader("Physical Parameters");
-addSlider("p0", "Momentum p", 0.5, 8.0, 0.1);
+addSlider("p0", "Momentum p", 0.5, 5.0, 0.1, () => resetAll());
 addSlider("dt", "dt", 0.01, 0.03, 0.01);
-addSlider("packetSigma", "packet sigma", 8.0, 80.0, 1.0);
+addSlider("packetSigma", "packet sigma", 8.0, 80.0, 1.0, () => resetAll());
 addSlider("slitWidth", "slit width", 6.0, 40.0, 1.0);
 addSlider("slitSep", "slit separation", 18.0, 140.0, 1.0);
 addSlider("absorbPx", "absorb boundary", 0.0, 60.0, 1.0);
-addSlider("nParticles", "particle count", 1, 3000, 10, () => rebuildParticles());
+addSlider("nParticles", "particle count", 1, 3000, 10, () => resetAll());
 addSlider("spinMagnitude", "spin |s|", 0.0, 2.0, 0.5);
 addChoiceButtons("guidingChoice", "guiding law", GUIDING_CHOICE_NAMES, (choice) => {
   params.guidingMode = choice === 0 ? 0 : 1;
@@ -282,6 +369,8 @@ addSlider("trailWidth", "trail width (px)", 0.5, 10.0, 0.1);
 
 //addSlider("visGain", "wave gain", 0.5, 20.0, 0.5);
 //addSlider("visGamma", "wave gamma", 0.3, 2.0, 0.05);
+
+removeEmptySectionHeaders();
 
 document.getElementById("reset").onclick = () => resetAll();
 document.getElementById("pause").onclick = (e) => {
@@ -328,6 +417,20 @@ const view = {
   offsetY: 0,
 };
 
+const INITIAL_ZOOM_FRACTION = 0.8;
+const EMBED_AUTO_RESTART_FRAMES = 1000;
+let userAdjustedView = false;
+let embeddedFramesSinceReset = 0;
+
+function getEmbedAutoRestartFrameLimit() {
+  if (EMBED_AUTO_RESTART_FRAMES <= 0) return 0;
+
+  const momentum = Math.max(0.001, Math.abs(params.p0));
+  return Math.max(1, Math.round(
+    EMBED_AUTO_RESTART_FRAMES * DEFAULT_AUTO_RESTART_MOMENTUM / momentum
+  ));
+}
+
 function clampViewOffset() {
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
@@ -343,25 +446,36 @@ function applyViewTransform() {
   canvas.style.transform = `translate(${view.offsetX}px, ${view.offsetY}px) scale(${view.zoom})`;
 }
 
-canvas.addEventListener("wheel", (e) => {
-  e.preventDefault();
-
-  const rect = canvas.parentElement.getBoundingClientRect();
-  const cursorX = e.clientX - rect.left;
-  const cursorY = e.clientY - rect.top;
-  const oldZoom = view.zoom;
-  const zoomFactor = Math.exp(-e.deltaY * 0.0012);
-  const nextZoom = Math.min(8, Math.max(1, oldZoom * zoomFactor));
-
-  if (nextZoom === oldZoom) return;
-
-  const worldX = (cursorX - view.offsetX) / oldZoom;
-  const worldY = (cursorY - view.offsetY) / oldZoom;
-  view.zoom = nextZoom;
-  view.offsetX = cursorX - worldX * nextZoom;
-  view.offsetY = cursorY - worldY * nextZoom;
+function applyInitialViewTransform() {
+  const visibleFraction = Math.min(1, Math.max(0.2, INITIAL_ZOOM_FRACTION));
+  view.zoom = 1 / visibleFraction;
+  view.offsetX = canvas.clientWidth * (1 - view.zoom) * 0.5;
+  view.offsetY = canvas.clientHeight * (1 - view.zoom) * 0.5;
   applyViewTransform();
-}, { passive: false });
+}
+
+if (!isEmbedded) {
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    userAdjustedView = true;
+
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+    const oldZoom = view.zoom;
+    const zoomFactor = Math.exp(-e.deltaY * 0.0012);
+    const nextZoom = Math.min(8, Math.max(1, oldZoom * zoomFactor));
+
+    if (nextZoom === oldZoom) return;
+
+    const worldX = (cursorX - view.offsetX) / oldZoom;
+    const worldY = (cursorY - view.offsetY) / oldZoom;
+    view.zoom = nextZoom;
+    view.offsetX = cursorX - worldX * nextZoom;
+    view.offsetY = cursorY - worldY * nextZoom;
+    applyViewTransform();
+  }, { passive: false });
+}
 
 function compile(type, src) {
   const sh = gl.createShader(type);
@@ -943,7 +1057,7 @@ function drawKillBoundary() {
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-  let comp = PALETTE_COMPLEMENTS[params.paletteId | 0] || [1,1,1];
+  let comp = DEFAULT_PALETTE_COMPLEMENT;
   const alpha = 0.15;
   const colorLoc = gl.getUniformLocation(progBoundary, 'uBoundaryColor');
   gl.uniform4f(colorLoc, comp[0], comp[1], comp[2], alpha);
@@ -1113,11 +1227,16 @@ function resetAll() {
   resetWave();
   rebuildParticles();
   clearDensity();
+  embeddedFramesSinceReset = 0;
 }
 
 window.addEventListener("resize", () => {
   rebuildSimulation();
-  applyViewTransform();
+  if (userAdjustedView) {
+    applyViewTransform();
+  } else {
+    applyInitialViewTransform();
+  }
 });
 
 function advanceSimulationFrame() {
@@ -1134,6 +1253,13 @@ function drawSimulationFrame(advancePhysics) {
 
   if (advancePhysics) {
     advanceSimulationFrame();
+    const autoRestartFrames = getEmbedAutoRestartFrameLimit();
+    if (isEmbedded && autoRestartFrames > 0) {
+      embeddedFramesSinceReset += 1;
+      if (embeddedFramesSinceReset >= autoRestartFrames) {
+        resetAll();
+      }
+    }
   }
 
   render();
@@ -1161,6 +1287,7 @@ async function main() {
   await loadShaders();
   buildPrograms();
   rebuildSimulation();
+  applyInitialViewTransform();
   updateStats();
   simulationReady = true;
 
