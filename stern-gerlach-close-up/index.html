@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D Stern Gerlach with Spin</title>
+  <style>
+    html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family: system-ui, sans-serif; }
+    #wrap { position:relative; width:100%; height:100%; }
+    #c { width:100%; height:100%; display:block; }
+    #ui {
+      position:absolute; left:12px; top:12px; width:330px;
+      background:rgba(0,0,0,0.55); color:#ddd; padding:12px 12px 10px;
+      border:1px solid rgba(255,255,255,0.12); border-radius:10px;
+      backdrop-filter: blur(6px);
+      user-select:none;
+      box-sizing:border-box;
+      max-height:calc(100vh - 24px);
+      display:flex;
+      flex-direction:column;
+    }
+    #ui h3 { margin:0 0 8px 0; font-size:14px; font-weight:600; color:#fff; }
+    #uibody { flex:1 1 auto; min-height:0; overflow-y:auto; padding-right:4px; scrollbar-width:thin; }
+    .row { display:flex; align-items:center; gap:10px; margin:6px 0; }
+    .row label { width:120px; font-size:12px; color:#bbb; }
+    .row input[type="range"] { flex:1; }
+    .row .val { width:76px; text-align:right; font-variant-numeric: tabular-nums; font-size:12px; color:#fff; }
+    .btns { display:flex; gap:10px; margin-top:8px; }
+    button {
+      flex:1; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.2);
+      background:rgba(255,255,255,0.08); color:#fff; cursor:pointer;
+    }
+    button:hover { background:rgba(255,255,255,0.12); }
+    button.selected { background:rgba(64,156,255,0.35); border-color:rgba(64,156,255,0.6); }
+    button:disabled { cursor:not-allowed; opacity:0.62; }
+    .toggle-group { display:flex; gap:6px; flex:1; }
+    .toggle-group button { flex:1; padding:6px 8px; font-size:11px; }
+    .row.mode-row { flex-direction:column; align-items:stretch; gap:6px; }
+    .row.mode-row label { width:auto; }
+    .row.mode-row .val { display:none; }
+    .row.mode-row .toggle-group { width:100%; }
+    .row.mode-row .toggle-group button { min-width:0; white-space:normal; line-height:1.15; }
+    .stat { margin-top:8px; font-size:12px; color:#bbb; line-height:1.35; }
+    .stat b { color:#fff; font-weight:600; }
+    #viewtools {
+      position:absolute; left:382px; top:12px; width:118px;
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      background:rgba(0,0,0,0.42); color:#ddd; padding:7px;
+      border:1px solid rgba(255,255,255,0.12); border-radius:8px;
+      backdrop-filter: blur(6px);
+      user-select:none;
+    }
+    #viewGizmo {
+      width:104px; height:76px; display:block;
+    }
+    #viewtools .view-buttons {
+      display:flex; gap:6px;
+    }
+    #viewtools button {
+      flex:0 0 auto; width:32px; height:30px; padding:0;
+      border-radius:6px; font-size:11px; font-weight:700;
+      line-height:1; text-align:center;
+    }
+    #explain {
+      position:absolute; right:12px; top:12px;
+      width:25vw; min-width:280px; max-width:430px;
+      max-height:calc(100vh - 24px);
+      background:rgba(0,0,0,0.58); color:#d7e1e7;
+      border:1px solid rgba(255,255,255,0.14); border-radius:10px;
+      backdrop-filter: blur(7px);
+      box-sizing:border-box;
+      display:flex; flex-direction:column;
+      user-select:text;
+    }
+    #explain.closed { width:auto; min-width:0; }
+    .panel-head {
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 12px;
+      user-select:none;
+    }
+    .panel-head h3 { margin:0; font-size:14px; font-weight:650; color:#fff; }
+    #explainToggle {
+      flex:0 0 auto; width:34px; height:28px; padding:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px; line-height:1;
+    }
+    #explainBody {
+      flex:1 1 auto; min-height:0; overflow-y:auto;
+      padding:0 14px 14px 14px;
+      font-size:13px; line-height:1.45;
+      color:#cbd7dd;
+      scrollbar-width:thin;
+    }
+    #explain.closed #explainBody { display:none; }
+    #explainBody p { margin:0 0 10px 0; }
+    #explainBody h4 {
+      margin:14px 0 6px 0;
+      font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+      color:#9fb8c5;
+    }
+    .eq {
+      margin:8px 0 12px 0;
+      padding:9px 10px;
+      border-left:2px solid rgba(107, 219, 190, 0.5);
+      background:rgba(255,255,255,0.045);
+      color:#f0fbff;
+      overflow-x:auto;
+    }
+    .eq math {
+      font-family: "Cambria Math", "STIX Two Math", "Times New Roman", serif;
+      font-size:16px;
+    }
+    @media (max-height: 720px) {
+      #ui { padding:9px; }
+      .row { margin:4px 0; gap:8px; }
+      .row label, .row .val, .stat { font-size:11px; }
+      button { padding:6px 8px; }
+      #viewtools { padding:5px; }
+    }
+    @media (max-width: 900px) {
+      #explain { width:34vw; min-width:240px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="c"></canvas>
+    <div id="ui">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+  <h3 style="margin:0; font-size:14px; font-weight:600; color:#fff;">3D Bohmian Particle in a Box</h3>
+  <button id="minui" title="Minimize/expand" style="
+    width:34px; height:28px; padding:0;
+    border-radius:8px; border:1px solid rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.08); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1;
+  ">▾</button>
+</div>
+      <div id="uibody">
+  <div id="controls"></div>
+  <div class="btns">
+    <button id="reset">Reset (R)</button>
+    <button id="pause">Pause</button>
+  </div>
+  <div class="stat" id="stats"></div>
+</div>
+    </div>
+    <div id="viewtools" aria-label="Camera view controls">
+      <canvas id="viewGizmo" width="104" height="76"></canvas>
+      <div class="view-buttons">
+        <button id="viewXY" type="button" title="Top XY view">XY</button>
+        <button id="viewXZ" type="button" title="Side XZ view">XZ</button>
+        <button id="viewYZ" type="button" title="Side YZ view">YZ</button>
+      </div>
+    </div>
+    <aside id="explain" class="closed" aria-label="Explanation panel">
+      <div class="panel-head">
+        <h3>Explanation</h3>
+        <button id="explainToggle" type="button" title="Open explanation">+</button>
+      </div>
+      <div id="explainBody">
+        <p>This simulation shows an up-polarized Pauli spinor wave packet inside a hard-walled three-dimensional box, together with Bohmian particles guided by the Pauli current. The glowing cloud is the spinor density. The SG controls add the Stern-Gerlach z-gradient for manual splitting.</p>
+        <h4>Wave</h4>
+        <p>The wave function is a two-component spinor. Its density is</p>
+        <div class="eq">
+          <math display="block">
+            <mrow>
+              <mi>&rho;</mi><mo>(</mo><mi mathvariant="bold">x</mi><mo>,</mo><mi>t</mi><mo>)</mo>
+              <mo>=</mo>
+              <msup><mi>&Psi;</mi><mo>&dagger;</mo></msup><mi>&Psi;</mi>
+            </mrow>
+          </math>
+        </div>
+        <p>The wave evolves according to the Pauli equation inside the box. The x faces are periodic, while y and z remain hard-walled. The SG option applies the magnetic field through the spin Zeeman term for qualitative Stern-Gerlach deflection.</p>
+        <div class="eq">
+          <math display="block">
+            <mrow>
+              <mi>i</mi><mi>&hbar;</mi><msub><mo>&PartialD;</mo><mi>t</mi></msub><mi>&Psi;</mi>
+              <mo>=</mo>
+              <mfenced open="[" close="]">
+                <mrow>
+                  <mo>-</mo>
+                  <mfrac><msup><mi>&hbar;</mi><mn>2</mn></msup><mrow><mn>2</mn><mi>m</mi></mrow></mfrac>
+                  <msup><mo>&nabla;</mo><mn>2</mn></msup>
+                  <mo>-</mo>
+                  <mfrac><mi>&hbar;</mi><mrow><mn>2</mn><mi>m</mi></mrow></mfrac>
+                  <mi mathvariant="bold">&sigma;</mi><mo>&middot;</mo><mi mathvariant="bold">B</mi>
+                </mrow>
+              </mfenced>
+              <mi>&Psi;</mi>
+            </mrow>
+          </math>
+        </div>
+        <h4>Guidance</h4>
+        <p>The Bohmian velocity is based on the Pauli probability current divided by density.</p>
+        <div class="eq">
+          <math display="block">
+            <mrow>
+              <msub><mi mathvariant="bold">v</mi><mi>B</mi></msub>
+              <mo>=</mo>
+              <mfrac><mi mathvariant="bold">j</mi><mi>&rho;</mi></mfrac>
+            </mrow>
+          </math>
+        </div>
+        <div class="eq">
+          <math display="block">
+            <mrow>
+              <mi mathvariant="bold">j</mi>
+              <mo>=</mo>
+              <mfrac><mi>&hbar;</mi><mi>m</mi></mfrac>
+              <mi>Im</mi>
+              <mo>(</mo><msup><mi>&Psi;</mi><mo>&dagger;</mo></msup><mo>&nabla;</mo><mi>&Psi;</mi><mo>)</mo>
+            </mrow>
+          </math>
+        </div>
+        <p>The spin current uses the local Pauli spin density. For the default up-polarized packet it reduces to the familiar transverse curl around density gradients.</p>
+        <div class="eq">
+          <math display="block">
+            <mrow>
+              <mi mathvariant="bold">v</mi>
+              <mo>=</mo>
+              <mfrac><mi mathvariant="bold">j</mi><mi>&rho;</mi></mfrac>
+              <mo>+</mo>
+              <mfrac>
+                <mrow><mi>s</mi><mi>&hbar;</mi></mrow>
+                <mrow><mi>m</mi><mi>&rho;</mi></mrow>
+              </mfrac>
+              <mo>&nabla;</mo><mo>&times;</mo>
+              <mo>(</mo><msup><mi>&Psi;</mi><mo>&dagger;</mo></msup><mi mathvariant="bold">&sigma;</mi><mi>&Psi;</mi><mo>)</mo>
+            </mrow>
+          </math>
+        </div>
+      </div>
+    </aside>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bohmian Double Slit (WebGL2) — Q-Ontic Lab</title>
-  <meta name="description" content="WebGL2 Bohmian double-slit simulation with Schrödinger and Pauli spin-1/2 guiding laws. Adapted from Anssi Zander's BohmianDoubleSlit demo." />
+  <title>Bohmian Tunneling (WebGL2)</title>
   <style>
     html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family: system-ui, sans-serif; }
     #wrap { position:relative; width:100%; height:100%; }
@@ -22,29 +21,40 @@
     .row input[type="range"] { flex:1; }
     .row .val { width:76px; text-align:right; font-variant-numeric: tabular-nums; font-size:12px; color:#fff; }
     .btns { display:flex; gap:10px; margin-top:8px; }
-    .button-group { flex:1; display:flex; gap:6px; }
-    .button-group button { min-width:0; padding:8px 6px; font-size:11px; }
-    .button-group button.is-active {
-      background:rgba(132,192,255,0.24);
-      border-color:rgba(132,192,255,0.72);
-      box-shadow: inset 0 0 0 1px rgba(132,192,255,0.18);
-    }
     button {
       flex:1; padding:8px 10px; border-radius:8px; border:1px solid rgba(132,192,255,0.26);
       background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
     }
     button:hover { background:rgba(86,150,232,0.22); }
+    button.selected { background:rgba(64,156,255,0.35); border-color:rgba(64,156,255,0.6); }
+    button.recording { background:rgba(210,62,62,0.35); border-color:rgba(255,100,100,0.65); }
+    button:disabled { opacity:0.55; cursor:not-allowed; }
+    #record {
+      position:fixed; right:12px; bottom:12px; z-index:1000;
+      flex:0 0 auto; padding:8px 13px; border-radius:6px;
+      border:1px solid rgba(80,140,255,0.38);
+      background:rgba(4,10,30,0.88); color:#b8d4ff;
+      font:12px "JetBrains Mono","Courier New",monospace;
+      box-shadow:0 4px 18px rgba(0,0,20,0.65);
+      backdrop-filter:blur(8px);
+    }
+    #record:hover {
+      border-color:rgba(85,136,255,0.8);
+      color:#e8f2ff;
+    }
+    #record.recording {
+      background:rgba(125,26,24,0.88);
+      border-color:rgba(255,100,100,0.72);
+      color:#ffd0ca;
+    }
+    #record:disabled {
+      cursor:not-allowed;
+      opacity:0.58;
+    }
+    .toggle-group { display:flex; gap:6px; flex:1; }
+    .toggle-group button { flex:1; padding:6px 8px; font-size:11px; }
     .stat { margin-top:8px; font-size:12px; color:#b9cce5; line-height:1.35; }
     .stat b { color:#fff; font-weight:600; }
-    #credit {
-      position:absolute; right:12px; bottom:10px; z-index:10;
-      color:rgba(255,255,255,0.74); background:rgba(0,0,0,0.42);
-      border:1px solid rgba(255,255,255,0.14); border-radius:8px;
-      padding:6px 9px; font-size:11px; line-height:1.35;
-      backdrop-filter: blur(5px);
-    }
-    #credit a { color:#9fd0ff; text-decoration:none; }
-    #credit a:hover { text-decoration:underline; }
     #theory {
       position:absolute; right:12px; top:12px; width:380px; max-width:calc(100vw - 24px);
       max-height:calc(100vh - 24px); overflow:auto;
@@ -59,11 +69,8 @@
     .panel-toggle {
       flex:0 0 auto; width:34px; height:28px; padding:0;
       display:flex; align-items:center; justify-content:center;
-      border:1px solid rgba(132,192,255,0.26); border-radius:8px;
-      background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
       font-size:16px; line-height:1;
     }
-    .panel-toggle:hover { background:rgba(86,150,232,0.22); }
     #theorybody { margin-top:10px; font-size:13px; line-height:1.45; color:#c8d9ef; }
     #theorybody[hidden] { display:none; }
     #theorybody p { margin:0 0 10px; }
@@ -83,6 +90,7 @@
     .frac .bottom { padding:0.05em 0.18em 0; }
     .note { color:#9fbce0; }
     @media (max-width: 760px) {
+      #ui { width:calc(100vw - 48px); }
       #theory { top:auto; bottom:12px; width:calc(100vw - 48px); }
       #theory.is-minimized { width:160px; }
     }
@@ -93,30 +101,31 @@
     <canvas id="c"></canvas>
     <div id="ui">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
-        <h3 style="margin:0; font-size:14px; font-weight:600; color:#fff;">Bohmian Double Slit</h3>
-        <button id="minui" title="Minimize/expand" style="
-          width:34px; height:28px; padding:0;
-          border-radius:8px; border:1px solid rgba(132,192,255,0.26);
-          background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
-          display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1;
-        ">▾</button>
-      </div>
+  <h3 style="margin:0; font-size:14px; font-weight:600; color:#fff;">Bohmian Tunneling</h3>
+  <button id="minui" title="Minimize/expand" style="
+    width:34px; height:28px; padding:0;
+    border-radius:8px; border:1px solid rgba(132,192,255,0.26);
+    background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1;
+  ">▾</button>
+</div>
       <div id="uibody">
-        <div id="controls"></div>
-        <div class="btns">
-          <button id="reset">Reset (R)</button>
-          <button id="pause">Pause</button>
-        </div>
-        <div class="stat" id="stats"></div>
-      </div>
+  <div id="controls"></div>
+  <div class="btns">
+    <button id="reset">Reset (R)</button>
+    <button id="pause">Pause</button>
+  </div>
+  <div class="stat" id="stats"></div>
+</div>
     </div>
+    <button id="record">Start Recording</button>
     <div id="theory" class="is-minimized" aria-label="Theory panel">
       <div class="panel-head">
         <h3>Theory</h3>
         <button id="mintheory" class="panel-toggle" title="Minimize/expand" aria-expanded="false">+</button>
       </div>
       <div id="theorybody" hidden>
-        <p>A quantum wave packet travels according to the Schrödinger equation. The barrier splits it into two coherent parts; after the slits those parts overlap and form interference.</p>
+        <p>A wave packet approaches a finite potential barrier. Classically, a particle with too little energy would turn back; quantum mechanically, the wave penetrates the barrier and can leave a transmitted packet on the far side.</p>
         <div class="math">
           <span class="mi">i</span>&hbar;<span class="frac"><span class="top">&part;&psi;</span><span class="bottom">&part;t</span></span>
           =
@@ -125,13 +134,25 @@
           + <span class="mi">V</span>
           <span class="math-bracket">]</span>&psi;
         </div>
-        <p>The brightness is the Born density. The phase view colors the argument of the same wave.</p>
+        <p>The barrier height is compared with the kinetic energy of the incoming packet. When <span class="mi">E</span> &lt; <span class="mi">V</span><sub>0</sub>, the wave inside the barrier becomes evanescent instead of abruptly stopping.</p>
+        <div class="math">
+          <span class="mi">E</span> =
+          <span class="frac"><span class="top"><span class="mi">p</span><sub>0</sub><sup>2</sup></span><span class="bottom">2<span class="mi">m</span></span></span>,
+          &nbsp;&nbsp;
+          &kappa; =
+          <span class="frac"><span class="top">&radic;<span class="math-bracket">(</span>2<span class="mi">m</span>(<span class="mi">V</span><sub>0</sub>-<span class="mi">E</span>)<span class="math-bracket">)</span></span><span class="bottom">&hbar;</span></span>,
+          &nbsp;&nbsp;
+          &psi;<sub>barrier</sub> &sim; <span class="mi">e</span><sup>-&kappa;<span class="mi">y</span></sup>
+        </div>
+        <p>The visible density is the Born density. Reflection and tunneling are two parts of the same evolving wave packet.</p>
         <div class="math">
           &rho;(<span class="mi">x</span>,<span class="mi">t</span>) = |&psi;|<sup>2</sup>,
           &nbsp;&nbsp;
-          &psi; = <span class="mi">R</span><span class="mi">e</span><sup><span class="mi">iS</span>/&hbar;</sup>
+          <span class="mi">R</span> + <span class="mi">T</span> = 1,
+          &nbsp;&nbsp;
+          <span class="mi">T</span> &propto; <span class="mi">e</span><sup>-2&kappa;<span class="mi">a</span></sup>
         </div>
-        <p>A Bohmian particle has a definite position, and their velocity is determined by the propability current. The Guiding Law is:</p>
+        <p>Bohmian particles have definite positions, but their velocity is guided by the quantum current. Some trajectories are carried back by the reflected wave, while others follow the transmitted branch through the barrier.</p>
         <div class="math">
           <span class="dot">x&#775;</span>
           =
@@ -144,7 +165,7 @@
           <span class="frac"><span class="top">&hbar;</span><span class="bottom"><span class="mi">m</span></span></span>
           Im(&psi;<sup>*</sup>&nabla;&psi;)
         </div>
-        <p class="note">The Pauli option adds an extra term in the current arising from the spin. Paths can change while the same wave density still governs the pattern.</p>
+        <p class="note">The Pauli option adds a spin current, changing the detailed paths while the same density still determines the reflected and transmitted probability pattern.</p>
         <div class="math">
           <span class="dot">x&#775;</span>
           =
@@ -154,11 +175,6 @@
           (&part;<sub>y</sub>&rho;, -&part;<sub>x</sub>&rho;)
         </div>
       </div>
-    </div>
-    <div id="credit">
-      Adapted for Q-Ontic Lab from
-      <a href="https://github.com/anssiZander/BohmianDoubleSlit" target="_blank" rel="noopener">BohmianDoubleSlit</a>
-      by Anssi Zander.
     </div>
   </div>
   <script type="module" src="./main.js"></script>
