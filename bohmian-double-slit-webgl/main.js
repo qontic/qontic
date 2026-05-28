@@ -81,8 +81,8 @@ const oneParticlePreset = {
   slitSep: 40.0,
   spinSign: 1,
   spinMagnitude: 0.0,
-  absorbPx: 50.0,
-
+  absorbPx: 40.0,
+  absorbStrength: 2.0,
   showPhase: 1,
 
   showParticles: 1,
@@ -95,9 +95,10 @@ const oneParticlePreset = {
 };
 
 const particleCountPreset = { ...oneParticlePreset };
+
 particleCountPreset.nParticles= 500,
-particleCountPreset.dotSize = 9.0;
-particleCountPreset.trailWidth = 7.0;
+particleCountPreset.dotSize = 7.0;
+particleCountPreset.trailWidth = 5.0;
 particleCountPreset.trailVisGain = .5;
 particleCountPreset.trailGamma = .5;
 particleCountPreset.trailHalfLife = 19.0;
@@ -417,7 +418,8 @@ const view = {
   offsetY: 0,
 };
 
-const INITIAL_ZOOM_FRACTION = 0.8;
+const INITIAL_ZOOM_FRACTION = 0.65;
+const INITIAL_VIEW_SHIFT_X = 0.10;
 const EMBED_AUTO_RESTART_FRAMES = 1000;
 let userAdjustedView = false;
 let embeddedFramesSinceReset = 0;
@@ -449,7 +451,7 @@ function applyViewTransform() {
 function applyInitialViewTransform() {
   const visibleFraction = Math.min(1, Math.max(0.2, INITIAL_ZOOM_FRACTION));
   view.zoom = 1 / visibleFraction;
-  view.offsetX = canvas.clientWidth * (1 - view.zoom) * 0.5;
+  view.offsetX = canvas.clientWidth * (1 - view.zoom) * 0.5 - canvas.clientWidth * INITIAL_VIEW_SHIFT_X;
   view.offsetY = canvas.clientHeight * (1 - view.zoom) * 0.5;
   applyViewTransform();
 }

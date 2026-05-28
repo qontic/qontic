@@ -138,7 +138,8 @@
     }
 
     .page-hero {
-      padding: 1.7rem 0 2.2rem;
+      margin-bottom: 0.8rem;
+      padding: 1.4rem 0 0.7rem;
     }
 
     .kicker {
@@ -178,6 +179,20 @@
       grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
       gap: 2rem;
       align-items: start;
+    }
+
+    .intro-image {
+      margin: 0;
+    }
+
+    .intro-image img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 45, 0.14);
     }
 
     h2 {
@@ -440,28 +455,17 @@
     </nav>
 
     <section class="page-hero" aria-labelledby="page-title">
-      <p class="kicker">Educational notebook draft</p>
-      <h1 id="page-title">Bohmian Double Slit: Trajectories Guided by an interfering Wave</h1>
-      <p>
-        The Pilot-wave view of the double-slit experiment.
-      </p>
+      <p class="kicker">Educational notebook</p>
+      <h1 id="page-title">Double Slit in Bohmian mechanics</h1>
+      <h2>
+        Trajectories Guided by an interfering Wave.
+      </h2>
     </section>
 
-    <section class="intro-grid" aria-labelledby="overview">
-      <div>
-        <h2 id="overview">Overview</h2>
-        <p>
-          In the double-slit experiment, a localized wave packet moves toward a barrier with
-          two openings. The wave passes through both slits, spreads, and overlaps with itself.
-          This creates an interference pattern.
-        </p>
-        <p>
-          Bohmian mechanics adds particle positions to this wave description. Each particle
-          follows a definite trajectory, and that trajectory is guided by the wave.
-          The particle goes through one slit, while the wave passing through both slits still
-          shapes the motion downstream.
-        </p>
-      </div>
+    <section class="intro-grid" aria-label="Double-slit preview and section navigation">
+      <figure class="intro-image">
+        <img src="manyParticle.jpg" alt="Many Bohmian trajectories forming a double-slit interference pattern">
+      </figure>
 
       <aside class="note-box" aria-labelledby="sections-nav">
         <h2 id="sections-nav">Sections</h2>
@@ -473,84 +477,29 @@
       </aside>
     </section>
 
-    <section aria-labelledby="theory">
-      <h2 id="theory">Theory</h2>
-      <h3 id="theory">The Guiding Law</h3>
-      <p>
-        The applet evolves a two-dimensional wave packet with a double-slit potential barrier.
-        The central object is the wave function, whose density gives the Born probability
-        distribution:
-      </p>
-
-      <div class="equation">
-        <span class="eq-label">The Schrödinger equation</span>
-        \[
-          i\hbar\frac{\partial \psi}{\partial t}
-          =
-          \left[
-            -\frac{\hbar^2}{2m}\nabla^2 + V(x,y)
-          \right]\psi
-        \]
-      </div>
-
-      
-
-      <p>
-        The particle velocity is obtained from the probability
-        current divided by the density \( \rho(x,y,t) = \left|\psi(x,y,t)\right|^2 \).
-      </p>
-
-      <div class="equation">
-        <span class="eq-label">Bohmian Guidance Law</span>
-        \[
-          \frac{d\mathbf{x}}{dt}
-          =
-          \frac{\mathbf{j}}{\rho},
-          \qquad
-          \mathbf{j}
-          =
-          \frac{\hbar}{m}\operatorname{Im}
-          \left(\psi^*\nabla\psi\right)
-         
-        \]
-      </div>
-
-
-      <p>
-        If the wave is written in polar form,
-        \(\psi = R e^{iS/\hbar}\), then \(\rho = R^2\) it turns out the current can be written directly
-        in terms of the phase gradient:
-      </p>
-
-      <div class="equation">
-        <span class="eq-label">Guidance in terms of Phase gradient</span>
-        \[
-         
-          \mathbf{j}
-          =
-          \frac{\rho\nabla S}{m}
-        \]
-      </div>
-
-      <p>
-        Thus, the Bohmian velocity is
-        \(\mathbf{v} = d\mathbf{x}/dt = \nabla S/m\), which emphasizes the role of the wave phase gradient
-        in the a guiding of particle motion. 
-
-      </p>
-
-      <p>
-        In short: 
-        The density tells where particles
-        are likely to be found, while the phase \(S\) determines the direction of the local motion.
-      </p>
-
-    </section>
+    
 
     <section class="applet-section" aria-labelledby="focused-applet">
       <h2 id="focused-applet">A Bohmian particle</h2>
       <p>
-        A bohmian particle surfing the Schrödinger wave. 
+          In the double-slit experiment, a localized wave packet moves toward a barrier with
+          two openings. The wave passes through both slits, spreads, and overlaps with itself, creating an interference pattern.
+          So far the description is standard QM.
+      </p>
+      <p>
+          Bohmian mechanics adds a particle to the picture. The trajectory of the particle
+           is guided by the wave. The velocity is proportional to the probability current at the location of the particle.
+           Alternatively the guiding principle can be expressed via the phase of the wave:
+           The particle always moves along the phase gradient.
+      </p>
+      <p>
+          In any case it is now clear how a single particle can "sense the both slits". Even though 
+          the particle goes through only one slit, the Schrödinger wave passes through both slits. 
+          The wave interferes with itself, as usual, creating disturbances in the phase,
+           and these disturbances will then affect the guiding of the particle.
+      </p>
+      <p>
+        Click the following applet and observe a bohmian particle surfing the Schrödinger wave. 
       </p>
 
       <div class="applet-shell is-inactive">
@@ -568,8 +517,8 @@
         </div>
       </div>
       <p class="caption">
-        Notice how the particles follows the phase gradient. 
-        Interference distorts the phase fronts, causing the particle to bend its path as it moves through the interference region.
+        Notice how the particle follows the phase gradient. 
+        Interference distorts the phase fronts, causing the particle to bend its path.
       </p>
     </section>
 
@@ -634,6 +583,81 @@
         With enough initially sampled positions, the particle ensemble remains distributed like
         \(\rho = |\psi|^2\) as both wave and trajectories evolve.
       </p>
+      
+    </section>
+
+    
+    <section aria-labelledby="theory">
+      <h2 id="theory">Theory</h2>
+      <h3 id="theory">The Guiding Law</h3>
+      <p>
+        The wave  \( \psi = \psi(x,y,t) \) in pilot wave theory is the Schrödinger wave from standard quantum mechanics,
+         evolving according to the Schrödinger equation:
+      </p>
+
+      <div class="equation">
+        <span class="eq-label">The Schrödinger equation</span>
+        \[
+          i\hbar\frac{\partial \psi}{\partial t}
+          =
+          \left[
+            -\frac{\hbar^2}{2m}\nabla^2 + V(x,y)
+          \right]\psi
+        \]
+      </div>
+
+      
+
+      <p>
+        The particle velocity is obtained from the probability
+        current divided by the density \( \rho(x,y,t) = \left|\psi(x,y,t)\right|^2 \).
+      </p>
+
+      <div class="equation">
+        <span class="eq-label">Bohmian Guidance Law</span>
+        \[
+          \frac{d\mathbf{x}}{dt}
+          =
+          \frac{\mathbf{j}}{\rho},
+          \qquad
+          \mathbf{j}
+          =
+          \frac{\hbar}{m}\operatorname{Im}
+          \left(\psi^*\nabla\psi\right)
+         
+        \]
+      </div>
+
+
+      <p>
+        If the wave is written in polar form,
+        \(\psi = R e^{iS/\hbar}\), then \(\rho = R^2\) it turns out the current can be written directly
+        in terms of the phase gradient:
+      </p>
+
+      <div class="equation">
+        <span class="eq-label">Guidance in terms of Phase gradient</span>
+        \[
+         
+          \mathbf{j}
+          =
+          \frac{\rho\nabla S}{m}
+        \]
+      </div>
+
+      <p>
+        Thus, the Bohmian velocity is
+        \(\mathbf{v} = d\mathbf{x}/dt = \nabla S/m\), which emphasizes the role of the wave phase gradient
+        in the a guiding of particle motion. 
+
+      </p>
+
+      <p>
+        In short: 
+        The density tells where particles
+        are likely to be found, while the phase \(S\) determines the direction of the local motion.
+      </p>
+      <h3 id="equivariance">Equivariance</h3>
       <p>
         The mathematical statement is that the Born density \( \rho = |\psi|^2 \), and the Bohmian particle density  \( \rho_B \),
         satisfy the same continuity equation when particles move with
@@ -660,7 +684,9 @@
         guidance law carries that whole distribution along with the quantum current. The swarm
         can rearrange into fringes, but it does not drift away from the Born density.
       </p>
+
     </section>
+
 
     <section class="next-step" aria-labelledby="full-applet">
       <h2 id="full-applet">Original Scale Applet</h2>
