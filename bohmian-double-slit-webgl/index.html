@@ -2,165 +2,733 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bohmian Double Slit (WebGL2) — Q-Ontic Lab</title>
-  <meta name="description" content="WebGL2 Bohmian double-slit simulation with Schrödinger and Pauli spin-1/2 guiding laws. Adapted from Anssi Zander's BohmianDoubleSlit demo." />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bohmian Double Slit Notebook - Q-Ontic Lab</title>
+  <meta name="description" content="An educational notebook page for the Q-Ontic Lab Bohmian double-slit WebGL2 simulation, with theory notes and an embedded applet." />
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+      },
+      svg: {
+        fontCache: "global"
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
   <style>
-    html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family: system-ui, sans-serif; }
-    #wrap { position:relative; width:100%; height:100%; }
-    canvas { width:100%; height:100%; display:block; }
-    #ui {
-      position:absolute; left:12px; top:12px; width:330px;
-      background:rgba(5,16,36,0.62); color:#d9e6f8; padding:12px 12px 10px;
-      border:1px solid rgba(116,174,255,0.22); border-radius:10px;
-      backdrop-filter: blur(6px);
-      user-select:none;
+    :root {
+      --blue-900: #003366;
+      --blue-800: #003f7f;
+      --blue-700: #0055aa;
+      --blue-100: #dde9f8;
+      --ink: #253142;
+      --muted: #5d6b7a;
+      --paper: #f9f9f9;
+      --surface: #ffffff;
+      --line: #dbe4f0;
+      --cyan: #007f9f;
+      --green: #2a7b4f;
+      --amber: #9a6818;
     }
-    #ui h3 { margin:0 0 8px 0; font-size:14px; font-weight:600; color:#fff; }
-    .row { display:flex; align-items:center; gap:10px; margin:6px 0; }
-    .row label { width:120px; font-size:12px; color:#b9cce5; }
-    .row input[type="range"] { flex:1; }
-    .row .val { width:76px; text-align:right; font-variant-numeric: tabular-nums; font-size:12px; color:#fff; }
-    .btns { display:flex; gap:10px; margin-top:8px; }
-    .button-group { flex:1; display:flex; gap:6px; }
-    .button-group button { min-width:0; padding:8px 6px; font-size:11px; }
-    .button-group button.is-active {
-      background:rgba(132,192,255,0.24);
-      border-color:rgba(132,192,255,0.72);
-      box-shadow: inset 0 0 0 1px rgba(132,192,255,0.18);
+
+    * {
+      box-sizing: border-box;
     }
-    button {
-      flex:1; padding:8px 10px; border-radius:8px; border:1px solid rgba(132,192,255,0.26);
-      background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
+
+    html {
+      scroll-behavior: smooth;
     }
-    button:hover { background:rgba(86,150,232,0.22); }
-    .stat { margin-top:8px; font-size:12px; color:#b9cce5; line-height:1.35; }
-    .stat b { color:#fff; font-weight:600; }
-    #credit {
-      position:absolute; right:12px; bottom:10px; z-index:10;
-      color:rgba(255,255,255,0.74); background:rgba(0,0,0,0.42);
-      border:1px solid rgba(255,255,255,0.14); border-radius:8px;
-      padding:6px 9px; font-size:11px; line-height:1.35;
-      backdrop-filter: blur(5px);
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
     }
-    #credit a { color:#9fd0ff; text-decoration:none; }
-    #credit a:hover { text-decoration:underline; }
-    #theory {
-      position:absolute; right:12px; top:12px; width:380px; max-width:calc(100vw - 24px);
-      max-height:calc(100vh - 24px); overflow:auto;
-      background:rgba(5,16,36,0.62); color:#d9e6f8; padding:12px;
-      border:1px solid rgba(116,174,255,0.22); border-radius:10px;
-      backdrop-filter: blur(6px);
-      user-select:none;
+
+    a {
+      color: var(--blue-700);
     }
-    #theory.is-minimized { width:160px; overflow:hidden; }
-    .panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .panel-head h3 { margin:0; font-size:14px; font-weight:600; color:#fff; }
-    .panel-toggle {
-      flex:0 0 auto; width:34px; height:28px; padding:0;
-      display:flex; align-items:center; justify-content:center;
-      border:1px solid rgba(132,192,255,0.26); border-radius:8px;
-      background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
-      font-size:16px; line-height:1;
+
+    a:hover {
+      color: var(--blue-800);
     }
-    .panel-toggle:hover { background:rgba(86,150,232,0.22); }
-    #theorybody { margin-top:10px; font-size:13px; line-height:1.45; color:#c8d9ef; }
-    #theorybody[hidden] { display:none; }
-    #theorybody p { margin:0 0 10px; }
-    .math {
-      margin:8px 0 10px; padding:9px 11px; overflow-x:auto;
-      border:1px solid rgba(132,192,255,0.18); border-radius:8px;
-      background:rgba(8,23,51,0.54); color:#eef7ff;
-      font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;
-      font-size:16px; line-height:1.55; white-space:nowrap;
+
+    .site-banner {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--blue-900);
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
     }
-    .mi { font-style:italic; }
-    .frac {
-      display:inline-grid; grid-template-rows:auto auto; vertical-align:middle;
-      text-align:center; line-height:1.05; margin:0 0.12em;
+
+    main,
+    .site-footer-inner {
+      width: min(1120px, calc(100% - 2rem));
+      margin: 0 auto;
     }
-    .frac .top { border-bottom:1px solid currentColor; padding:0 0.18em 0.05em; }
-    .frac .bottom { padding:0.05em 0.18em 0; }
-    .note { color:#9fbce0; }
-    @media (max-width: 760px) {
-      #theory { top:auto; bottom:12px; width:calc(100vw - 48px); }
-      #theory.is-minimized { width:160px; }
+
+    .site-banner h1 {
+      max-width: none;
+      margin: 0;
+      color: white;
+      font-size: 2.25rem;
+      line-height: 1.1;
+      font-weight: 750;
+    }
+
+    .site-banner p {
+      margin: 0.45rem 0 0;
+      color: white;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    .page-nav {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 1rem;
+      padding: 1rem 0 0;
+    }
+
+    .nav-button,
+    .primary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0.55rem 0.9rem;
+      border-radius: 4px;
+      font-weight: 700;
+      text-decoration: none;
+      line-height: 1.2;
+    }
+
+    .nav-button {
+      border: 1px solid var(--line);
+      color: var(--blue-900);
+      background: var(--surface);
+      box-shadow: 0 1px 3px rgba(0, 0, 51, 0.06);
+    }
+
+    .nav-button:hover {
+      color: var(--blue-800);
+      border-color: #bdd0e6;
+      background: #f1f6fc;
+    }
+
+    .primary-button {
+      color: white;
+      background: var(--blue-700);
+      border: 1px solid var(--blue-700);
+    }
+
+    .primary-button:hover {
+      color: white;
+      background: var(--blue-800);
+      border-color: var(--blue-800);
+    }
+
+    .page-hero {
+      margin-bottom: 0.8rem;
+      padding: 1.4rem 0 0.7rem;
+    }
+
+    .kicker {
+      margin: 0 0 0.45rem;
+      color: var(--blue-700);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    h1 {
+      max-width: 880px;
+      margin: 0;
+      font-size: 3rem;
+      line-height: 1.12;
+      font-weight: 750;
+      color: var(--blue-900);
+    }
+
+    .page-hero p {
+      max-width: 760px;
+      margin: 1rem 0 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    main {
+      padding: 0 0 3.5rem;
+    }
+
+    section {
+      margin: 0 0 2.6rem;
+      scroll-margin-top: 120px;
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .intro-image {
+      margin: 0;
+    }
+
+    .intro-image img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 45, 0.14);
+    }
+
+    h2 {
+      margin: 0 0 0.7rem;
+      color: var(--blue-900);
+      font-size: 1.5rem;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 1.4rem 0 0.35rem;
+      color: var(--blue-900);
+      font-size: 1.08rem;
+    }
+
+    p {
+      margin: 0 0 1rem;
+    }
+
+    .note-box {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--cyan);
+      border-radius: 8px;
+      padding: 1rem 1.1rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 51, 0.06);
+    }
+
+    .note-box h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .note-list {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+
+    .note-list li {
+      margin: 0.45rem 0;
+    }
+
+    .equation {
+      margin: 1rem 0 1.15rem;
+      padding: 0.85rem 1rem;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--blue-700);
+      border-radius: 8px;
+      background: var(--surface);
+      color: #162335;
+      font-size: 1.1rem;
+      line-height: 1.65;
+    }
+
+    .equation .eq-label {
+      display: block;
+      color: var(--blue-900);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+
+    .equation mjx-container {
+      margin: 0.15rem 0 0 !important;
+    }
+
+    .theory-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.3rem;
+    }
+
+    .theory-point {
+      border-top: 3px solid var(--blue-100);
+      padding-top: 0.8rem;
+    }
+
+    .theory-point:nth-child(2) {
+      border-top-color: #d8eadf;
+    }
+
+    .theory-point:nth-child(3) {
+      border-top-color: #d9edf2;
+    }
+
+    .theory-point:nth-child(4) {
+      border-top-color: #f1dfbe;
+    }
+
+    .theory-point p {
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .applet-section {
+      margin-top: 3rem;
+    }
+
+    .applet-shell {
+      overflow: hidden;
+      border: 1px solid #11294d;
+      border-radius: 8px;
+      background: #07101f;
+      box-shadow: 0 8px 24px rgba(0, 0, 45, 0.18);
+    }
+
+    .applet-stage {
+      position: relative;
+      background: #000;
+    }
+
+    .applet-stage.has-poster {
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+
+    .applet-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 1rem;
+      padding: 0.7rem 0.9rem;
+      color: #d9e6f8;
+      background: #061225;
+      border-bottom: 1px solid rgba(125, 174, 255, 0.22);
+      font-size: 0.88rem;
+    }
+
+    .applet-frame {
+      display: block;
+      width: 100%;
+      height: 650px;
+      border: 0;
+      background: #000;
+    }
+
+    .applet-shell.is-inactive .applet-frame {
+      visibility: hidden;
+    }
+
+    .applet-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      background: rgba(0, 0, 0, 0.22);
+      color: rgba(255, 255, 255, 0.68);
+      cursor: pointer;
+      font: 700 3rem/1 "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .applet-play:hover,
+    .applet-play:focus-visible {
+      background: rgba(0, 0, 0, 0.32);
+      color: rgba(255, 255, 255, 0.86);
+      outline: none;
+    }
+
+    .caption {
+      margin-top: 0.75rem;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .next-step {
+      padding-top: 2rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .next-step p {
+      max-width: 720px;
+    }
+
+    .site-footer {
+      background: #eeeeee;
+      color: #555;
+      padding: 1.5rem 1rem;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .site-footer p {
+      margin: 0.35rem 0;
+    }
+
+    @media (max-width: 820px) {
+      .intro-grid,
+      .theory-columns {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 2.3rem;
+      }
+
+      .site-banner h1 {
+        font-size: 1.9rem;
+      }
+
+      .applet-frame {
+        height: 560px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      body {
+        font-size: 15px;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      .site-banner {
+        padding: 0.8rem 1rem;
+      }
+
+      .site-banner h1 {
+        font-size: 1.65rem;
+      }
+
+      .site-banner p {
+        font-size: 0.92rem;
+      }
+
+      .nav-button,
+      .primary-button {
+        width: 100%;
+      }
+
+      .applet-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .applet-frame {
+        height: 620px;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="wrap">
-    <canvas id="c"></canvas>
-    <div id="ui">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
-        <h3 style="margin:0; font-size:14px; font-weight:600; color:#fff;">Bohmian Double Slit</h3>
-        <button id="minui" title="Minimize/expand" style="
-          width:34px; height:28px; padding:0;
-          border-radius:8px; border:1px solid rgba(132,192,255,0.26);
-          background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
-          display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1;
-        ">▾</button>
-      </div>
-      <div id="uibody">
-        <div id="controls"></div>
-        <div class="btns">
-          <button id="reset">Reset (R)</button>
-          <button id="pause">Pause</button>
+  <header class="site-banner">
+    <h1>Q-Ontic Lab</h1>
+    <p>Interactive quantum simulations for representational comparison</p>
+  </header>
+
+  <main>
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="nav-button" href="../index.html" aria-label="Back to the Q-Ontic Lab main page">Back to Main Page</a>
+    </nav>
+
+    <section class="page-hero" aria-labelledby="page-title">
+      <p class="kicker">Educational notebook</p>
+      <h1 id="page-title">Double Slit in Bohmian mechanics</h1>
+      <h2>
+        Trajectories Guided by an interfering Wave.
+      </h2>
+    </section>
+
+    <section class="intro-grid" aria-label="Double-slit preview and section navigation">
+      <figure class="intro-image">
+        <img src="manyParticle.jpg" alt="Many Bohmian trajectories forming a double-slit interference pattern">
+      </figure>
+
+      <aside class="note-box" aria-labelledby="sections-nav">
+        <h2 id="sections-nav">Sections</h2>
+        <ul class="note-list">
+          <li><a href="#focused-applet">A Bohmian particle</a></li>
+          <li><a href="#count-applet">Many initial positions at once</a></li>
+          <li><a href="#equivariance-applet">Equivariance</a></li>
+          <li><a href="#theory">Theory & Equations</a></li>
+        </ul>
+      </aside>
+    </section>
+
+    
+
+    <section class="applet-section" aria-labelledby="focused-applet">
+      <h2 id="focused-applet">A Bohmian particle</h2>
+      <p>
+          In the double-slit experiment, a localized wave packet moves toward a barrier with
+          two openings. The wave passes through both slits, spreads, and overlaps with itself, creating an interference pattern.
+          So far the description is standard QM.
+      </p>
+      <p>
+          Bohmian mechanics adds a particle to the picture. The trajectory of the particle
+           is guided by the wave. The velocity is proportional to the probability current at the location of the particle.
+           Alternatively the guiding principle can be expressed via the phase of the wave:
+           The particle always moves along the phase gradient.
+      </p>
+      <p>
+          In any case it is now clear how a single particle can "sense the both slits". Even though 
+          the particle goes through only one slit, the Schrödinger wave passes through both slits. 
+          The wave interferes with itself, as usual, creating disturbances in the phase,
+           and these disturbances will then affect the guiding of the particle.
+      </p>
+      <p>
+        Click the following applet and observe a bohmian particle surfing the Schrödinger wave. 
+      </p>
+
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">
+          <span>Bohmian particle in Double Slit</span>
         </div>
-        <div class="stat" id="stats"></div>
+        <div class="applet-stage has-poster" style="background-image: url('singleParticle.jpg');">
+          <iframe
+            class="applet-frame"
+            title="Focused one-particle Bohmian double-slit WebGL2 applet"
+            data-src="full-applet.html?embed=1&amp;preset=one-particle"
+            allow="fullscreen"
+          ></iframe>
+          <button class="applet-play" type="button" aria-label="Play one-particle simulation">Play</button>
+        </div>
       </div>
+      <p class="caption">
+        Notice how the particle follows the phase gradient. 
+        Interference distorts the phase fronts, causing the particle to bend its path.
+      </p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="count-applet">
+      <h2 id="count-applet">Multiple instances at once</h2>
+      <p>
+        The individual trajectories may look complicated and their collective statistical nature may be unclear. 
+        But plotting many at once reveals the famous interference pattern emerging from a swarm of Bohmian trajectories.
+      </p>
+
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">
+          <span>Multiple Instances</span>
+        </div>
+        <div class="applet-stage has-poster" style="background-image: url('manyParticle.jpg');">
+          <iframe
+            class="applet-frame"
+            title="Focused Bohmian double-slit applet with adjustable particle count"
+            data-src="full-applet.html?embed=1&amp;preset=particle-count"
+            allow="fullscreen"
+          ></iframe>
+          <button class="applet-play" type="button" aria-label="Play multiple-instances simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">
+         Each instance of a particle is guided by the same wave, but starts at a different initial position.
+      </p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="equivariance-applet">
+      <h2 id="equivariance-applet">Equivariance Demo</h2>
+      <p>
+        
+        Next, let us will initialize a large number of particle instances with positions sampled from the Born density \(\rho = |\psi|^2\) 
+        at \(t=0\).
+        We will visualize the density of the wave function.
+        Compare the evolution of the wave density
+        with the propagation of a very large number of particle instances. 
+        Notice how the particle swarm rearranges into the same pattern as the wave density, 
+        even though a manifestation of an individual trajectory may be complicated.
+        
+        
+      </p>
+
+      
+
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">
+          <span>Equivariance: density and particle ensemble</span>
+        </div>
+        <div class="applet-stage has-poster" style="background-image: url('equivariance.jpg');">
+          <iframe
+            class="applet-frame"
+            title="Equivariance-focused Bohmian double-slit WebGL2 applet"
+            data-src="full-applet.html?embed=1&amp;preset=equivariance"
+            allow="fullscreen"
+          ></iframe>
+          <button class="applet-play" type="button" aria-label="Play equivariance simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">
+        With enough initially sampled positions, the particle ensemble remains distributed like
+        \(\rho = |\psi|^2\) as both wave and trajectories evolve.
+      </p>
+
+      <p>
+        This behaviour, that the statistical distribution of bohmian particles follows
+         the time evolution of the squared modulus of the wave function, is called equivariance.
+         It means the emprical probability of finding a Bohmian particle at a location, 
+         is the same as the probability of collapse to that point upon a measurement in the standard
+         interpretation of QM.  
+      </p>
+      <p>
+        Conclusion: the two interpretations are empirically equivalent. 
+      </p>
+      
+    </section>
+
+    
+    <section aria-labelledby="theory">
+      <h2 id="theory">Theory</h2>
+      <h3>The Guiding Law</h3>
+      <p>
+        The wave  \( \psi = \psi(x,y,t) \) in pilot wave theory is the Schrödinger wave from standard quantum mechanics,
+         evolving according to the Schrödinger equation:
+      </p>
+
+      <div class="equation">
+        <span class="eq-label">The Schrödinger equation</span>
+        \[
+          i\hbar\frac{\partial \psi}{\partial t}
+          =
+          \left[
+            -\frac{\hbar^2}{2m}\nabla^2 + V(x,y)
+          \right]\psi
+        \]
+      </div>
+
+      
+
+      <p>
+        The particle velocity is obtained from the probability
+        current divided by the density \( \rho(x,y,t) = \left|\psi(x,y,t)\right|^2 \).
+      </p>
+
+      <div class="equation">
+        <span class="eq-label">Bohmian Guidance Law</span>
+        \[
+          \frac{d\mathbf{x}}{dt}
+          =
+          \frac{\mathbf{j}}{\rho},
+          \qquad
+          \mathbf{j}
+          =
+          \frac{\hbar}{m}\operatorname{Im}
+          \left(\psi^*\nabla\psi\right)
+         
+        \]
+      </div>
+
+
+      <p>
+        If the wave is written in polar form,
+        \(\psi = R e^{iS/\hbar}\), then \(\rho = R^2\) it turns out the current can be written directly
+        in terms of the phase gradient:
+      </p>
+
+      <div class="equation">
+        <span class="eq-label">Guidance in terms of Phase gradient</span>
+        \[
+         
+          \mathbf{j}
+          =
+          \frac{\rho\nabla S}{m}
+        \]
+      </div>
+
+      <p>
+        Thus, the Bohmian velocity is
+        \(\mathbf{v} = d\mathbf{x}/dt = \nabla S/m\), which emphasizes the role of the wave phase gradient
+        in the a guiding of particle motion. 
+
+      </p>
+
+      <p>
+        In short: 
+        The density tells where particles
+        are likely to be found, while the phase \(S\) determines the direction of the local motion.
+      </p>
+      <h3 id="equivariance">Equivariance</h3>
+      <p>
+        The mathematical statement is that the Born density \( \rho = |\psi|^2 \), and the Bohmian particle density  \( \rho_B \),
+        satisfy the same continuity equation when particles move with
+        \(\mathbf{v}=\mathbf{j}/\rho\):
+      </p>
+      <div class="equation">
+        <span class="eq-label">Equivariance</span>
+        \[
+          \frac{\partial \rho}{\partial t} + \nabla\cdot\mathbf{j}=0,
+          \qquad
+          \frac{\partial \rho_B}{\partial t}
+          + \nabla\cdot(\rho_B\mathbf{v})=0,
+          \qquad
+          \mathbf{v}=\frac{\mathbf{j}}{\rho}
+        \]
+        \[
+          \rho_B(\mathbf{x},0)=|\psi(\mathbf{x},0)|^2
+          \;\Longrightarrow\;
+          \rho_B(\mathbf{x},t)=|\psi(\mathbf{x},t)|^2
+        \]
+      </div>
+      <p>
+        In words: if the initial particle positions are sampled from \(|\psi|^2\), then the
+        guidance law carries that whole distribution along with the quantum current. The swarm
+        can rearrange into fringes, but it does not drift away from the Born density.
+      </p>
+
+    </section>
+
+
+    <section class="next-step" aria-labelledby="full-applet">
+      <h2 id="full-applet">Original Scale Applet</h2>
+      <p>
+        For the full canvas and the original standalone layout, open the applet in a separate
+        browser tab.
+      </p>
+      <a class="primary-button" href="full-applet.html" target="_blank" rel="noopener">Open Original-Scale Applet</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <p>The Q-Ontic Lab supports research, teaching, and outreach on quantum mechanics through interactive visualization and representational comparison.</p>
+      <p><a href="../collaborators.html">Meet the team</a> &nbsp;|&nbsp; <a href="mailto:yepes@rice.edu">yepes@rice.edu</a></p>
     </div>
-    <div id="theory" class="is-minimized" aria-label="Theory panel">
-      <div class="panel-head">
-        <h3>Theory</h3>
-        <button id="mintheory" class="panel-toggle" title="Minimize/expand" aria-expanded="false">+</button>
-      </div>
-      <div id="theorybody" hidden>
-        <p>A quantum wave packet travels according to the Schrödinger equation. The barrier splits it into two coherent parts; after the slits those parts overlap and form interference.</p>
-        <div class="math">
-          <span class="mi">i</span>&hbar;<span class="frac"><span class="top">&part;&psi;</span><span class="bottom">&part;t</span></span>
-          =
-          <span class="math-bracket">[</span>
-          -<span class="frac"><span class="top">&hbar;<sup>2</sup></span><span class="bottom">2<span class="mi">m</span></span></span>&nabla;<sup>2</sup>
-          + <span class="mi">V</span>
-          <span class="math-bracket">]</span>&psi;
-        </div>
-        <p>The brightness is the Born density. The phase view colors the argument of the same wave.</p>
-        <div class="math">
-          &rho;(<span class="mi">x</span>,<span class="mi">t</span>) = |&psi;|<sup>2</sup>,
-          &nbsp;&nbsp;
-          &psi; = <span class="mi">R</span><span class="mi">e</span><sup><span class="mi">iS</span>/&hbar;</sup>
-        </div>
-        <p>A Bohmian particle has a definite position, and their velocity is determined by the propability current. The Guiding Law is:</p>
-        <div class="math">
-          <span class="dot">x&#775;</span>
-          =
-          <span class="frac"><span class="top">&nabla;<span class="mi">S</span></span><span class="bottom"><span class="mi">m</span></span></span>
-          =
-          <span class="frac"><span class="top"><span class="mi">j</span></span><span class="bottom">&rho;</span></span>,
-          &nbsp;&nbsp;
-          <span class="mi">j</span>
-          =
-          <span class="frac"><span class="top">&hbar;</span><span class="bottom"><span class="mi">m</span></span></span>
-          Im(&psi;<sup>*</sup>&nabla;&psi;)
-        </div>
-        <p class="note">The Pauli option adds an extra term in the current arising from the spin. Paths can change while the same wave density still governs the pattern.</p>
-        <div class="math">
-          <span class="dot">x&#775;</span>
-          =
-          <span class="frac"><span class="top"><span class="mi">j</span></span><span class="bottom">&rho;</span></span>
-          +
-          <span class="frac"><span class="top">&hbar;<span class="mi">s</span><sub>z</sub></span><span class="bottom"><span class="mi">m</span>&rho;</span></span>
-          (&part;<sub>y</sub>&rho;, -&part;<sub>x</sub>&rho;)
-        </div>
-      </div>
-    </div>
-    <div id="credit">
-      Adapted for Q-Ontic Lab from
-      <a href="https://github.com/anssiZander/BohmianDoubleSlit" target="_blank" rel="noopener">BohmianDoubleSlit</a>
-      by Anssi Zander.
-    </div>
-  </div>
-  <script type="module" src="./main.js"></script>
+  </footer>
+  <script>
+    document.querySelectorAll(".applet-shell.is-inactive").forEach((shell) => {
+      const frame = shell.querySelector("iframe[data-src]");
+      const playButton = shell.querySelector(".applet-play");
+
+      playButton.addEventListener("click", () => {
+        if (!frame.hasAttribute("src")) {
+          frame.setAttribute("src", frame.dataset.src);
+        }
+        shell.classList.remove("is-inactive");
+        playButton.remove();
+      });
+    });
+  </script>
 </body>
 </html>

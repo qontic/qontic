@@ -18,20 +18,10 @@ vec3 palette(in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d)
 
 void getPaletteParams(int id, out vec3 a, out vec3 b, out vec3 c, out vec3 d)
 {
-  
-  
-
-  if(id==0){ 
-    a=vec3(0.04,0.05,0.08); b=vec3(0.60,0.55,0.75); c=vec3(1.0); d=vec3(0.10,0.25,0.50);
-  } else if(id==1){ 
-    a=vec3(0.05,0.02,0.08); b=vec3(0.95,0.45,0.95); c=vec3(1.0); d=vec3(0.05,0.20,0.55);
-  } else if(id==2){ 
-    a=vec3(0.10,0.20,0.18); b=vec3(0.55,0.65,0.45); c=vec3(1.0); d=vec3(0.15,0.45,0.70);
-  } else if(id==3){ 
-    a=vec3(0.08,0.02,0.01); b=vec3(0.95,0.55,0.25); c=vec3(1.0); d=vec3(0.05,0.15,0.30);
-  } else { 
-    a=vec3(0.02,0.06,0.10); b=vec3(0.50,0.85,1.00); c=vec3(1.0); d=vec3(0.10,0.30,0.60);
-  }
+  a=vec3(0.02,0.06,0.10);
+  b=vec3(0.50,0.85,1.00);
+  c=vec3(1.0);
+  d=vec3(0.10,0.30,0.60);
 }
 
 void main(){
