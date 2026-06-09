@@ -2,74 +2,625 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bohmian Particle in a Box (WebGL2)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bohmian Free Particle - Q-Ontic Lab</title>
+  <meta name="description" content="An educational notebook about free Gaussian wave packets and Bohmian trajectories, with interactive WebGL2 demonstrations." />
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+      },
+      svg: {
+        fontCache: "global"
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
   <style>
-    html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family: system-ui, sans-serif; }
-    #wrap { position:relative; width:100%; height:100%; }
-    canvas { width:100%; height:100%; display:block; }
-    #ui {
-      position:absolute; left:12px; top:12px; width:330px;
-      background:rgba(5,16,36,0.62); color:#d9e6f8; padding:12px 12px 10px;
-      border:1px solid rgba(116,174,255,0.22); border-radius:10px;
-      backdrop-filter: blur(6px);
-      user-select:none;
-      box-sizing:border-box;
-      max-height:calc(100vh - 24px);
-      display:flex;
-      flex-direction:column;
+    :root {
+      --blue-900: #003366;
+      --blue-800: #003f7f;
+      --blue-700: #0055aa;
+      --ink: #253142;
+      --muted: #5d6b7a;
+      --paper: #f9f9f9;
+      --surface: #ffffff;
+      --line: #dbe4f0;
+      --cyan: #007f9f;
     }
-    #ui h3 { margin:0 0 8px 0; font-size:14px; font-weight:600; color:#fff; }
-    #uibody { flex:1 1 auto; min-height:0; overflow-y:auto; padding-right:4px; scrollbar-width:thin; }
-    .row { display:flex; align-items:center; gap:10px; margin:6px 0; }
-    .row label { width:120px; font-size:12px; color:#b9cce5; }
-    .row input[type="range"] { flex:1; }
-    .row .val { width:76px; text-align:right; font-variant-numeric: tabular-nums; font-size:12px; color:#fff; }
-    .btns { display:flex; gap:10px; margin-top:8px; }
-    button {
-      flex:1; padding:8px 10px; border-radius:8px; border:1px solid rgba(132,192,255,0.26);
-      background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
+
+    * {
+      box-sizing: border-box;
     }
-    button:hover { background:rgba(86,150,232,0.22); }
-    button.selected {
-      background:rgba(132,192,255,0.24);
-      border-color:rgba(132,192,255,0.72);
-      box-shadow: inset 0 0 0 1px rgba(132,192,255,0.18);
+
+    html {
+      scroll-behavior: smooth;
     }
-    .toggle-group { display:flex; gap:6px; flex:1; }
-    .toggle-group button { flex:1; padding:6px 8px; font-size:11px; }
-    .row.mode-row { flex-direction:column; align-items:stretch; gap:6px; }
-    .row.mode-row label { width:auto; }
-    .row.mode-row .val { display:none; }
-    .row.mode-row .toggle-group { width:100%; }
-    .row.mode-row .toggle-group button { min-width:0; white-space:normal; line-height:1.15; }
-    .stat { margin-top:8px; font-size:12px; color:#b9cce5; line-height:1.35; }
-    .stat b { color:#fff; font-weight:600; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    a {
+      color: var(--blue-700);
+    }
+
+    a:hover {
+      color: var(--blue-800);
+    }
+
+    .site-banner {
+      padding: 1rem;
+      background: var(--blue-900);
+      color: #fff;
+      text-align: center;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .site-banner h1 {
+      margin: 0;
+      color: #fff;
+      font-size: 2.25rem;
+      font-weight: 750;
+      line-height: 1.1;
+    }
+
+    .site-banner p {
+      margin: 0.45rem 0 0;
+      color: #fff;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    main,
+    .site-footer-inner {
+      width: min(1120px, calc(100% - 2rem));
+      margin: 0 auto;
+    }
+
+    main {
+      padding-bottom: 3.5rem;
+    }
+
+    section {
+      margin-bottom: 2.8rem;
+      scroll-margin-top: 120px;
+    }
+
+    .page-nav {
+      display: flex;
+      padding-top: 1rem;
+    }
+
+    .nav-button,
+    .primary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0.55rem 0.9rem;
+      border-radius: 4px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-decoration: none;
+    }
+
+    .nav-button {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--blue-900);
+      box-shadow: 0 1px 3px rgba(0, 0, 51, 0.06);
+    }
+
+    .nav-button:hover {
+      border-color: #bdd0e6;
+      background: #f1f6fc;
+    }
+
+    .primary-button {
+      border: 1px solid var(--blue-700);
+      background: var(--blue-700);
+      color: #fff;
+    }
+
+    .primary-button:hover {
+      border-color: var(--blue-800);
+      background: var(--blue-800);
+      color: #fff;
+    }
+
+    .page-hero {
+      margin-bottom: 0.8rem;
+      padding: 1.4rem 0 0.7rem;
+    }
+
+    .kicker {
+      margin: 0 0 0.45rem;
+      color: var(--blue-700);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .page-hero h1 {
+      max-width: 900px;
+      margin: 0;
+      color: var(--blue-900);
+      font-size: 3rem;
+      font-weight: 750;
+      line-height: 1.12;
+    }
+
+    .page-hero p:last-child {
+      max-width: 760px;
+      margin: 0.9rem 0 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .header-image {
+      margin: 0;
+      overflow: hidden;
+      border: 1px solid #11294d;
+      border-radius: 8px;
+      background: #07101f;
+      box-shadow: 0 8px 24px rgba(0, 0, 45, 0.14);
+    }
+
+    .header-image img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1108 / 713;
+      object-fit: cover;
+    }
+
+    .note-box {
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--cyan);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 1px 4px rgba(0, 0, 51, 0.06);
+    }
+
+    .note-box h2 {
+      margin: 0 0 0.55rem;
+      color: var(--blue-900);
+      font-size: 1.1rem;
+    }
+
+    .note-list {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+
+    .note-list li {
+      margin: 0.45rem 0;
+    }
+
+    h2 {
+      margin: 0 0 0.7rem;
+      color: var(--blue-900);
+      font-size: 1.5rem;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 1.4rem 0 0.35rem;
+      color: var(--blue-900);
+      font-size: 1.08rem;
+    }
+
+    p {
+      margin: 0 0 1rem;
+    }
+
+    .applet-section {
+      margin-top: 3rem;
+    }
+
+    .applet-shell {
+      overflow: hidden;
+      border: 1px solid #11294d;
+      border-radius: 8px;
+      background: #07101f;
+      box-shadow: 0 8px 24px rgba(0, 0, 45, 0.18);
+    }
+
+    .applet-toolbar {
+      padding: 0.7rem 0.9rem;
+      border-bottom: 1px solid rgba(125, 174, 255, 0.22);
+      background: #061225;
+      color: #d9e6f8;
+      font-size: 0.88rem;
+    }
+
+    .applet-stage {
+      position: relative;
+      min-height: 650px;
+      background: #000;
+    }
+
+    .applet-stage.has-poster {
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+
+    .applet-frame {
+      display: block;
+      width: 100%;
+      height: 650px;
+      border: 0;
+      background: #000;
+    }
+
+    .applet-shell.is-inactive .applet-frame {
+      visibility: hidden;
+    }
+
+    .applet-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      background: rgba(0, 0, 0, 0.2);
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      font: 700 3rem/1 "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .applet-play:hover,
+    .applet-play:focus-visible {
+      background: rgba(0, 0, 0, 0.32);
+      color: rgba(255, 255, 255, 0.9);
+      outline: none;
+    }
+
+    .caption {
+      margin-top: 0.75rem;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .equation {
+      margin: 1rem 0 1.15rem;
+      padding: 0.85rem 1rem;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--blue-700);
+      border-radius: 8px;
+      background: var(--surface);
+      color: #162335;
+      font-size: 1.1rem;
+      line-height: 1.65;
+    }
+
+    .eq-label {
+      display: block;
+      margin-bottom: 0.3rem;
+      color: var(--blue-900);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .equation mjx-container {
+      margin: 0.15rem 0 0 !important;
+    }
+
+    .next-step {
+      padding-top: 2rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .site-footer {
+      padding: 1.5rem 1rem;
+      background: #eee;
+      color: #555;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .site-footer p {
+      margin: 0.35rem 0;
+    }
+
+    @media (max-width: 820px) {
+      .intro-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page-hero h1 {
+        font-size: 2.3rem;
+      }
+
+      .site-banner h1 {
+        font-size: 1.9rem;
+      }
+
+      .applet-stage {
+        min-height: 560px;
+      }
+
+      .applet-frame {
+        height: 560px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      body {
+        font-size: 15px;
+      }
+
+      .page-hero h1 {
+        font-size: 2rem;
+      }
+
+      .site-banner {
+        padding: 0.8rem 1rem;
+      }
+
+      .site-banner h1 {
+        font-size: 1.65rem;
+      }
+
+      .site-banner p {
+        font-size: 0.92rem;
+      }
+
+      .nav-button,
+      .primary-button {
+        width: 100%;
+      }
+
+      .applet-stage {
+        min-height: 620px;
+      }
+
+      .applet-frame {
+        height: 620px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div id="wrap">
-    <canvas id="c"></canvas>
-    <div id="ui">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
-  <h3 style="margin:0; font-size:14px; font-weight:600; color:#fff;">Bohmian Particle in a Box</h3>
-  <button id="minui" title="Minimize/expand" style="
-    width:34px; height:28px; padding:0;
-    border-radius:8px; border:1px solid rgba(132,192,255,0.26);
-    background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1;
-  ">▾</button>
-</div>
-      <div id="uibody">
-  <div id="controls"></div>
-  <div class="btns">
-    <button id="reset">Reset (R)</button>
-    <button id="pause">Pause</button>
-  </div>
-  <div class="stat" id="stats"></div>
-</div>
+  <header class="site-banner">
+    <h1>Q-Ontic Lab</h1>
+    <p>Interactive quantum simulations for representational comparison</p>
+  </header>
+
+  <main>
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="nav-button" href="../index.html" aria-label="Back to the Q-Ontic Lab main page">Back to Main Page</a>
+    </nav>
+
+    <section class="page-hero" aria-labelledby="page-title">
+      <p class="kicker">Educational notebook</p>
+      <h1 id="page-title">Bohmian Motion of a Free Particle</h1>
+      <p>A Gaussian wave packet and its Bohmian trajectories.</p>
+    </section>
+
+    <section class="intro-grid" aria-label="Header image and section navigation">
+      <figure class="header-image">
+        <img src="headerImage.jpg" alt="Bohmian free wave-packet simulation">
+      </figure>
+
+      <aside class="note-box" aria-labelledby="sections-nav">
+        <h2 id="sections-nav">Sections</h2>
+        <ul class="note-list">
+          <li><a href="#spreading-applet">Single Particle and its Pilot Wave</a></li>
+          <li><a href="#ensemble-applet">Trajectory ensemble</a></li>
+          <li><a href="#split-applet">Non-symmetric wave packet</a></li>
+          <li><a href="#theory">Theory &amp; Equations</a></li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="applet-section" aria-labelledby="spreading-applet">
+      <h2 id="spreading-applet">Wave-packet spreading</h2>
+      <p>
+        A free Gaussian wave packet provides a simple setting for exploring the relationship between density,
+         phase, and Bohmian trajectories. 
+        Observe how the Bohmian particle always moves such that its velocity is orthogonal to the phase gradient.
+      </p>
+
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Single free particle</div>
+        <div class="applet-stage has-poster" style="background-image: url('singleParticleImage.jpg');">
+          <iframe
+            class="applet-frame"
+            title="Single free Gaussian packet demonstration"
+            data-src="full-applet.html?embed=1&amp;preset=spreading"
+            allow="fullscreen"
+          ></iframe>
+          <button class="applet-play" type="button" aria-label="Play wave-packet spreading simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">
+        Bohmian trajectories are guided by the local phase gradient.
+      </p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="ensemble-applet">
+      <h2 id="ensemble-applet">Many trajectories at once</h2>
+      <p>
+        The initial position of a single bohmian particle is distributed according to the wave function's density.
+        We can visualize many trajectories together to see how they collectively represent the evolving quantum flow.
+      </p>
+
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Many Bohmian trajectories</div>
+        <div class="applet-stage has-poster" style="background-image: url('manyParticleImage.jpg');">
+          <iframe
+            class="applet-frame"
+            title="Free-packet Bohmian trajectory ensemble"
+            data-src="full-applet.html?embed=1&amp;preset=ensemble"
+            allow="fullscreen"
+          ></iframe>
+          <button class="applet-play" type="button" aria-label="Play trajectory ensemble simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">
+        The ensemble expands with the packet while individual paths display the local quantum flow.
+      </p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="split-applet">
+      <h2 id="split-applet">A non-symmetric wave packet</h2>
+      <p>
+        The initial distribution does not have to be a single Gaussian. 
+        By starting with two separated peaks, we can see how the paths of the Bohmian particles 
+        become much more complex.
+      </p>
+
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Two-component Gaussian packet</div>
+        <div class="applet-stage">
+          <iframe
+            class="applet-frame"
+            title="Split Gaussian free-packet demonstration"
+            data-src="full-applet.html?embed=1&amp;preset=split"
+            allow="fullscreen"
+          ></iframe>
+          <button class="applet-play" type="button" aria-label="Play split wave-packet simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">
+        The paths of the Bohmian particles lose their simplicity when the initial wave packet is non-symmetric.
+      </p>
+    </section>
+
+    <section id="theory" aria-labelledby="theory-title">
+      <h2 id="theory-title">Theory &amp; Equations</h2>
+
+      <h3>Free Schrödinger evolution</h3>
+      <p>
+        With no external potential, the wave function obeys the free-particle Schrödinger equation:
+      </p>
+      <div class="equation">
+        <span class="eq-label">Free Schrödinger equation</span>
+        \[
+          i\hbar\frac{\partial\psi}{\partial t}
+          =
+          -\frac{\hbar^2}{2m}\nabla^2\psi .
+        \]
+      </div>
+
+      <p>
+        A convenient initial state is a Gaussian envelope centered at \(\mathbf{x}_0\), multiplied
+        by a plane-wave phase with mean momentum \(\mathbf{p}_0\):
+      </p>
+      <div class="equation">
+        <span class="eq-label">Initial Gaussian packet</span>
+        \[
+          \psi(\mathbf{x},0)
+          =
+          A\exp\left[
+            -\frac{|\mathbf{x}-\mathbf{x}_0|^2}{4\sigma_0^2}
+            +\frac{i}{\hbar}\mathbf{p}_0\cdot(\mathbf{x}-\mathbf{x}_0)
+          \right].
+        \]
+      </div>
+
+      <h3>Spreading</h3>
+      <p>
+        For this Gaussian convention, the characteristic width grows with time according to
+      </p>
+      <div class="equation">
+        <span class="eq-label">Packet width</span>
+        \[
+          \sigma(t)
+          =
+          \sigma_0
+          \sqrt{
+            1+
+            \left(\frac{\hbar t}{2m\sigma_0^2}\right)^2
+          }.
+        \]
+      </div>
+      <p>
+        The packet center travels with the group velocity
+        \(\mathbf{v}_{\mathrm{g}}=\mathbf{p}_0/m\), while the increasing width represents quantum dispersion.
+      </p>
+
+      <h3>Bohmian guidance</h3>
+      <p>
+        Writing \(\psi=R e^{iS/\hbar}\), the Bohmian velocity is determined by the local phase gradient:
+      </p>
+      <div class="equation">
+        <span class="eq-label">Guidance law</span>
+        \[
+          \frac{d\mathbf{X}}{dt}
+          =
+          \frac{\mathbf{j}}{|\psi|^2}
+          =
+          \frac{\hbar}{m}
+          \operatorname{Im}\left(\frac{\nabla\psi}{\psi}\right)
+          =
+          \frac{\nabla S}{m},
+        \]
+        \[
+          \mathbf{j}
+          =
+          \frac{\hbar}{m}
+          \operatorname{Im}\left(\psi^*\nabla\psi\right).
+        \]
+      </div>
+      <p>
+        The density \(|\psi|^2\) describes the distribution of positions, while the phase controls
+        their local velocity. As the free packet spreads, its phase develops the spatial variation
+        that drives neighboring Bohmian trajectories apart.
+      </p>
+    </section>
+
+    <section class="next-step" aria-labelledby="full-applet">
+      <h2 id="full-applet">Full Applet</h2>
+      <p>Open the original-scale simulation with its complete control panel in a separate browser tab.</p>
+      <a class="primary-button" href="full-applet.html" target="_blank" rel="noopener">Open Full Applet</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <p>The Q-Ontic Lab supports research, teaching, and outreach through interactive quantum visualization.</p>
+      <p>
+        Adapted from
+        <a href="https://github.com/anssiZander/Bohmian-Free-Packet" target="_blank" rel="noopener">Bohmian-Free-Packet</a>
+        by Anssi Zander.
+      </p>
     </div>
-  </div>
-  <script type="module" src="./main.js"></script>
+  </footer>
+
+  <script>
+    document.querySelectorAll(".applet-shell.is-inactive").forEach((shell) => {
+      const frame = shell.querySelector("iframe[data-src]");
+      const playButton = shell.querySelector(".applet-play");
+
+      playButton.addEventListener("click", () => {
+        if (!frame.hasAttribute("src")) {
+          frame.setAttribute("src", frame.dataset.src);
+        }
+        shell.classList.remove("is-inactive");
+        playButton.remove();
+      });
+    });
+  </script>
 </body>
 </html>

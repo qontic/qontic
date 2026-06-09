@@ -13,20 +13,19 @@ if (!extFloatRT) {
 
 const params = {
   simScale: 0.5,
-  stepsPerFrame: 20,
+  stepsPerFrame: 5,
 
   hbar: 6.0,
   mass: 1.0,
   p0: 2.0,
   dt: 0.04,
 
-  packetX: 0.5,
+  packetX: 0.3,
   packetY: 0.5,
-  packetSigma: 50.0,
+  packetSigma: 30.0,
   doubleGaussian: 0,
   gaussianSeparation: 200.0,
 
-  nParticles: 200,
   rhoMin: 1e-6,
   velClamp: 160.0,
   guidingMode: 1,
@@ -38,20 +37,101 @@ const params = {
   showPhase: 1,
 
   showParticles: 1,
-  dotSize: 9.0,
+  nParticles: 100,
+  dotSize: 12.0,
   dotSigma: 0.28,
   dotGain: 1.,
 
   showTrail: 1,
-  trailHalfLife: 100.0,
+  trailHalfLife: 10.0,
   trailVisGain: 1.,
   trailVisGamma: 1,
   trailStampGain: 0.55,
-  trailWidth: 6.0,
+  trailWidth: 7.0,
   trailBlendMode: 1,
 
   paletteId: 5,
 };
+
+const urlParams = new URLSearchParams(window.location.search);
+const preset = urlParams.get("preset");
+
+const embeddedBasePreset = {
+  simScale: 0.5,
+  stepsPerFrame: 5,
+  dt: 0.04,
+  p0: 2.0,
+  packetSigma: 30.0,
+  doubleGaussian: 0,
+  gaussianSeparation: 200.0,
+  
+  spinS: 0.5,
+  guidingMode: 0,
+  boundaryMode: 0,
+  nParticles: 100,
+  dotSize: 12.0,
+  dotGain: 1.0,
+  showTrail: 1,
+  trailHalfLife: 10.0,
+  trailWidth: 7.0,
+};
+
+const spreadingPreset = {
+  ...embeddedBasePreset,
+  nParticles: 1,
+  dotSize: 14.0,
+  trailWidth: 5.0,
+  trailHalfLife: 5.0,
+};
+
+const ensemblePreset = {
+  ...embeddedBasePreset,
+  nParticles: 500,
+  showPhase: 1,
+  dotSize: 7.0,
+  trailWidth: 4.0,
+  trailHalfLife: 3.0,
+};
+
+const splitPreset = {
+  ...embeddedBasePreset,
+  doubleGaussian: 1,
+  p0: .9,
+  gaussianSeparation: 100.0,
+  nParticles: 500,
+  dotSize: 6.0,
+  trailWidth: 4.0,
+  trailHalfLife: 5.0,
+};
+
+const PRESETS = {
+  // Preset params are fixed and hidden unless their key is listed in adjustable.
+  spreading: {
+    params: spreadingPreset,
+    adjustable: ["p0", "packetSigma"],
+  },
+  ensemble: {
+    params: ensemblePreset,
+    adjustable: ["p0","packetSigma","nParticles"],
+  },
+  split: {
+    params: splitPreset,
+    adjustable: ["p0","packetSigma","gaussianSeparation" ],
+   
+  },
+};
+
+const presetDefinition = PRESETS[preset];
+const presetParams = presetDefinition?.params;
+const adjustableControls = new Set(presetDefinition?.adjustable ?? []);
+
+if (presetParams) {
+  Object.assign(params, presetParams);
+}
+
+function isControlFixed(key) {
+  return Boolean(presetDefinition) && !adjustableControls.has(key);
+}
 
 const PALETTE_NAMES = [
   "Nebula",
@@ -67,16 +147,9 @@ const PALETTE_NAMES = [
   "Pastel Mirage"
 ];
 
-const GUIDING_MODE_NAMES = [
-  "Schrodinger",
-  "Pauli spin (+z)",
-  "Pauli spin (-z)"
-];
-
 let paused = false;
 
 const controls = document.getElementById("controls");
-const statsEl = document.getElementById("stats");
 
 function fmt(v) {
   const av = Math.abs(v);
@@ -85,6 +158,8 @@ function fmt(v) {
 }
 
 function addSlider(key, label, min, max, step, onChange = null) {
+  if (isControlFixed(key)) return;
+
   const row = document.createElement("div");
   row.className = "row";
 
@@ -115,7 +190,9 @@ function addSlider(key, label, min, max, step, onChange = null) {
   controls.appendChild(row);
 }
 
-function addToggleInt(key, label) {
+function addToggleInt(key, label, onChange = null) {
+  if (isControlFixed(key)) return;
+
   const row = document.createElement("div");
   row.className = "row";
   const lab = document.createElement("label");
@@ -127,6 +204,39 @@ function addToggleInt(key, label) {
   btn.addEventListener("click", () => {
     params[key] = params[key] ? 0 : 1;
     btn.textContent = params[key] ? "ON" : "OFF";
+    if (onChange) onChange(params[key]);
+  });
+
+  const val = document.createElement("div");
+  val.className = "val";
+  val.textContent = "";
+
+  row.appendChild(lab);
+  row.appendChild(btn);
+  row.appendChild(val);
+  controls.appendChild(row);
+}
+
+function addLinkedToggleInt(keys, label) {
+  if (keys.every((key) => isControlFixed(key))) return;
+
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const lab = document.createElement("label");
+  lab.textContent = label;
+
+  const btn = document.createElement("button");
+  btn.style.flex = "1";
+
+  const setValue = (value) => {
+    for (const key of keys) params[key] = value;
+    btn.textContent = value ? "ON" : "OFF";
+  };
+
+  setValue(keys.some((key) => params[key]) ? 1 : 0);
+  btn.addEventListener("click", () => {
+    setValue(params[keys[0]] ? 0 : 1);
   });
 
   const val = document.createElement("div");
@@ -140,6 +250,8 @@ function addToggleInt(key, label) {
 }
 
 function addCycleButton(key, label, values, onChange = null) {
+  if (isControlFixed(key)) return;
+
   const row = document.createElement("div");
   row.className = "row";
 
@@ -172,6 +284,7 @@ function addCycleButton(key, label, values, onChange = null) {
 
 function addSectionHeader(label) {
   const header = document.createElement("div");
+  header.className = "section-header";
   header.style.marginTop = "12px";
   header.style.marginBottom = "8px";
   header.style.fontSize = "11px";
@@ -183,20 +296,37 @@ function addSectionHeader(label) {
   controls.appendChild(header);
 }
 
+function removeEmptySectionHeaders() {
+  for (const header of controls.querySelectorAll(".section-header")) {
+    let sibling = header.nextElementSibling;
+    let hasControl = false;
+
+    while (sibling && !sibling.classList.contains("section-header")) {
+      if (sibling.classList.contains("row")) {
+        hasControl = true;
+        break;
+      }
+      sibling = sibling.nextElementSibling;
+    }
+
+    if (!hasControl) header.remove();
+  }
+}
+
 addSlider("simScale", "sim scale", 0.25, 1.0, 0.05, () => rebuildSimulation());
 addSlider("stepsPerFrame", "Steps/frame", 1, 51, 5);
 addSlider("dt", "dt", 0.01, 0.04, 0.01);
 
 addSectionHeader("Physical Parameters");
-addSlider("p0", "momentum p", 0., 8.0, 0.1, () => resetAll());
+addSlider("p0", "momentum p", 0., 4.0, 0.1, () => resetAll());
 
 //addSlider("packetX", "packet start x", 0.05, 0.95, 0.01, () => resetAll());
 //addSlider("packetY", "packet start y", 0.05, 0.95, 0.01, () => resetAll());
-addSlider("packetSigma", "packet sigma", 8.0, 80.0, 1.0, () => resetAll());
-addToggleInt("doubleGaussian", "split gaussian");
-addSlider("gaussianSeparation", "separation", 0.0, 400.0, 10.0, () => resetAll());
+addSlider("packetSigma", "packet sigma", 18.0, 80.0, 1.0, () => resetAll());
+addToggleInt("doubleGaussian", "split gaussian", () => resetAll());
+addSlider("gaussianSeparation", "split separation", 0.0, 300.0, 10.0, () => resetAll());
 addSlider("spinS", "spin s", 0.0, 2.0, 0.5);
-{
+if (!isControlFixed("guidingMode")) {
   const row = document.createElement("div");
   row.className = "row mode-row";
 
@@ -251,7 +381,7 @@ addSlider("spinS", "spin s", 0.0, 2.0, 0.5);
   controls.appendChild(row);
 }
 
-{
+if (!isControlFixed("boundaryMode")) {
   const row = document.createElement("div");
   row.className = "row mode-row";
 
@@ -296,12 +426,11 @@ addSlider("spinS", "spin s", 0.0, 2.0, 0.5);
 
 addSectionHeader("Visual Parameters");
 addToggleInt("showPhase", "show phase");
-addToggleInt("showParticles", "show particles");
-addSlider("nParticles", "particle count", 1, 3000, 1, () => rebuildParticles());
+addLinkedToggleInt(["showParticles", "showTrail"], "show particles");
+addSlider("nParticles", "particle count", 1, 3000, 1, () => resetAll());
 addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
 addSlider("dotGain", "particle brightness", 0.1, 3.0, 0.1);
 
-addToggleInt("showTrail", "draw trails");
 addSlider("trailHalfLife", "trail half-life", 1.0, 100.0, 1.0);
 //addSlider("trailVisGain", "trail gain", 0.1, 1.0, 0.1);
 //addSlider("trailVisGamma", "trail gamma", 0.4, 2.0, 0.05);
@@ -309,6 +438,8 @@ addSlider("trailWidth", "trail width (px)", 3, 10.0, 1);
 
 //addSlider("visGain", "wave gain", 0.5, 20.0, 0.5);
 //addSlider("visGamma", "wave gamma", 0.3, 2.0, 0.05);
+
+removeEmptySectionHeaders();
 
 document.getElementById("reset").onclick = () => resetAll();
 document.getElementById("pause").onclick = (e) => {
@@ -818,7 +949,7 @@ function render() {
 
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-  if (params.showTrail) {
+  if (params.showParticles) {
     gl.enable(gl.BLEND);
 
     if (params.trailBlendMode === 0) {
@@ -870,14 +1001,6 @@ function render() {
   }
 }
 
-function guidingModeLabel() {
-  return GUIDING_MODE_NAMES[params.guidingMode | 0] ?? GUIDING_MODE_NAMES[0];
-}
-
-function updateStats() {
-  statsEl.innerHTML = `<b>Physics</b>: ${guidingModeLabel()}<br><b>Sim</b>: ${simW} x ${simH} (${fmt(params.simScale)}x)`;
-}
-
 function rebuildSimulation() {
   resizeCanvas();
 
@@ -912,7 +1035,6 @@ async function main() {
   await loadShaders();
   buildPrograms();
   rebuildSimulation();
-  updateStats();
 
   params.trailHalfLife*=0.99;
 
@@ -929,7 +1051,6 @@ async function main() {
     }
 
     render();
-    updateStats();
     requestAnimationFrame(loop);
   });
 }

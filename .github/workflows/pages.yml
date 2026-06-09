@@ -67,10 +67,8 @@ jobs:
           mkdir -p _site/bohmian-tunneling
           cp -r /tmp/BohmianTunneling/* _site/bohmian-tunneling/
 
-          git clone --depth 1 https://github.com/anssiZander/Bohmian-Free-Packet.git /tmp/Bohmian-Free-Packet
-          rm -rf _site/bohmian-free-packet-2d
-          mkdir -p _site/bohmian-free-packet-2d
-          cp -r /tmp/Bohmian-Free-Packet/* _site/bohmian-free-packet-2d/
+          # The free-packet notebook and its embedded applets are maintained in this repo.
+          # The initial rsync above already copied the complete bohmian-free-packet-2d folder.
 
           git clone --depth 1 https://github.com/anssiZander/Bohmian-Free-3D.git /tmp/Bohmian-Free-3D
           rm -rf _site/bohmian-free-particle-box-3d
@@ -81,7 +79,6 @@ jobs:
           from pathlib import Path
           demos = {
               'bohmian-tunneling': ('BohmianTunneling', 'Bohmian Tunneling'),
-              'bohmian-free-packet-2d': ('Bohmian-Free-Packet', 'Bohmian Free Packet'),
               'bohmian-free-particle-box-3d': ('Bohmian-Free-3D', 'Bohmian Free 3D'),
           }
           style = """
