@@ -56,9 +56,6 @@
     }
 
     .site-banner {
-      position: sticky;
-      top: 0;
-      z-index: 20;
       padding: 1rem;
       background: var(--blue-900);
       color: #fff;
@@ -256,6 +253,12 @@
       background: #000;
     }
 
+    .applet-stage.has-poster {
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+
     .applet-frame {
       display: block;
       width: 100%;
@@ -439,8 +442,8 @@
       </p>
 
       <div class="applet-shell is-inactive">
-        <div class="applet-toolbar">Single free packet</div>
-        <div class="applet-stage">
+        <div class="applet-toolbar">Single free particle</div>
+        <div class="applet-stage has-poster" style="background-image: url('singleParticleImage.jpg');">
           <iframe
             class="applet-frame"
             title="Single free Gaussian packet demonstration"
@@ -451,7 +454,7 @@
         </div>
       </div>
       <p class="caption">
-        Bohmian trajectories are guided by the local phase structure.
+        Bohmian trajectories are guided by the local phase gradient.
       </p>
     </section>
 
@@ -464,7 +467,7 @@
 
       <div class="applet-shell is-inactive">
         <div class="applet-toolbar">Many Bohmian trajectories</div>
-        <div class="applet-stage">
+        <div class="applet-stage has-poster" style="background-image: url('manyParticleImage.jpg');">
           <iframe
             class="applet-frame"
             title="Free-packet Bohmian trajectory ensemble"
