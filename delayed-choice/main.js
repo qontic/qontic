@@ -111,6 +111,7 @@ const params = {
 
 const urlParams = new URLSearchParams(window.location.search);
 const preset = urlParams.get("preset");
+const isEmbedded = urlParams.get("embed") === "1";
 
 const embeddedBasePreset = {
   simScale: 0.5,
@@ -508,7 +509,29 @@ window.addEventListener("keydown", (e) => {
 
   if (e.key.toLowerCase() === "r") resetAll();
 });
-wrap.addEventListener("wheel", handleWheelZoom, { passive: false });
+if (isEmbedded) {
+  wrap.addEventListener("wheel", (e) => {
+    e.preventDefault();
+
+    let deltaX = e.deltaX;
+    let deltaY = e.deltaY;
+    if (e.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+      deltaX *= 16;
+      deltaY *= 16;
+    } else if (e.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+      deltaX *= window.innerWidth;
+      deltaY *= window.innerHeight;
+    }
+
+    try {
+      window.top.scrollBy(deltaX, deltaY);
+    } catch {
+      // Cross-origin hosts retain the browser's default iframe behavior.
+    }
+  }, { passive: false });
+} else {
+  wrap.addEventListener("wheel", handleWheelZoom, { passive: false });
+}
 
 // Minimize UI panel
 const uiBody = document.getElementById("uibody");
