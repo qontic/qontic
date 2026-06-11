@@ -8,13 +8,13 @@ uniform float uGamma;
 uniform int uBlendMode;
 uniform int uColorCodePaths;
 uniform vec2 uViewCenterFrac;
-uniform float uViewZoom;
+uniform vec2 uViewScale;
 
 in vec2 vUV;
 out vec4 fragColor;
 
 void main(){
-  vec2 uv = uViewCenterFrac + (vUV - vec2(0.5)) / max(uViewZoom, 1e-6);
+  vec2 uv = uViewCenterFrac + (vUV - vec2(0.5)) / max(uViewScale, vec2(1e-6));
   if(any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
     fragColor = vec4(0.0);
     return;

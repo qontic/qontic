@@ -13,7 +13,7 @@ uniform int uNumParticles;
 uniform float uTrailWidth;
 uniform int uRenderMode;
 uniform vec2 uViewCenterFrac;
-uniform float uViewZoom;
+uniform vec2 uViewScale;
 out float vAlive;
 out float vParticleId;
 out float vTransmitted;
@@ -57,7 +57,7 @@ void main(){
   vParticleId = float(gl_VertexID) / float(uNumParticles);
   vec2 uv  = aState.xy / vec2(uSimRes);
   vTailAlpha = (aState.z > 1.5) ? 1.0 : packetTailAlpha(uv);
-  vec2 screenUv = vec2(0.5) + (uv - uViewCenterFrac) * uViewZoom;
+  vec2 screenUv = vec2(0.5) + (uv - uViewCenterFrac) * uViewScale;
   vec2 ndc = screenUv * 2.0 - 1.0;
   gl_Position = vec4(ndc, 0.0, 1.0);
   // choose width: trail stamps can be thinner

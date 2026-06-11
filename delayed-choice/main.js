@@ -43,7 +43,7 @@ if (!extFloatRT) {
 }
 
 const params = {
-  simScale: .5,
+  simScale: 0.5,
   stepsPerFrame: 30,
 
   hbar: 6.0,
@@ -61,7 +61,7 @@ const params = {
   splitterOpacity: 0.55,
 
   detectorX: 0.65,
-  detectorLength: 2500.0,
+  detectorLength: 3500.0,
   detectorWidth: 20.0,
   detectorActive: 1,
   showHistogram: 1,
@@ -114,7 +114,7 @@ const preset = urlParams.get("preset");
 const isEmbedded = urlParams.get("embed") === "1";
 
 const embeddedBasePreset = {
-  simScale: 0.5,
+  simScale: 0.3,
   stepsPerFrame: 30,
   dt: 0.02,
   p0: 2.5,
@@ -180,7 +180,7 @@ const PRESETS = {
 const presetDefinition = PRESETS[preset];
 const presetParams = presetDefinition?.params;
 const adjustableControls = new Set(presetDefinition?.adjustable ?? []);
-const detectorControlEnabled = !presetDefinition || preset === "delayed-choice";
+const detectorControlEnabled = !presetDefinition || isEmbedded;
 if (!detectorControlEnabled) detectorToggleButton.style.display = "none";
 
 if (presetParams) {
@@ -197,8 +197,12 @@ const SPLITTER_EDGE_FEATHER_PX = 2.0;
 const VISUAL_SPLITTER_WIDTH_SCALE = 9.0;
 const SPLITTER_CALIBRATION_MAX_V0 = 1e6;
 const PHYSICAL_DOMAIN_SCALE = 2.0;
-const DETECTOR_BUTTON_WIDTH = 232;
-const DETECTOR_BUTTON_HEIGHT = 60;
+// The physics domain is authored at this size and is fitted to the canvas only for display.
+const PHYSICAL_VIEW_WIDTH = 3200;
+const PHYSICAL_VIEW_HEIGHT = 1800;
+const DETECTOR_BUTTON_SCALE = isEmbedded ? 0.5 : 1.0;
+const DETECTOR_BUTTON_WIDTH = 232 * DETECTOR_BUTTON_SCALE;
+const DETECTOR_BUTTON_HEIGHT = 60 * DETECTOR_BUTTON_SCALE;
 const DETECTOR_BUTTON_ROTATION_DEG = 0;
 const DETECTOR_DRAG_THRESHOLD_PX = 4;
 const DETECTOR_HISTOGRAM_BIN_FRACTION = 0.05;
@@ -218,6 +222,17 @@ let splitterCalibrationCache = null;
 let detectorDragState = null;
 let guideMirrorDetectorX = params.detectorX;
 
+Object.assign(detectorToggleButton.style, {
+  width: `${DETECTOR_BUTTON_WIDTH}px`,
+  height: `${DETECTOR_BUTTON_HEIGHT}px`,
+  padding: `0 ${20 * DETECTOR_BUTTON_SCALE}px`,
+  borderRadius: `${16 * DETECTOR_BUTTON_SCALE}px`,
+  borderWidth: `${2 * DETECTOR_BUTTON_SCALE}px`,
+  fontSize: `${24 * DETECTOR_BUTTON_SCALE}px`,
+  lineHeight: `${56 * DETECTOR_BUTTON_SCALE}px`,
+  backdropFilter: `blur(${12 * DETECTOR_BUTTON_SCALE}px)`,
+  boxShadow: `0 ${8 * DETECTOR_BUTTON_SCALE}px ${28 * DETECTOR_BUTTON_SCALE}px rgba(0,0,0,0.28)`,
+});
 detectorToggleButton.style.transformOrigin = "center center";
 detectorToggleButton.style.transform = `rotate(${DETECTOR_BUTTON_ROTATION_DEG}deg)`;
 
@@ -751,7 +766,7 @@ U.waveRender = {
   uVisGamma: u(progWaveRender, "uVisGamma"),
   uWaveTailFade: u(progWaveRender, "uWaveTailFade"),
   uViewCenterFrac: u(progWaveRender, "uViewCenterFrac"),
-  uViewZoom: u(progWaveRender, "uViewZoom"),
+  uViewScale: u(progWaveRender, "uViewScale"),
   uShowWave: u(progWaveRender, "uShowWave"),
   uShowPhase: u(progWaveRender, "uShowPhase"),
   uSplitterXFrac: u(progWaveRender, "uSplitterXFrac"),
@@ -817,7 +832,7 @@ U.partUpdate = {
     uTrailWidth: u(progPartView, "uTrailWidth"),
     uRenderMode: u(progPartView, "uRenderMode"),
     uViewCenterFrac: u(progPartView, "uViewCenterFrac"),
-    uViewZoom: u(progPartView, "uViewZoom"),
+    uViewScale: u(progPartView, "uViewScale"),
   };
 
   U.partStamp = {
@@ -834,7 +849,7 @@ U.partUpdate = {
     uTrailWidth: u(progPartStamp, "uTrailWidth"),
     uRenderMode: u(progPartStamp, "uRenderMode"),
     uViewCenterFrac: u(progPartStamp, "uViewCenterFrac"),
-    uViewZoom: u(progPartStamp, "uViewZoom"),
+    uViewScale: u(progPartStamp, "uViewScale"),
   };
 
   U.densityStep = {
@@ -849,7 +864,7 @@ U.partUpdate = {
     uBlendMode: u(progDensityRender, "uBlendMode"),
     uColorCodePaths: u(progDensityRender, "uColorCodePaths"),
     uViewCenterFrac: u(progDensityRender, "uViewCenterFrac"),
-    uViewZoom: u(progDensityRender, "uViewZoom"),
+    uViewScale: u(progDensityRender, "uViewScale"),
   };
 }
 
@@ -880,11 +895,16 @@ function resizeCanvas() {
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   const w = Math.floor(canvas.clientWidth * dpr);
   const h = Math.floor(canvas.clientHeight * dpr);
-  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  const changed = canvas.width !== w || canvas.height !== h;
+  if (changed) {
+    canvas.width = w;
+    canvas.height = h;
+  }
   if (overlayCanvas.width !== w || overlayCanvas.height !== h) {
     overlayCanvas.width = w;
     overlayCanvas.height = h;
   }
+  return changed;
 }
 
 function simPx(px) {
@@ -895,12 +915,29 @@ function renderPx(px) {
   return px / PHYSICAL_DOMAIN_SCALE;
 }
 
+function getViewScale(zoom = view.zoom) {
+  const displayW = Math.max(1, canvas.width);
+  const displayH = Math.max(1, canvas.height);
+  const worldW = Math.max(1, simW);
+  const worldH = Math.max(1, simH);
+  const fit = Math.min(displayW / worldW, displayH / worldH);
+
+  return {
+    x: zoom * fit * worldW / displayW,
+    y: zoom * fit * worldH / displayH,
+  };
+}
+
 function clampViewState(state) {
   state.zoom = Math.max(VIEW_MIN_ZOOM, Math.min(VIEW_MAX_ZOOM, state.zoom));
-  const halfX = 0.5 / state.zoom;
-  const halfY = 0.5 / state.zoom;
-  state.centerX = Math.max(halfX, Math.min(1.0 - halfX, state.centerX));
-  state.centerY = Math.max(halfY, Math.min(1.0 - halfY, state.centerY));
+  const scale = getViewScale(state.zoom);
+  const clampAxis = (center, axisScale) => {
+    if (axisScale <= 1.0) return 0.5;
+    const half = 0.5 / axisScale;
+    return Math.max(half, Math.min(1.0 - half, center));
+  };
+  state.centerX = clampAxis(state.centerX, scale.x);
+  state.centerY = clampAxis(state.centerY, scale.y);
 }
 
 function updateViewEasing(frameTime) {
@@ -926,26 +963,28 @@ function handleWheelZoom(e) {
   const screenX = Math.max(0.0, Math.min(1.0, (e.clientX - rect.left) / rect.width));
   const screenY = Math.max(0.0, Math.min(1.0, 1.0 - (e.clientY - rect.top) / rect.height));
   const oldZoom = targetView.zoom;
+  const oldScale = getViewScale(oldZoom);
   const nextZoom = Math.max(
     VIEW_MIN_ZOOM,
     Math.min(VIEW_MAX_ZOOM, oldZoom * Math.exp(-e.deltaY * 0.001))
   );
+  const nextScale = getViewScale(nextZoom);
 
-  const worldX = targetView.centerX + (screenX - 0.5) / oldZoom;
-  const worldY = targetView.centerY + (screenY - 0.5) / oldZoom;
+  const worldX = targetView.centerX + (screenX - 0.5) / oldScale.x;
+  const worldY = targetView.centerY + (screenY - 0.5) / oldScale.y;
 
   targetView.zoom = nextZoom;
-  targetView.centerX = worldX - (screenX - 0.5) / nextZoom;
-  targetView.centerY = worldY - (screenY - 0.5) / nextZoom;
+  targetView.centerX = worldX - (screenX - 0.5) / nextScale.x;
+  targetView.centerY = worldY - (screenY - 0.5) / nextScale.y;
   clampViewState(targetView);
 }
 
 function simToScreenUvX(xPx) {
-  return 0.5 + view.zoom * (xPx / Math.max(1.0, simW - 1.0) - view.centerX);
+  return 0.5 + getViewScale().x * (xPx / Math.max(1.0, simW - 1.0) - view.centerX);
 }
 
 function simToScreenUvY(yPx) {
-  return 0.5 + view.zoom * (yPx / Math.max(1.0, simH - 1.0) - view.centerY);
+  return 0.5 + getViewScale().y * (yPx / Math.max(1.0, simH - 1.0) - view.centerY);
 }
 
 function simToCanvasX(xPx) {
@@ -964,9 +1003,16 @@ function simToCssY(yPx) {
   return (1.0 - simToScreenUvY(yPx)) * (canvas.clientHeight || canvas.height);
 }
 
-function setViewUniforms(uniforms, centerX = view.centerX, centerY = view.centerY, zoom = view.zoom) {
+function setViewUniforms(
+  uniforms,
+  centerX = view.centerX,
+  centerY = view.centerY,
+  zoom = view.zoom,
+  fitToDisplay = true
+) {
+  const scale = fitToDisplay ? getViewScale(zoom) : { x: zoom, y: zoom };
   if (uniforms.uViewCenterFrac) gl.uniform2f(uniforms.uViewCenterFrac, centerX, centerY);
-  if (uniforms.uViewZoom) gl.uniform1f(uniforms.uViewZoom, zoom);
+  if (uniforms.uViewScale) gl.uniform2f(uniforms.uViewScale, scale.x, scale.y);
 }
 
 function computeSplitterNormalEnergy() {
@@ -1125,7 +1171,8 @@ function detectorDragDeltaToFraction(deltaClientX) {
   const cavityWidthPx = Math.max(1.0, bounds.innerMaxX - bounds.innerMinX);
   const canvasRect = canvas.getBoundingClientRect();
   const canvasWidthCss = Math.max(1.0, canvasRect.width);
-  const cavityWidthCss = (cavityWidthPx / Math.max(1.0, simW - 1)) * canvasWidthCss * view.zoom;
+  const cavityWidthCss =
+    (cavityWidthPx / Math.max(1.0, simW - 1)) * canvasWidthCss * getViewScale().x;
   return deltaClientX / Math.max(1.0, cavityWidthCss);
 }
 
@@ -1837,7 +1884,7 @@ function densityStepAndStamp() {
   gl.uniform1i(U.partStamp.uNumParticles, params.nParticles);
   gl.uniform1f(U.partStamp.uTrailWidth, renderPx(params.trailWidth));
   gl.uniform1i(U.partStamp.uRenderMode, PARTICLE_RENDER_ALL);
-  setViewUniforms(U.partStamp, 0.5, 0.5, 1.0);
+  setViewUniforms(U.partStamp, 0.5, 0.5, 1.0, false);
 
   gl.drawArrays(gl.POINTS, 0, Math.floor(params.nParticles));
 
@@ -2099,8 +2146,14 @@ function rebuildSimulation() {
   if (fboA) gl.deleteFramebuffer(fboA);
   if (fboB) gl.deleteFramebuffer(fboB);
 
-  let targetW = Math.max(64, Math.floor(canvas.width * params.simScale * PHYSICAL_DOMAIN_SCALE));
-  let targetH = Math.max(64, Math.floor(canvas.height * params.simScale * PHYSICAL_DOMAIN_SCALE));
+  let targetW = Math.max(
+    64,
+    Math.floor(PHYSICAL_VIEW_WIDTH * params.simScale * PHYSICAL_DOMAIN_SCALE)
+  );
+  let targetH = Math.max(
+    64,
+    Math.floor(PHYSICAL_VIEW_HEIGHT * params.simScale * PHYSICAL_DOMAIN_SCALE)
+  );
   const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   if (targetW > maxTextureSize || targetH > maxTextureSize) {
     const fit = Math.min(maxTextureSize / targetW, maxTextureSize / targetH);
@@ -2135,7 +2188,13 @@ function resetAll() {
 // --------------------
 // Main
 // --------------------
-window.addEventListener("resize", () => rebuildSimulation());
+function syncDisplaySize() {
+  if (!resizeCanvas()) return;
+  if (densTexA) rebuildDensity();
+  updateDetectorToggleButton();
+}
+
+window.addEventListener("resize", syncDisplaySize);
 
 async function main() {
   await loadShaders();
@@ -2146,7 +2205,7 @@ async function main() {
   
   requestAnimationFrame(function loop(frameTime) {
     updateViewEasing(frameTime);
-    resizeCanvas();
+    syncDisplaySize();
 
     if (!paused) {
       const steps = Math.floor(params.stepsPerFrame);
