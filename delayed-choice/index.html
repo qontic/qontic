@@ -295,7 +295,7 @@
     <section class="page-hero" aria-labelledby="page-title">
       <p class="kicker">Educational notebook</p>
       <h1 id="page-title">Delayed Choice</h1>
-      <p>A Bohmian view of beam splitting, guided trajectories, and a detector choice made while the quantum packet is already in flight.</p>
+      <p>Compare a standard collapse representation with Bohmian trajectories in a delayed-choice interferometer.</p>
     </section>
 
     <section class="intro-grid" aria-label="Delayed-choice preview and section navigation">
@@ -305,18 +305,84 @@
       <aside class="note-box" aria-labelledby="sections-nav">
         <h2 id="sections-nav">Sections</h2>
         <ul class="note-list">
-          <li><a href="#splitter-applet">At the beam splitter</a></li>
+          <li><a href="#edge-collapse-applet">Collapse at the edge detector</a></li>
+          <li><a href="#collapse-applet">Collapse at the first detector</a></li>
+          <li><a href="#splitter-applet">The Bohmian View</a></li>
           <li><a href="#ensemble-applet">Trajectory ensemble</a></li>
           <li><a href="#choice-applet">Make the delayed choice</a></li>
-          <li><a href="#theory">Theory &amp; Equations</a></li>
+          
         </ul>
       </aside>
     </section>
 
-    <section class="applet-section" aria-labelledby="splitter-applet">
-      <h2 id="splitter-applet">At the beam splitter</h2>
+    <section class="applet-section" aria-labelledby="edge-collapse-applet">
+      <h2 id="edge-collapse-applet">Standard collapse at the edge detector</h2>
       <p>
-        The incoming wave packet encounters a balanced splitter. Its wave passes into both arms,
+        Here the first detector is initially switched off, so the wave and particle continue
+        to the detector at the far edge. Detection freezes the physical evolution and triggers
+        the same localized wave-collapse animation used in the next demonstration.
+      </p>
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Standard viewpoint with the first detector off</div>
+        <div class="applet-stage" style="background-image:url('standardCollapseEdgePoster.png')">
+          <iframe class="applet-frame" title="Standard wave collapse at the edge detector"
+            data-src="full-applet.html?embed=1&amp;preset=standard-collapse-edge" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button"
+            aria-label="Play standard wave-collapse simulation with edge detection">Play</button>
+        </div>
+      </div>
+      <p class="caption">With the first detector off, detection occurs at the far edge.</p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="collapse-applet">
+      <h2 id="collapse-applet">Standard wave-collapse view</h2>
+      <p>
+        Let us build the mystery by starting witht the stardard interpretation. 
+        The incoming wave packet, which also somehow represents the particle, encounters a balanced splitter.
+        <br>
+        If the detector is placed at the intersection of the recombining paths,
+        there will be interference. Interpretation is, as in the double slit, that the particle
+        "took both paths at once". 
+        <br>
+        
+        If, on the other hand, the detector is placed at the far wall, there will be no interference.
+        The interpretation is that the particle "took only one path":
+        1. It the particle is detector in the upper region it must have taken the lower path,
+        since,surely, it must have reflected of the lower mirror.
+        2. If the particle is detected in the lower region, it must have taken the upper path,
+        since it must have reflected of the upper mirror. 
+        
+        <br>
+         It get's worse,  because the detector can be moved during the run,
+         forcing the particle to "decide retroactively" which path to take after it has already passed the splitter. 
+         Or so the standard story goes.
+         <br>
+        
+
+        Makes sense? No? Don't worry. It will be much clearer when we see the Bohmian trajectories.
+
+
+        
+      </p>
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Standard view point</div>
+        <div class="applet-stage" style="background-image:url('standardCollapsePoster.png')">
+          <iframe class="applet-frame" title="Standard wave-collapse demonstration"
+            data-src="full-applet.html?embed=1&amp;preset=standard-collapse" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play standard wave-collapse simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">At detection, physical evolution freezes while the wave-collapse representation is animated.</p>
+
+      This paradox is not so much about which path the particle took, but whether it took one path or both paths, 
+      and whether it can make the decision retroactively, based on the whim of the experimenter.
+        
+    </section>
+
+    <section class="applet-section" aria-labelledby="splitter-applet">
+      <h2 id="splitter-applet">The Bohmian View</h2>
+      <p>
+        In bohmian mechanics, the wave passes into both arms,
         while each Bohmian particle has one continuous trajectory guided by the local wave field. 
         At the intersection, the particle "receives information" about the other path, even though it never goes that way.
         You can move the detector by dragging it, and disable it by clicking it.
@@ -369,80 +435,6 @@
         </div>
       </div>
       <p class="caption">Click Detector OFF or Detector ON during the run to change where detection occurs.</p>
-    </section>
-
-    <section id="theory" aria-labelledby="theory-title">
-      <h2 id="theory-title">Theory &amp; Equations</h2>
-
-      <h3>Wave evolution</h3>
-      <p>
-        The wave function evolves under the time-dependent Schrodinger equation. The simulated
-        splitter, guide mirrors, and detector arrangement are represented through the potential
-        \(V(\mathbf{x},t)\).
-      </p>
-      <div class="equation">
-        <span class="eq-label">Schrodinger equation</span>
-        \[
-          i\hbar\frac{\partial\psi}{\partial t}
-          =
-          \left(-\frac{\hbar^2}{2m}\nabla^2+V(\mathbf{x},t)\right)\psi
-        \]
-      </div>
-
-      <h3>Balanced splitting</h3>
-      <p>
-        An ideal balanced splitter produces two branches with equal squared amplitudes. The
-        relative phase between the branches remains part of the full wave function.
-      </p>
-      <div class="equation">
-        <span class="eq-label">Two-arm state</span>
-        \[
-          \psi
-          \longrightarrow
-          \frac{1}{\sqrt{2}}
-          \left(\psi_{\mathrm{upper}}+e^{i\phi}\psi_{\mathrm{lower}}\right)
-        \]
-      </div>
-
-      <h3>Bohmian guidance</h3>
-      <p>
-        Writing \(\psi=R e^{iS/\hbar}\), the probability current and velocity field are
-        \(\mathbf{j}=\rho\nabla S/m\) and \(\mathbf{v}=\mathbf{j}/\rho\).
-        The actual particle position follows one integral curve of this field.
-      </p>
-      <div class="equation">
-        <span class="eq-label">Guidance equation</span>
-        \[
-          \frac{d\mathbf{X}}{dt}
-          =
-          \left.\frac{\mathbf{j}}{|\psi|^2}\right|_{\mathbf{x}=\mathbf{X}(t)}
-          =
-          \left.\frac{\nabla S}{m}\right|_{\mathbf{x}=\mathbf{X}(t)}
-        \]
-      </div>
-
-      <h3>Detection statistics</h3>
-      <p>
-        If initial positions are distributed according to the Born density, the continuity
-        equation preserves that distribution during the motion. Detector counts therefore
-        approach the flux predicted by the evolving wave.
-      </p>
-      <div class="equation">
-        <span class="eq-label">Equivariance</span>
-        \[
-          \rho_B(\mathbf{x},0)=|\psi(\mathbf{x},0)|^2
-          \quad\Longrightarrow\quad
-          \rho_B(\mathbf{x},t)=|\psi(\mathbf{x},t)|^2
-        \]
-      </div>
-
-      <h3>The delayed choice</h3>
-      <p>
-        The detector setting may be changed after launch. In the simulation this changes
-        \(V(\mathbf{x},t)\) and the later boundary conditions. The wave and guidance field then
-        evolve from their current state under the new arrangement. No backward-in-time update
-        of the earlier particle position is required.
-      </p>
     </section>
 
     <section class="next-step" aria-labelledby="full-applet">

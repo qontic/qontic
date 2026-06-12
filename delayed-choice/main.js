@@ -141,7 +141,32 @@ const embeddedBasePreset = {
   detectorActive: 1,
 };
 
+const standardCollapsePreset = {
+  ...embeddedBasePreset,
+  showParticles: 0,
+  nParticles: 1,
+  dotSize: 22,
+  colorCodePaths: 0,
+  showTrail: 0,
+  waveTailFade: 0.45,
+  showHistogram: 1,
+};
+
 const PRESETS = {
+  "standard-collapse-edge": {
+    params: {
+      ...standardCollapsePreset,
+      detectorActive: 0,
+    },
+    adjustable: ["nParticles"],
+  },
+  "standard-collapse": {
+    params: {
+      ...standardCollapsePreset,
+      detectorActive: 1,
+    },
+    adjustable: ["nParticles"],
+  },
   splitter: {
     params: {
       ...embeddedBasePreset,
@@ -184,6 +209,8 @@ const presetDefinition = PRESETS[preset];
 const presetParams = presetDefinition?.params;
 const adjustableControls = new Set(presetDefinition?.adjustable ?? []);
 const detectorControlEnabled = !presetDefinition || isEmbedded;
+const collapseEnabled =
+  preset === "standard-collapse" || preset === "standard-collapse-edge";
 if (!detectorControlEnabled) detectorToggleButton.style.display = "none";
 
 if (presetParams) {
@@ -256,6 +283,14 @@ const targetView = {
   centerX: view.centerX,
   centerY: view.centerY,
 };
+const collapse = {
+  active: false,
+  done: false,
+  startMs: 0,
+  durationMs: 675,
+  xPx: 0,
+  yPx: 0,
+};
 let previousFrameTime = performance.now();
 
 const controls = document.getElementById("controls");
@@ -266,6 +301,40 @@ function fmt(v) {
   const av = Math.abs(v);
   if (av >= 1000 || (av > 0 && av < 0.01)) return v.toExponential(2);
   return v.toFixed(3).replace(/\.?0+$/, "");
+}
+
+function smooth01(t) {
+  const clamped = Math.max(0, Math.min(1, t));
+  return clamped * clamped * (3 - 2 * clamped);
+}
+
+function collapseProgress() {
+  if (!collapse.active) return 0;
+  const progress = (performance.now() - collapse.startMs) /
+    Math.max(1, collapse.durationMs);
+  if (progress >= 1) collapse.done = true;
+  return smooth01(progress);
+}
+
+function beginCollapseAt(xPx, yPx) {
+  if (!collapseEnabled || collapse.active) return;
+  collapse.active = true;
+  collapse.done = false;
+  collapse.startMs = performance.now();
+  collapse.xPx = Math.max(0, Math.min(simW - 1, xPx));
+  collapse.yPx = Math.max(0, Math.min(simH - 1, yPx));
+  paused = true;
+  pauseButton.textContent = "Detected";
+  pauseButton.disabled = true;
+}
+
+function resetCollapse() {
+  collapse.active = false;
+  collapse.done = false;
+  collapse.startMs = 0;
+  collapse.xPx = 0;
+  collapse.yPx = 0;
+  pauseButton.disabled = false;
 }
 
 function addSlider(key, label, min, max, step, onChange = null) {
@@ -503,6 +572,7 @@ const resetButton = document.getElementById("reset");
 const pauseButton = document.getElementById("pause");
 
 function togglePause() {
+  if (collapse.active) return;
   paused = !paused;
   pauseButton.textContent = paused ? "Resume" : "Pause";
 }
@@ -789,6 +859,10 @@ U.waveRender = {
   uGuideMirrorYTrimPx: u(progWaveRender, "uGuideMirrorYTrimPx"),
   uGuideMirrorWidthPx: u(progWaveRender, "uGuideMirrorWidthPx"),
   uGuideMirrorsActive: u(progWaveRender, "uGuideMirrorsActive"),
+  uCollapseActive: u(progWaveRender, "uCollapseActive"),
+  uCollapseProgress: u(progWaveRender, "uCollapseProgress"),
+  uCollapsePosFrac: u(progWaveRender, "uCollapsePosFrac"),
+  uCollapseSigmaPx: u(progWaveRender, "uCollapseSigmaPx"),
 };
 
   
@@ -1192,12 +1266,13 @@ function startDetectorButtonDrag(e) {
     dragged: false
   };
   detectorToggleButton.setPointerCapture(e.pointerId);
-  detectorToggleButton.style.cursor = "ew-resize";
+  detectorToggleButton.style.cursor = params.detectorActive ? "ew-resize" : "pointer";
   e.preventDefault();
 }
 
 function moveDetectorButtonDrag(e) {
   if (!detectorDragState || e.pointerId !== detectorDragState.pointerId) return;
+  if (!params.detectorActive) return;
 
   const dx = e.clientX - detectorDragState.startClientX;
   if (Math.abs(dx) >= DETECTOR_DRAG_THRESHOLD_PX) {
@@ -1247,7 +1322,10 @@ function updateDetectorToggleButton() {
     return;
   }
 
-  const { centerX, centerY, halfLength } = computeDetectorGeometry();
+  const buttonDetectorX = params.detectorActive
+    ? params.detectorX
+    : getDetectionXFrac();
+  const { centerX, centerY, halfLength } = computeDetectorGeometry(buttonDetectorX);
   const cssW = canvas.clientWidth || canvas.width;
   const cssH = canvas.clientHeight || canvas.height;
   const topDetectorY = Math.min(simH - 1, centerY + halfLength);
@@ -1296,7 +1374,7 @@ function updateDetectorToggleButton() {
   detectorToggleButton.style.display = "block";
   detectorToggleButton.style.left = `${left}px`;
   detectorToggleButton.style.top = `${top}px`;
-  detectorToggleButton.textContent = params.detectorActive ? "Detector ON" : "Detector OFF";
+  detectorToggleButton.textContent = params.detectorActive ? "Detector" : "Detector";
   detectorToggleButton.title = params.detectorActive
     ? "Click to move detection to the right back wall. Drag horizontally to move the main detector."
     : "Click to restore the main detector. Detection currently occurs at the right back wall.";
@@ -2053,6 +2131,14 @@ function render() {
   gl.uniform1f(U.waveRender.uGuideMirrorYTrimPx, simPx(params.guideMirrorYTrim));
   gl.uniform1f(U.waveRender.uGuideMirrorWidthPx, simPx(params.guideMirrorWidth));
   gl.uniform1i(U.waveRender.uGuideMirrorsActive, params.guideMirrorsActive | 0);
+  gl.uniform1i(U.waveRender.uCollapseActive, collapse.active ? 1 : 0);
+  gl.uniform1f(U.waveRender.uCollapseProgress, collapseProgress());
+  gl.uniform2f(
+    U.waveRender.uCollapsePosFrac,
+    simW > 1 ? collapse.xPx / (simW - 1) : 0.5,
+    simH > 1 ? collapse.yPx / (simH - 1) : 0.5
+  );
+  gl.uniform1f(U.waveRender.uCollapseSigmaPx, Math.max(2.5, simPx(10)));
 
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
@@ -2138,6 +2224,7 @@ function updateStats() {
 // Rebuild / reset
 // --------------------
 function rebuildSimulation() {
+  resetCollapse();
   resizeCanvas();
 
   if (texA) gl.deleteTexture(texA);
@@ -2176,6 +2263,7 @@ function rebuildSimulation() {
 }
 
 function resetAll() {
+  resetCollapse();
   paused = false;
   pauseButton.textContent = "Pause";
   guideMirrorDetectorX = params.detectorX;
@@ -2215,17 +2303,27 @@ async function main() {
         particleUpdate();
       }
       const detectedCount = captureDetectorHits();
-      const autoPauseCount = Math.ceil(
-        Math.floor(params.nParticles) * DETECTOR_AUTO_PAUSE_FRACTION
-      );
       if (
-        !detectorAutoPauseTriggered &&
-        detectedCount >= autoPauseCount
+        collapseEnabled &&
+        !collapse.active &&
+        detectedCount > 0 &&
+        particleReadback &&
+        particleReadback[2] > 1.5
       ) {
-        detectorAutoPauseTriggered = true;
-        pauseSimulation();
+        beginCollapseAt(particleReadback[0], particleReadback[1]);
+      } else if (!collapseEnabled) {
+        const autoPauseCount = Math.ceil(
+          Math.floor(params.nParticles) * DETECTOR_AUTO_PAUSE_FRACTION
+        );
+        if (
+          !detectorAutoPauseTriggered &&
+          detectedCount >= autoPauseCount
+        ) {
+          detectorAutoPauseTriggered = true;
+          pauseSimulation();
+        }
       }
-      densityStepAndStamp();
+      if (!collapse.active) densityStepAndStamp();
     }
 
     render();

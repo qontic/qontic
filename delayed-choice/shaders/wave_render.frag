@@ -30,6 +30,10 @@ uniform float uGuideMirrorAngleTrim;
 uniform float uGuideMirrorYTrimPx;
 uniform float uGuideMirrorWidthPx;
 uniform int   uGuideMirrorsActive;
+uniform int   uCollapseActive;
+uniform float uCollapseProgress;
+uniform vec2  uCollapsePosFrac;
+uniform float uCollapseSigmaPx;
 
 in vec2 vUV;
 out vec4 fragColor;
@@ -186,12 +190,67 @@ void main(){
   }
 
   vec2 xPx = uv * vec2(uSimRes);
+
+  if(uCollapseActive == 1) {
+    float p = clamp(uCollapseProgress, 0.0, 1.0);
+    vec2 hitPx = uCollapsePosFrac * (vec2(uSimRes) - vec2(1.0));
+    float radius = length(xPx - hitPx);
+    float maxRadius = length(vec2(uSimRes));
+    float finalSigma = max(uCollapseSigmaPx, 1.0);
+
+    float finalShrink = clamp(1.35 * finalSigma / max(maxRadius, 1.0), 0.003, 0.020);
+    float shrink = mix(1.0, finalShrink, p);
+    vec2 sourceUv = uCollapsePosFrac +
+      (uv - uCollapsePosFrac) / max(shrink, 1e-4);
+    float inside = step(0.0, sourceUv.x) * step(sourceUv.x, 1.0) *
+      step(0.0, sourceUv.y) * step(sourceUv.y, 1.0);
+
+    vec2 suckedPsi = texture(
+      uState,
+      clamp(sourceUv, vec2(0.0), vec2(1.0))
+    ).rg;
+    float suckedRho = dot(suckedPsi, suckedPsi) * inside;
+    float suckedI = pow(
+      clamp(1.0 - exp(-uVisGain * suckedRho), 0.0, 1.0),
+      uVisGamma
+    );
+    float suckedPhase = fract((atan(suckedPsi.y, suckedPsi.x) + PI) / (2.0 * PI));
+
+    float envelopeSigma = mix(0.22 * maxRadius, finalSigma * 1.05, p);
+    float envelope = exp(
+      -0.5 * radius * radius /
+      max(envelopeSigma * envelopeSigma, 1e-3)
+    );
+    envelope = pow(envelope, mix(0.85, 1.75, p));
+    vec3 suckedCol = colorMap(suckedPhase, a, b, c, d) * suckedI * envelope;
+
+    float broadSigma = mix(0.16 * maxRadius, finalSigma * 1.8, p);
+    float broadGlow = exp(
+      -0.5 * radius * radius /
+      max(broadSigma * broadSigma, 1e-3)
+    );
+    float finalBlob = exp(
+      -0.5 * radius * radius /
+      max(finalSigma * finalSigma, 1e-3)
+    );
+
+    vec3 collapseCol = vec3(1.0, 0.92, 0.70) * finalBlob *
+      smoothstep(0.22, 1.0, p) * 4.2;
+    vec3 glowCol = vec3(0.50, 0.82, 1.0) * broadGlow *
+      smoothstep(0.04, 0.70, p) * 0.50;
+
+    col = col * pow(1.0 - p, 1.8) +
+      suckedCol * (0.45 + 2.2 * p) +
+      glowCol +
+      collapseCol;
+  }
+
   float splitter = plateMask(xPx);
   float mirrors = mirrorMask(xPx);
   float guideMirrors = guideMirrorMask(xPx);
   float detector = (uDetectorActive == 1) ? detectorMask(xPx) : 0.0;
 
-  if(uDetectorActive == 1) {
+  if(uDetectorActive == 1 && uCollapseActive == 0) {
     vec2 innerMin, innerMax, splitterCenter;
     cavityBounds(innerMin, innerMax, splitterCenter);
     float detectorX = mix(innerMin.x, innerMax.x, uDetectionXFrac);
