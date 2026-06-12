@@ -118,7 +118,7 @@ const PRESETS = {
       spinS: 2,
       showTrail: 1,
     },
-    adjustable: ["spinS", "nParticles","showPhase",],
+    adjustable: ["spinS", "nParticles","showPhase","showTrail"],
   },
   excited: {
     params: {
@@ -133,7 +133,7 @@ const PRESETS = {
     adjustable: [
       "spinS",
       "eigenQuantumNumbers",
-      "showPhase",
+      "showPhase","showTrail"
     ],
   },
   magnetic: {
