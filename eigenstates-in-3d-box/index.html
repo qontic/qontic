@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Eigenstates in 3D Box - Q-Ontic Lab</title>
+  <meta name="description" content="An educational notebook about particle-in-a-box eigenstates, Pauli spin current, and Bohmian trajectories in three dimensions." />
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+      },
+      svg: { fontCache: "global" }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    :root {
+      --blue-900: #003366;
+      --blue-800: #003f7f;
+      --blue-700: #0055aa;
+      --ink: #253142;
+      --muted: #5d6b7a;
+      --paper: #f9f9f9;
+      --surface: #fff;
+      --line: #dbe4f0;
+      --cyan: #007f9f;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 16px/1.65 "Segoe UI", system-ui, sans-serif;
+    }
+    a { color: var(--blue-700); }
+    a:hover { color: var(--blue-800); }
+
+    .site-banner {
+      padding: 1rem;
+      background: var(--blue-900);
+      color: #fff;
+      text-align: center;
+    }
+    .site-banner h1 {
+      margin: 0;
+      font-size: 2.25rem;
+      line-height: 1.1;
+    }
+    .site-banner p {
+      margin: 0.45rem 0 0;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    main,
+    .site-footer-inner {
+      width: min(1120px, calc(100% - 2rem));
+      margin: 0 auto;
+    }
+    main { padding-bottom: 3.5rem; }
+    section {
+      margin-bottom: 2.8rem;
+      scroll-margin-top: 24px;
+    }
+    .page-nav {
+      display: flex;
+      padding-top: 1rem;
+    }
+    .nav-button,
+    .primary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0.55rem 0.9rem;
+      border-radius: 4px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-decoration: none;
+    }
+    .nav-button {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--blue-900);
+      box-shadow: 0 1px 3px rgba(0, 0, 51, 0.06);
+    }
+    .primary-button {
+      border: 1px solid var(--blue-700);
+      background: var(--blue-700);
+      color: #fff;
+    }
+    .primary-button:hover {
+      background: var(--blue-800);
+      color: #fff;
+    }
+
+    .page-hero {
+      margin-bottom: 0.8rem;
+      padding: 1.4rem 0 0.7rem;
+    }
+    .kicker {
+      margin: 0 0 0.45rem;
+      color: var(--blue-700);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+    .page-hero h1 {
+      margin: 0;
+      color: var(--blue-900);
+      font-size: 3rem;
+      line-height: 1.12;
+    }
+    .page-hero p:last-child {
+      max-width: 780px;
+      margin: 0.9rem 0 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+      gap: 2rem;
+      align-items: start;
+    }
+    .header-image {
+      margin: 0;
+      overflow: hidden;
+      border: 1px solid #11294d;
+      border-radius: 8px;
+      background: #000;
+      box-shadow: 0 8px 24px rgba(0, 0, 45, 0.14);
+    }
+    .header-image img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1100 / 650;
+      object-fit: cover;
+    }
+    .note-box {
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--cyan);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .note-box h2 {
+      margin: 0 0 0.55rem;
+      color: var(--blue-900);
+      font-size: 1.1rem;
+    }
+    .note-list {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+    .note-list li { margin: 0.45rem 0; }
+
+    h2, h3 {
+      color: var(--blue-900);
+      line-height: 1.25;
+    }
+    h2 {
+      margin: 0 0 0.8rem;
+      font-size: 1.75rem;
+    }
+    .applet-section > p {
+      max-width: 900px;
+    }
+    .applet-shell {
+      overflow: hidden;
+      border: 1px solid #1d3558;
+      border-radius: 8px;
+      background: #000;
+      box-shadow: 0 9px 26px rgba(0, 0, 45, 0.16);
+    }
+    .applet-toolbar {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #28476e;
+      background: #172439;
+      color: #fff;
+      font-weight: 650;
+    }
+    .applet-stage {
+      position: relative;
+      height: 650px;
+      background: #000 center / cover no-repeat;
+    }
+    .applet-frame {
+      display: block;
+      width: 100%;
+      height: 650px;
+      border: 0;
+      background: #000;
+    }
+    .applet-shell.is-inactive .applet-frame { visibility: hidden; }
+    .applet-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 0;
+      background: rgba(0, 0, 0, 0.22);
+      color: rgba(255, 255, 255, 0.86);
+      font: 700 2rem/1 "Segoe UI", system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .applet-play:hover,
+    .applet-play:focus-visible {
+      background: rgba(0, 0, 0, 0.34);
+      color: #fff;
+    }
+    .caption {
+      margin: 0.7rem 0 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .theory-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.2rem 2rem;
+    }
+    .equation {
+      overflow-x: auto;
+      margin: 0.8rem 0;
+      padding: 0.8rem 1rem;
+      border-left: 3px solid var(--cyan);
+      background: #eef5fa;
+    }
+    .next-step {
+      padding: 1.4rem 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .site-footer {
+      background: var(--blue-900);
+      color: #fff;
+    }
+    .site-footer-inner {
+      padding: 1.5rem 0;
+    }
+    .site-footer a { color: #cce7ff; }
+
+    @media (max-width: 760px) {
+      .page-hero h1 { font-size: 2.25rem; }
+      .intro-grid,
+      .theory-grid { grid-template-columns: 1fr; }
+      .applet-stage,
+      .applet-frame { height: 560px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-banner">
+    <h1>Q-Ontic Lab</h1>
+    <p>Interactive quantum simulations for representational comparison</p>
+  </header>
+
+  <main>
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="nav-button" href="../index.html">Back to Main Page</a>
+    </nav>
+
+    <section class="page-hero" aria-labelledby="page-title">
+      <p class="kicker">Educational notebook</p>
+      <h1 id="page-title">Eigenstates in 3D Box</h1>
+      <p>Explore stationary particle-in-a-box states, nodal surfaces, Pauli spin current, and Bohmian motion inside a hard-walled three-dimensional region.</p>
+    </section>
+
+    <section class="intro-grid" aria-label="Notebook preview and section navigation">
+      <figure class="header-image">
+        <img src="groundStatePoster.png" alt="Ground-state density and Bohmian trajectories inside a three-dimensional box">
+      </figure>
+      <aside class="note-box" aria-labelledby="sections-nav">
+        <h2 id="sections-nav">Sections</h2>
+        <ul class="note-list">
+          <li><a href="#ground-state">Ground state</a></li>
+          <li><a href="#excited-state">Excited states and nodes</a></li>
+          <li><a href="#spin-current">Spin current and magnetic field</a></li>
+          <li><a href="#theory">Theory and equations</a></li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="applet-section" aria-labelledby="ground-state">
+      <h2 id="ground-state">Ground-state density</h2>
+      <p>
+        The state \(n_x=n_y=n_z=1\) has no interior nodal planes. Its probability density is
+        largest near the center and vanishes on all six hard walls. Adjust the particle count
+        and compare the trajectory ensemble with the glowing density cloud.
+      </p>
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Ground state: \(n=(1,1,1)\)</div>
+        <div class="applet-stage" style="background-image:url('groundStatePoster.png')">
+          <iframe class="applet-frame" title="Ground-state particle in a three-dimensional box"
+            data-src="full-applet.html?embed=1&amp;preset=ground" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play ground-state simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">Drag to orbit the box. The XY, XZ, and YZ buttons provide orthographic views.</p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="excited-state">
+      <h2 id="excited-state">Excited states and nodes</h2>
+      <p>
+        Higher quantum numbers introduce nodal planes where the wave function and probability
+        density vanish. Change \(n_x\), \(n_y\), and \(n_z\) to see how each quantum number
+        controls the number of lobes along its corresponding axis.
+      </p>
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Excited eigenstates and nodal structure</div>
+        <div class="applet-stage" style="background-image:url('excitedStatePoster.png')">
+          <iframe class="applet-frame" title="Excited eigenstates in a three-dimensional box"
+            data-src="full-applet.html?embed=1&amp;preset=excited" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play excited-state simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">Floor contours and internal level sets help expose the density's nodal geometry.</p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="spin-current">
+      <h2 id="spin-current">Pauli spin current</h2>
+      <p>
+        For a Pauli spinor, the Bohmian guidance current contains a spin-dependent curl term.
+        This can produce motion even when the scalar spatial eigenfunction is real. Use the
+        controls to compare spin directions and add a uniform magnetic field.
+      </p>
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Spin current and uniform magnetic field</div>
+        <div class="applet-stage" style="background-image:url('spinCurrentPoster.png')">
+          <iframe class="applet-frame" title="Pauli spin-current demonstration in a three-dimensional box"
+            data-src="full-applet.html?embed=1&amp;preset=magnetic" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play spin-current simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">Field lines indicate the selected uniform magnetic-field direction.</p>
+    </section>
+
+    <section id="theory" aria-labelledby="theory-title">
+      <h2 id="theory-title">Theory and equations</h2>
+      <div class="theory-grid">
+        <div>
+          <h3>Box eigenfunctions</h3>
+          <p>For a rectangular box with side lengths \(L_x,L_y,L_z\), separation of variables gives</p>
+          <div class="equation">
+            \[
+              \psi_{n_xn_yn_z}(x,y,z)
+              =
+              \sqrt{\frac{8}{L_xL_yL_z}}
+              \sin\!\left(\frac{n_x\pi x}{L_x}\right)
+              \sin\!\left(\frac{n_y\pi y}{L_y}\right)
+              \sin\!\left(\frac{n_z\pi z}{L_z}\right).
+            \]
+          </div>
+          <p>Each positive integer \(n_i\) fixes the nodal structure along one spatial axis.</p>
+        </div>
+        <div>
+          <h3>Energy and density</h3>
+          <div class="equation">
+            \[
+              E_{n_xn_yn_z}
+              =
+              \frac{\hbar^2\pi^2}{2m}
+              \left(
+                \frac{n_x^2}{L_x^2}
+                \frac{n_y^2}{L_y^2}
+                \frac{n_z^2}{L_z^2}
+              \right),
+              \qquad
+              \rho=\Psi^\dagger\Psi .
+            \]
+          </div>
+          <p>An energy eigenstate changes only by a global time-dependent phase, so its density remains stationary.</p>
+        </div>
+        <div>
+          <h3>Pauli evolution</h3>
+          <div class="equation">
+            \[
+              i\hbar\frac{\partial\Psi}{\partial t}
+              =
+              \left[
+                \frac{1}{2m}(-i\hbar\nabla-\mathbf A)^2
+                -\frac{\hbar}{2m}\boldsymbol{\sigma}\cdot\mathbf B
+              \right]\Psi .
+            \]
+          </div>
+          <p>The simulation uses hard-wall boundary conditions and a symmetric-gauge vector potential for the uniform magnetic field.</p>
+        </div>
+        <div>
+          <h3>Bohmian guidance</h3>
+          <div class="equation">
+            \[
+              \mathbf v
+              =
+              \frac{\hbar}{m\rho}
+              \operatorname{Im}(\Psi^\dagger\nabla\Psi)
+              +
+              \frac{s\hbar}{m\rho}
+              \nabla\times(\Psi^\dagger\boldsymbol{\sigma}\Psi)
+              -
+              \frac{\mathbf A}{m}.
+            \]
+          </div>
+          <p>The first term is the convective current, the second is the spin current, and the last accounts for magnetic coupling in the simulation's units.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="next-step" aria-labelledby="full-applet">
+      <h2 id="full-applet">Full Applet</h2>
+      <p>Open the original-scale simulation with its complete control panel in a separate browser tab.</p>
+      <a class="primary-button" href="full-applet.html" target="_blank" rel="noopener">Open Full Applet</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      Adapted for Q-Ontic Lab from
+      <a href="https://github.com/anssiZander/Bohmian3DBox" target="_blank" rel="noopener">Bohmian3DBox</a>
+      by Anssi Zander.
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll(".applet-shell.is-inactive").forEach((shell) => {
+      const frame = shell.querySelector("iframe[data-src]");
+      const playButton = shell.querySelector(".applet-play");
+      playButton.addEventListener("click", () => {
+        if (!frame.hasAttribute("src")) frame.setAttribute("src", frame.dataset.src);
+        shell.classList.remove("is-inactive");
+        playButton.remove();
+      });
+    });
+  </script>
+</body>
+</html>
