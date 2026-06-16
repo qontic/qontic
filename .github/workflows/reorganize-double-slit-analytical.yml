@@ -1,0 +1,66 @@
+name: Reorganize analytical double-slit app
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reorganize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move analytical double-slit app into clean directory
+        run: |
+          set -euo pipefail
+
+          mkdir -p double-slit-analytical/js double-slit-analytical/css
+
+          # Copy the actual source files into the clean app directory.
+          cp qsf-v1.html double-slit-analytical/qsf-v1.html
+          cp -r js/. double-slit-analytical/js/
+          cp css/palette.css double-slit-analytical/css/palette.css
+          cp css/qsf-style.css double-slit-analytical/css/qsf-style.css
+
+          # Update the landing-page card to point to the reorganized app.
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+          html = html.replace("url:'qsf-v1.html'", "url:'double-slit-analytical/qsf-v1.html'")
+          html = html.replace('url:"qsf-v1.html"', 'url:"double-slit-analytical/qsf-v1.html"')
+          html = html.replace("url:'double-slit/'", "url:'double-slit-analytical/qsf-v1.html'")
+          html = html.replace('url:"double-slit/"', 'url:"double-slit-analytical/qsf-v1.html"')
+          path.write_text(html, encoding='utf-8')
+          PY
+
+          # Make the Pages deployment use the repository structure directly.
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/pages.yml')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace("url:'qsf-v1.html'", "url:'double-slit-analytical/qsf-v1.html'")
+          text = text.replace("url:'double-slit/'", "url:'double-slit-analytical/qsf-v1.html'")
+          text = text.replace('url:"qsf-v1.html"', 'url:"double-slit-analytical/qsf-v1.html"')
+          text = text.replace('url:"double-slit/"', 'url:"double-slit-analytical/qsf-v1.html"')
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add double-slit-analytical index.html .github/workflows/pages.yml
+
+          if git diff --cached --quiet; then
+            echo "No reorganization changes to commit."
+          else
+            git commit -m "Move analytical double-slit app into self-contained directory"
+            git push
+          fi
