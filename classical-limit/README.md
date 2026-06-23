@@ -4,21 +4,20 @@ WebGPU pilot-wave applet for exploring how a free Gaussian packet in a reflectin
 
 The wave uses finite-difference Schrodinger evolution in WebGPU compute passes. The displayed density/phase and the Bohmian particle guidance both read from that evolved wave state, so the particles are guided by the simulated wave rather than by a separate analytic approximation.
 
-The `classical limit` slider changes hidden effective parameters together:
+The app now exposes two fixed presets through a single switch button instead of a group of free sliders.
+Both presets keep the packet width and on-screen drift speed close to each other, while changing the effective quantum scale:
 
-- lowers the displayed effective `hbar`;
-- lowers `hbar / mass` within a grid-resolvable range;
-- adjusts `p0` and `mass` so the packet speed stays approximately fixed;
-- widens the initial packet enough to keep the motion more ray-like;
-
-The `packet spread` slider scales the initial Gaussian sigma on top of that regime mapping.
-It can now go lower than the old WebGL version, but the effective packet width is still clamped to a 10-grid-cell floor to avoid under-resolved finite-difference artifacts.
+- `Quantum packet`: `hbar = 6`, `hbar / mass = 6`, `sigma = 24px`, `dt = 0.04`, `steps/frame = 15`.
+- `Classical packet`: `hbar = 0.06`, `hbar / mass = 1.5`, `sigma = 24px`, `dt = 0.15`, `steps/frame = 4`.
 
 The `velocity angle` slider rotates the initial plane-wave momentum from `-90deg` to `90deg`.
+The visual controls can toggle phase, particles, and trails, and adjust particle count, particle appearance, and trail appearance without changing the fixed physics presets.
 Mouse-wheel scrolling over the canvas zooms the view; double-clicking the canvas resets the view.
 
 The guidance law is purely Schrodinger/Bohmian, with no Pauli spin-current term.
 
-At the quantum end, the particle trails show stronger curvature from wave spreading. At the classical end, the wider packet and smaller `hbar / mass` reduce spreading while keeping the phase wavelength above the grid's aliasing limit.
-
-The `sim scale` slider can now run larger grids than the old WebGL2 version, subject to the device's WebGPU storage-buffer limits.
+At the quantum end, the larger `hbar / mass` gives stronger wave spreading and more curved particle trails.
+At the classical end, the smaller `hbar / mass` reduces spreading while keeping the phase wavelength above the grid's aliasing limit.
+The classical preset uses a larger `dt`, but fewer steps per frame, so the packet moves across the screen at roughly the same rate as the quantum preset.
+The wave reset initializes the leapfrog state with a finite-difference phase backstep to avoid seeding a counter-propagating numerical branch.
+The classical preset also applies a smooth render-only density mask below `rho = 0.0002..0.002`, hiding residual low-density artifacts without changing the simulated wave or particle guidance.

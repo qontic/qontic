@@ -37,21 +37,21 @@ const trailFormat = "rgba16float";
 
 const params = {
   simScale: 1.0,
-  stepsPerFrame: 6,
+  stepsPerFrame: 15,
 
   classicality: 0.0,
   classicalSpeed: 2.0,
-  velocityAngleDeg: 0.0,
+  velocityAngleDeg: 45.0,
   packetSpread: 1.0,
 
   hbar: 6.0,
   mass: 1.0,
   p0: 2.0,
-  dt: 0.035,
+  dt: 0.04,
 
   packetX: 0.55,
   packetY: 0.5,
-  packetSigma: 30.0,
+  packetSigma: 24.0,
   doubleGaussian: 0,
   gaussianSeparation: 200.0,
 
@@ -61,6 +61,8 @@ const params = {
 
   visGain: 20.0,
   visGamma: 0.5,
+  densityMaskLow: 0.0,
+  densityMaskHigh: 0.0,
   showPhase: 1,
 
   showParticles: 1,
@@ -83,28 +85,39 @@ const params = {
 const urlParams = new URLSearchParams(window.location.search);
 const isEmbedded = urlParams.get("embed") === "1";
 
-const CLASSICAL_LIMIT = {
-  quantumHbar: 6.0,
-  classicalHbar: 0.12,
-  quantumHbarOverMass: 6.0,
-  classicalHbarOverMass: 0.9,
-  maxPhaseK: 1.08,
-  quantumSigma: 30.0,
-  classicalSigma: 140.0,
-  minSigma: 10.0,
+const REGIME_PRESETS = {
+  quantum: {
+    id: "quantum",
+    label: "Quantum packet",
+    switchLabel: "Use classical preset",
+    classicality: 0.0,
+    speed: 2.0,
+    hbar: 6.0,
+    hbarOverMass: 6.0,
+    packetSigma: 24.0,
+    densityMaskLow: 0.0,
+    densityMaskHigh: 0.0,
+    dt: 0.04,
+    stepsPerFrame: 15,
+  },
+  classical: {
+    id: "classical",
+    label: "Classical packet",
+    switchLabel: "Use quantum preset",
+    classicality: 1.0,
+    speed: 2.0,
+    hbar: 0.06,
+    hbarOverMass: 1.5,
+    packetSigma: 24.0,
+    densityMaskLow: 0.0002,
+    densityMaskHigh: 0.002,
+    dt: 0.15,
+    stepsPerFrame: 4,
+  },
 };
 
 function clamp01(x) {
   return Math.min(1, Math.max(0, x));
-}
-
-function mix(a, b, t) {
-  return a + (b - a) * t;
-}
-
-function smooth01(t) {
-  t = clamp01(t);
-  return t * t * (3 - 2 * t);
 }
 
 function clampViewCenter() {
@@ -120,30 +133,49 @@ function clampViewCenter() {
   viewState.centerY = Math.min(1 - half, Math.max(half, viewState.centerY));
 }
 
-function applyClassicalLimit() {
-  const t = smooth01(params.classicality);
-  const requestedAlpha = mix(CLASSICAL_LIMIT.quantumHbarOverMass, CLASSICAL_LIMIT.classicalHbarOverMass, t);
-  const minResolvedAlpha = params.classicalSpeed / CLASSICAL_LIMIT.maxPhaseK;
-  const hbarOverMass = Math.max(requestedAlpha, minResolvedAlpha);
+let activePresetId = "quantum";
+let presetButton = null;
+let presetNameReadout = null;
 
-  params.hbar = mix(CLASSICAL_LIMIT.quantumHbar, CLASSICAL_LIMIT.classicalHbar, t);
-  params.mass = params.hbar / hbarOverMass;
-  params.p0 = params.classicalSpeed * params.mass;
-  params.packetSigma = Math.max(
-    CLASSICAL_LIMIT.minSigma,
-    mix(CLASSICAL_LIMIT.quantumSigma, CLASSICAL_LIMIT.classicalSigma, t) * params.packetSpread
-  );
+function getActivePreset() {
+  return REGIME_PRESETS[activePresetId] || REGIME_PRESETS.quantum;
+}
+
+function nextPresetId() {
+  return activePresetId === "quantum" ? "classical" : "quantum";
+}
+
+function syncPresetUI() {
+  const preset = getActivePreset();
+  if (presetButton) {
+    presetButton.textContent = preset.switchLabel;
+    presetButton.title = `Active: ${preset.label}`;
+  }
+  if (presetNameReadout) {
+    presetNameReadout.textContent = preset.label;
+  }
+}
+
+function applyRegimePreset(presetId = activePresetId) {
+  const preset = REGIME_PRESETS[presetId] || REGIME_PRESETS.quantum;
+  activePresetId = preset.id;
+
+  params.classicality = preset.classicality;
+  params.classicalSpeed = preset.speed;
+  params.packetSpread = 1.0;
+  params.hbar = preset.hbar;
+  params.mass = preset.hbar / preset.hbarOverMass;
+  params.p0 = preset.speed * params.mass;
+  params.packetSigma = preset.packetSigma;
+  params.densityMaskLow = preset.densityMaskLow;
+  params.densityMaskHigh = preset.densityMaskHigh;
+  params.dt = preset.dt;
+  params.stepsPerFrame = preset.stepsPerFrame;
   params.boundaryMode = 0;
+  params.doubleGaussian = 0;
+  syncPresetUI();
 }
 
-function classicalityLabel() {
-  const t = params.classicality;
-  if (t < 0.18) return "Quantum";
-  if (t > 0.82) return "Classical";
-  return `${Math.round(t * 100)}%`;
-}
-
-let classicalReadout = null;
 let simW = 0;
 let simH = 0;
 const viewState = {
@@ -152,38 +184,22 @@ const viewState = {
   zoom: 1.0,
 };
 
-function updateClassicalReadout() {
-  if (!classicalReadout) return;
-  const alpha = params.hbar / params.mass;
-  const k = params.p0 / params.hbar;
-  const wavelength = 2 * Math.PI / Math.max(1e-6, k);
-  const grid = simW > 0 ? `, grid ${simW}x${simH}` : "";
-  const zoom = viewState.zoom > 1.0001 ? `, zoom ${fmt(viewState.zoom)}x` : "";
-  classicalReadout.textContent =
-    `hbar ${fmt(params.hbar)}, hbar/m ${fmt(alpha)}, width ${fmt(params.packetSigma)}, lambda ${fmt(wavelength)}px, angle ${fmt(params.velocityAngleDeg)}deg${grid}${zoom}`;
+const urlMode = (urlParams.get("mode") || "").toLowerCase();
+if (urlMode === "classical" || urlMode === "quantum") {
+  activePresetId = urlMode;
+} else {
+  const urlClassicality = parseFloat(urlParams.get("classicality"));
+  if (Number.isFinite(urlClassicality)) {
+    activePresetId = clamp01(urlClassicality) >= 0.5 ? "classical" : "quantum";
+  }
 }
 
-const urlClassicality = parseFloat(urlParams.get("classicality"));
-if (Number.isFinite(urlClassicality)) {
-  params.classicality = clamp01(urlClassicality);
-}
-
-const urlSpeed = parseFloat(urlParams.get("speed"));
-if (Number.isFinite(urlSpeed)) {
-  params.classicalSpeed = Math.min(4.0, Math.max(0.5, urlSpeed));
-}
+applyRegimePreset();
 
 const urlAngle = parseFloat(urlParams.get("angle"));
 if (Number.isFinite(urlAngle)) {
   params.velocityAngleDeg = Math.min(90.0, Math.max(-90.0, urlAngle));
 }
-
-const urlSpread = parseFloat(urlParams.get("spread"));
-if (Number.isFinite(urlSpread)) {
-  params.packetSpread = Math.min(3.5, Math.max(0.2, urlSpread));
-}
-
-applyClassicalLimit();
 
 function isControlFixed(key) {
   return false;
@@ -223,11 +239,8 @@ function addSlider(key, label, min, max, step, onChange = null) {
     const v = parseFloat(input.value);
     params[key] = v;
     if (key === "classicalSpeed" || key === "packetSpread") {
-      applyClassicalLimit();
+      applyRegimePreset();
       updateUniforms();
-      updateClassicalReadout();
-    } else if (key === "velocityAngleDeg") {
-      updateClassicalReadout();
     }
     val.textContent = fmt(v);
   });
@@ -239,51 +252,24 @@ function addSlider(key, label, min, max, step, onChange = null) {
   controls.appendChild(row);
 }
 
-function addClassicalityControl() {
+function addPresetControl() {
   const row = document.createElement("div");
-  row.className = "row";
+  row.className = "row mode-row";
 
   const lab = document.createElement("label");
-  lab.textContent = "classical limit";
+  presetNameReadout = lab;
 
-  const input = document.createElement("input");
-  input.type = "range";
-  input.min = 0;
-  input.max = 1;
-  input.step = 0.01;
-  input.value = params.classicality;
-
-  const val = document.createElement("div");
-  val.className = "val";
-  val.textContent = classicalityLabel();
-
-  input.addEventListener("input", () => {
-    params.classicality = parseFloat(input.value);
-    applyClassicalLimit();
-    updateUniforms();
-    val.textContent = classicalityLabel();
-    updateClassicalReadout();
+  presetButton = document.createElement("button");
+  presetButton.addEventListener("click", () => {
+    applyRegimePreset(nextPresetId());
+    resetAll();
   });
-  input.addEventListener("change", () => resetAll());
 
   row.appendChild(lab);
-  row.appendChild(input);
-  row.appendChild(val);
+  row.appendChild(presetButton);
   controls.appendChild(row);
 
-  const readout = document.createElement("div");
-  readout.className = "row";
-  const readoutLabel = document.createElement("label");
-  readoutLabel.textContent = "effective values";
-  classicalReadout = document.createElement("div");
-  classicalReadout.style.flex = "1";
-  classicalReadout.style.color = "#d9e6f8";
-  classicalReadout.style.fontSize = "12px";
-  classicalReadout.style.textAlign = "right";
-  readout.appendChild(readoutLabel);
-  readout.appendChild(classicalReadout);
-  controls.appendChild(readout);
-  updateClassicalReadout();
+  syncPresetUI();
 }
 
 function addToggleInt(key, label, onChange = null) {
@@ -346,26 +332,10 @@ function removeEmptySectionHeaders() {
 }
 
 addSectionHeader("Regime");
-addClassicalityControl();
-addSlider("classicalSpeed", "drift speed", 0.5, 4.0, 0.1, () => {
-  applyClassicalLimit();
-  resetAll();
-  updateClassicalReadout();
-});
+addPresetControl();
 addSlider("velocityAngleDeg", "velocity angle", -90.0, 90.0, 1.0, () => {
   resetAll();
-  updateClassicalReadout();
 });
-addSlider("packetSpread", "packet spread", 0.2, 3.5, 0.05, () => {
-  applyClassicalLimit();
-  resetAll();
-  updateClassicalReadout();
-});
-
-addSectionHeader("Performance");
-addSlider("simScale", "sim scale", 0.5, 2.0, 0.05, () => rebuildSimulation());
-addSlider("stepsPerFrame", "Steps/frame", 1, 51, 5);
-addSlider("dt", "dt", 0.005, 0.04, 0.005);
 
 addSectionHeader("Visual Parameters");
 addToggleInt("showPhase", "show phase");
@@ -438,7 +408,6 @@ canvas.addEventListener("wheel", (event) => {
 
   updateUniforms();
   clearTrails();
-  updateClassicalReadout();
 }, { passive: false });
 
 canvas.addEventListener("dblclick", () => {
@@ -447,7 +416,6 @@ canvas.addEventListener("dblclick", () => {
   viewState.centerY = 0.5;
   updateUniforms();
   clearTrails();
-  updateClassicalReadout();
 });
 
 const PARAM_FLOATS = 40;
@@ -497,7 +465,7 @@ struct Params {
   trailGamma: f32,
   trailBlendMode: f32,
   paletteId: f32,
-  _pad0: vec2<f32>,
+  densityMask: vec2<f32>,
   viewCenter: vec2<f32>,
   packetDir: vec2<f32>,
   viewScale: f32,
@@ -585,15 +553,19 @@ ${commonWGSL}
 @group(0) @binding(1) var<storage, read_write> waveA: array<vec4<f32>>;
 @group(0) @binding(2) var<storage, read_write> waveB: array<vec4<f32>>;
 
-fn kineticEnergy() -> f32 {
-  return 0.5 * sqr(params.p0) / params.mass;
+fn packetAngularFrequency() -> f32 {
+  let k = params.p0 / params.hbar;
+  let kd = k * params.packetDir;
+  let omegaFD = (params.hbar / params.mass) * ((1.0 - cos(kd.x)) + (1.0 - cos(kd.y)));
+  let omegaDt = asin(clamp(params.dt * omegaFD, -0.999, 0.999));
+  return omegaDt / max(params.dt, 1.0e-6);
 }
 
 fn initialPacketAtPx(xPx: vec2<f32>, t: f32) -> vec2<f32> {
   let x0 = params.packetPos * params.simSize;
   let k = params.p0 / params.hbar;
   let dir = params.packetDir;
-  let phaseTime = -kineticEnergy() * t / params.hbar;
+  let phaseTime = -packetAngularFrequency() * t;
 
   if (i32(params.doubleGaussian + 0.5) != 0) {
     let sep = params.gaussianSep * 0.5;
@@ -619,13 +591,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   let xPx = vec2<f32>(f32(gid.x), f32(gid.y));
   let psi0 = initialPacketAtPx(xPx, 0.0);
-  let psiE = initialPacketAtPx(xPx + vec2<f32>( 1.0, 0.0), 0.0);
-  let psiW = initialPacketAtPx(xPx + vec2<f32>(-1.0, 0.0), 0.0);
-  let psiN = initialPacketAtPx(xPx + vec2<f32>(0.0,  1.0), 0.0);
-  let psiS = initialPacketAtPx(xPx + vec2<f32>(0.0, -1.0), 0.0);
-  let lap0 = psiE + psiW + psiN + psiS - 4.0 * psi0;
-  let rhs0 = schrodingerRHS(params, psi0, lap0);
-  let psiPrev = psi0 - params.dt * rhs0;
+  let psiPrev = initialPacketAtPx(xPx, -params.dt);
   let state = vec4<f32>(psi0, psiPrev);
   let idx = cellIndex(params, gid.x, gid.y);
   waveA[idx] = state;
@@ -830,6 +796,9 @@ fn fs(in: FullscreenOut) -> @location(0) vec4<f32> {
   let psi = wave[cellIndex(params, coord.x, coord.y)].xy;
   let rho = dot(psi, psi);
   var intensity = 1.0 - exp(-params.visGain * rho);
+  if (params.densityMask.y > params.densityMask.x) {
+    intensity *= smoothstep(params.densityMask.x, params.densityMask.y, rho);
+  }
   intensity = pow(clamp(intensity, 0.0, 1.0), params.visGamma);
 
   var col: vec3<f32>;
@@ -1220,8 +1189,8 @@ function updateUniforms() {
   paramsArray[27] = params.trailVisGamma;
   paramsArray[28] = params.trailBlendMode;
   paramsArray[29] = params.paletteId;
-  paramsArray[30] = 0;
-  paramsArray[31] = 0;
+  paramsArray[30] = params.densityMaskLow;
+  paramsArray[31] = params.densityMaskHigh;
   paramsArray[32] = viewState.centerX;
   paramsArray[33] = viewState.centerY;
   const angleRad = params.velocityAngleDeg * Math.PI / 180;
@@ -1521,7 +1490,7 @@ function render(encoder) {
 
 function rebuildSimulation() {
   resizeCanvas();
-  applyClassicalLimit();
+  applyRegimePreset();
 
   const size = computeSimulationSize();
   simW = size.w;
@@ -1534,16 +1503,14 @@ function rebuildSimulation() {
   resetWave();
   clearTrails();
   updateUniforms();
-  updateClassicalReadout();
 }
 
 function resetAll() {
-  applyClassicalLimit();
+  applyRegimePreset();
   updateUniforms();
   resetWave();
   rebuildParticles();
   clearTrails();
-  updateClassicalReadout();
 }
 
 window.addEventListener("resize", () => rebuildSimulation());
