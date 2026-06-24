@@ -6,6 +6,7 @@ uniform ivec2 uSimRes;
 uniform float uHBAR;
 uniform float uMass;
 uniform float uP0;
+uniform vec2  uPacketDir;
 uniform float uDT;
 
 uniform vec2  uPacketPosFrac;
@@ -42,11 +43,10 @@ vec2 initialPacketAtPx(vec2 xPx, float t){
     float amp = (amp1 + amp2) / sqrt(2.0);
     
     float k  = uP0/uHBAR;
-    vec2 dir = vec2(1.0, 0.0);
     
     // Phase for both gaussians (same momentum direction)
-    float phase1 = k * dot(dir, d1);
-    float phase2 = k * dot(dir, d2);
+    float phase1 = k * dot(uPacketDir, d1);
+    float phase2 = k * dot(uPacketDir, d2);
     float phaseTime  = -kineticEnergy() * t / uHBAR;
     
     vec2 psi1 = amp1 * cis(phase1 + phaseTime);
@@ -61,8 +61,7 @@ vec2 initialPacketAtPx(vec2 xPx, float t){
     float amp = exp(-dot(d,d)/(2.0*sqr(uPacketSigmaPx)));
 
     float k  = uP0/uHBAR;
-    vec2 dir = vec2(1.0, 0.0);
-    float phaseSpace = k * dot(dir, d);
+    float phaseSpace = k * dot(uPacketDir, d);
     float phaseTime  = -kineticEnergy() * t / uHBAR;
     return amp * cis(phaseSpace + phaseTime);
   }

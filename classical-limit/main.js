@@ -493,12 +493,12 @@ addSectionHeader("Visual Parameters");
 addToggleInt("showPhase", "show phase");
 addToggleInt("showParticles", "show particles");
 addSlider("nParticles", "particle count", 1, 300, 1, () => resetAll());
-addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
-addSlider("dotGain", "particle brightness", 0.1, 3.0, 0.1);
+//addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
+//addSlider("dotGain", "particle brightness", 0.1, 3.0, 0.1);
 
-addToggleInt("showTrail", "draw trails");
-addSlider("trailHalfLife", "trail half-life", 1.0, 100.0, 1.0);
-addSlider("trailWidth", "trail width (px)", 3, 10.0, 1);
+//addToggleInt("showTrail", "draw trails");
+//addSlider("trailHalfLife", "trail half-life", 1.0, 100.0, 1.0);
+//addSlider("trailWidth", "trail width (px)", 3, 10.0, 1);
 
 removeEmptySectionHeaders();
 

@@ -18,6 +18,7 @@ const params = {
   hbar: 6.0,
   mass: 1.0,
   p0: 2.0,
+  packetAngleDeg: 0.0,
   dt: 0.04,
 
   packetX: 0.3,
@@ -62,6 +63,7 @@ const embeddedBasePreset = {
   stepsPerFrame: 5,
   dt: 0.04,
   p0: 2.0,
+  packetAngleDeg: 0.0,
   packetSigma: 30.0,
   doubleGaussian: 0,
   gaussianSeparation: 200.0,
@@ -109,15 +111,15 @@ const PRESETS = {
   // Preset params are fixed and hidden unless their key is listed in adjustable.
   spreading: {
     params: spreadingPreset,
-    adjustable: ["p0", "packetSigma"],
+    adjustable: ["p0", "packetAngleDeg", "packetSigma"],
   },
   ensemble: {
     params: ensemblePreset,
-    adjustable: ["p0","packetSigma","nParticles"],
+    adjustable: ["p0", "packetAngleDeg", "packetSigma", "nParticles"],
   },
   split: {
     params: splitPreset,
-    adjustable: ["p0","packetSigma","gaussianSeparation" ],
+    adjustable: ["p0", "packetAngleDeg", "packetSigma", "gaussianSeparation"],
    
   },
 };
@@ -320,6 +322,7 @@ addSlider("dt", "dt", 0.01, 0.04, 0.01);
 
 addSectionHeader("Physical Parameters");
 addSlider("p0", "momentum p", 0., 4.0, 0.1, () => resetAll());
+addSlider("packetAngleDeg", "direction (deg)", -90.0, 90.0, 1.0, () => resetAll());
 
 //addSlider("packetX", "packet start x", 0.05, 0.95, 0.01, () => resetAll());
 //addSlider("packetY", "packet start y", 0.05, 0.95, 0.01, () => resetAll());
@@ -606,6 +609,7 @@ function buildPrograms() {
     uHBAR: u(progWaveInit, "uHBAR"),
     uMass: u(progWaveInit, "uMass"),
     uP0: u(progWaveInit, "uP0"),
+    uPacketDir: u(progWaveInit, "uPacketDir"),
     uDT: u(progWaveInit, "uDT"),
     uPacketPosFrac: u(progWaveInit, "uPacketPosFrac"),
     uPacketSigmaPx: u(progWaveInit, "uPacketSigmaPx"),
@@ -696,6 +700,8 @@ function setWaveInitUniforms() {
   gl.uniform1f(U.waveInit.uHBAR, params.hbar);
   gl.uniform1f(U.waveInit.uMass, params.mass);
   gl.uniform1f(U.waveInit.uP0, params.p0);
+  const packetAngleRad = params.packetAngleDeg * Math.PI / 180.0;
+  gl.uniform2f(U.waveInit.uPacketDir, Math.cos(packetAngleRad), Math.sin(packetAngleRad));
   gl.uniform1f(U.waveInit.uDT, params.dt);
 
   gl.uniform2f(U.waveInit.uPacketPosFrac, params.packetX, params.packetY);
