@@ -326,7 +326,7 @@ addSlider("packetAngleDeg", "direction (deg)", -90.0, 90.0, 1.0, () => resetAll(
 
 //addSlider("packetX", "packet start x", 0.05, 0.95, 0.01, () => resetAll());
 //addSlider("packetY", "packet start y", 0.05, 0.95, 0.01, () => resetAll());
-addSlider("packetSigma", "packet sigma", 18.0, 80.0, 1.0, () => resetAll());
+addSlider("packetSigma", "packet sigma", 8.0, 80.0, 1.0, () => resetAll());
 addToggleInt("doubleGaussian", "split gaussian", () => resetAll());
 addSlider("gaussianSeparation", "split separation", 0.0, 300.0, 10.0, () => resetAll());
 addSlider("spinS", "spin s", 0.0, 2.0, 0.5);

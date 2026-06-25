@@ -219,9 +219,9 @@
       color: var(--muted);
     }
 
-    .video-grid {
-      display: grid;
-      gap: 2rem;
+    .video-section .video-card,
+    .applet-section .video-card {
+      margin: 1.4rem 0 1.2rem;
     }
 
     .video-card {
@@ -244,6 +244,10 @@
       height: 650px;
       object-fit: contain;
       cursor: pointer;
+    }
+
+    .comparison-video.is-double-height {
+      height: 1300px;
     }
 
     .comparison-video:focus-visible {
@@ -472,6 +476,10 @@
       .comparison-video {
         height: 560px;
       }
+
+      .comparison-video.is-double-height {
+        height: 1120px;
+      }
     }
 
     @media (max-width: 520px) {
@@ -510,6 +518,10 @@
 
       .comparison-video {
         height: 620px;
+      }
+
+      .comparison-video.is-double-height {
+        height: 1240px;
       }
 
       .video-controls {
@@ -559,7 +571,7 @@
           <li><a href="#comparison-videos">Introduction</a></li>
           <li><a href="#spreading-applet">The Bohmian Approach to the Free Particle</a></li>
           <li><a href="#ensemble-applet">Trajectory ensemble</a></li>
-          <li><a href="#split-applet">Non-symmetric wave packet</a></li>
+          <li><a href="#split-applet">Asymmetric wave packet</a></li>
           <li><a href="#theory">Theory &amp; Equations</a></li>
         </ul>
       </aside>
@@ -572,11 +584,10 @@
          at a constant speed and in a straight line if there are no external agents acting on it. 
       </p>
 
-      <div class="video-grid">
-        <figure class="video-card">
-          <div class="video-window">
-            <video
-              class="comparison-video"
+      <figure class="video-card">
+        <div class="video-window">
+          <video
+            class="comparison-video"
               src="videos/classicalParticle0000-0517.mp4"
               autoplay
               muted
@@ -585,13 +596,13 @@
               preload="metadata"
               tabindex="0"
               aria-label="Classical particle animation"
-            ></video>
-          </div>
-          <figcaption>
-            <strong>Classical particle</strong>
-            <span>Classical free particle in a box.</span>
-          </figcaption>
-        </figure>
+          ></video>
+        </div>
+        <figcaption>
+          <strong>Classical particle</strong>
+          <span>Classical free particle in a box.</span>
+        </figcaption>
+      </figure>
         <p>
         In standard quantum mechanics the point particle is replaced by a wave. The evolution of the wave is described by
         Schrödinger's equation. Schrödinger’s equation does not immediately describe particles following trajectories.  
@@ -600,10 +611,10 @@
         </p>
 
 
-        <figure class="video-card">
-          <div class="video-window">
-            <video
-              class="comparison-video"
+      <figure class="video-card">
+        <div class="video-window">
+          <video
+            class="comparison-video"
               src="videos/quantumWave0525-1134.mp4"
               autoplay
               muted
@@ -612,13 +623,13 @@
               preload="metadata"
               tabindex="0"
               aria-label="Standard quantum wave animation"
-            ></video>
-          </div>
-          <figcaption>
-            <strong>Standard quantum wave</strong>
-            <span>The state is represented by the spreading wave packet density and phase.</span>
-          </figcaption>
-        </figure>
+          ></video>
+        </div>
+        <figcaption>
+          <strong>Standard quantum wave</strong>
+          <span>The state is represented by the spreading wave packet density and phase.</span>
+        </figcaption>
+      </figure>
 
 
         <p>
@@ -654,12 +665,22 @@
         but it is not very useful for understanding individual particle behavior or the dynamics of the physical process
          that is unfolding. 
         </p>
-        
+    </section>
 
-        <figure class="video-card">
-          <div class="video-window">
-            <video
-              class="comparison-video"
+    <section class="applet-section" aria-labelledby="spreading-applet">
+      <h2 id="spreading-applet">The Bohmian Approach to the Free Particle</h2>
+
+      <p>
+      In the Bohmian view a quantum free particle is still described by a wave packet according to Schrodinger’s equation.
+
+        Observe how the Bohmian particle always moves such that its velocity is orthogonal to the phase gradient.
+        Basically the particle is surfing the Schrödinger's wave!
+      </p>
+
+      <figure class="video-card">
+        <div class="video-window">
+          <video
+            class="comparison-video"
               src="videos/bohmianQuantum1146-2199.mp4"
               autoplay
               muted
@@ -668,18 +689,23 @@
               preload="metadata"
               tabindex="0"
               aria-label="Bohmian quantum packet animation"
-            ></video>
-          </div>
-          <figcaption>
-            <strong>Bohmian quantum packet</strong>
-            <span>The particle has a definite position while the wave supplies its guidance field.</span>
-          </figcaption>
-        </figure>
+          ></video>
+        </div>
+        <figcaption>
+          <strong>Bohmian quantum packet</strong>
+          <span>The particle has a definite position while the wave supplies its guidance field.</span>
+        </figcaption>
+      </figure>
 
-        <figure class="video-card">
-          <div class="video-window">
-            <video
-              class="comparison-video"
+        <p>
+        Bohmian mechanics allows a very nice gradual transition into classical physics.
+        By increasing the scale, the trajectory starts to resemble the Newtonian free motion more and more.
+      </p>
+
+      <figure class="video-card">
+        <div class="video-window">
+          <video
+            class="comparison-video is-double-height"
               src="videos/bohmianSemiClassical1146-2087.mp4"
               autoplay
               muted
@@ -688,28 +714,18 @@
               preload="metadata"
               tabindex="0"
               aria-label="Bohmian semi-classical packet animation"
-            ></video>
-          </div>
-          <figcaption>
-            <strong>Semi-classical Bohmian packet</strong>
-            <span>In larger scales the bohmian trajectory turns increasingly similar to a classical path.</span>
-          </figcaption>
-        </figure>
-      </div>
-    </section>
+          ></video>
+        </div>
+        <figcaption>
+          <strong>Semi-classical Bohmian packet</strong>
+          <span>In larger scales the bohmian trajectory turns increasingly similar to a classical path.</span>
+        </figcaption>
+      </figure>
 
-    <section class="applet-section" aria-labelledby="spreading-applet">
-      <h2 id="spreading-applet">The Bohmian Approach to the Free Particle</h2>
-
-      
       <p>
-      In the Bohmian view a quantum free particle is still described by a wave packet according to Schrodinger’s equation.  
-      However, just as we did in classical physics, 
-      if we assume a value for the initial position of a particle, 
-      we can then use Schrödinger’s equation to compute its trajectory.  
-      </p>
-      <p>
-        Observe how the Bohmian particle always moves such that its velocity is orthogonal to the phase gradient.
+        Playing with Bohmian particle and its wave your self with the following demo.
+        Try narrowing down the inital wave packet and see how it affects the evolution.
+        That is Heisenberg's uncertainty principle in action.
       </p>
 
       <div class="applet-shell is-inactive">
@@ -790,16 +806,17 @@
     </section>
 
     <section class="applet-section" aria-labelledby="split-applet">
-      <h2 id="split-applet">A non-symmetric wave packet</h2>
+      <h2 id="split-applet">Asymmetric wave packet</h2>
       <p>
-        The initial distribution does not have to be a single Gaussian. 
-        By starting with two separated peaks, we can see how the paths of the Bohmian particles 
-        become much more complex.
+        The initial distribution does not have to be symmetric like a single Gaussian.
+        Let us end this lesson with a quick look at bohmian evolution under a double peaked initial distribution.
+        This is still a free particle (apart from the walls), but an asymmetric wave will "drive" the Bohmian particles
+        along more complex trajectories, making them quickly depart from Newtonian vision of inertial movement.
       </p>
 
       <div class="applet-shell is-inactive">
         <div class="applet-toolbar">Two-component Gaussian packet</div>
-        <div class="applet-stage">
+        <div class="applet-stage has-poster" style="background-image: url('doublePeakImage.jpg');">
           <iframe
             class="applet-frame"
             title="Split Gaussian free-packet demonstration"
