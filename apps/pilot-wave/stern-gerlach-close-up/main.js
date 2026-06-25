@@ -14,10 +14,21 @@ if (!adapter) {
   const secure = window.isSecureContext ? "yes" : "no";
   const host = location.host;
   const ua = navigator.userAgent;
+  const inFrame = window.top !== window ? "yes" : "no";
+  const policy = document.permissionsPolicy || document.featurePolicy;
+  let webgpuAllowed = "unknown";
+  try {
+    if (policy && typeof policy.allowsFeature === "function") {
+      webgpuAllowed = policy.allowsFeature("webgpu") ? "yes" : "no";
+    }
+  } catch {
+    webgpuAllowed = "unknown";
+  }
   const cause = [
     `No WebGPU adapter found (secureContext=${secure}, host=${host}).`,
     "Likely causes: hardware acceleration disabled, remote desktop/software rendering,",
     "browser policy/flags, or unsupported GPU/driver.",
+    `Context: inIframe=${inFrame}, permissionsPolicy.webgpu=${webgpuAllowed}.`,
     `UA: ${ua}`
   ].join(" ");
   alert(cause);
