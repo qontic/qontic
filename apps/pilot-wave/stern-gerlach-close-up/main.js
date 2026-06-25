@@ -4,10 +4,21 @@ if (!navigator.gpu) {
   throw new Error("WebGPU not available.");
 }
 
-const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+// Try several adapter hints before failing. Some environments reject
+// high-performance but still provide a valid low-power/default adapter.
+let adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+if (!adapter) adapter = await navigator.gpu.requestAdapter({ powerPreference: "low-power" });
+if (!adapter) adapter = await navigator.gpu.requestAdapter();
 if (!adapter) {
-  alert("No WebGPU adapter was found.");
-  throw new Error("No WebGPU adapter.");
+  const secure = window.isSecureContext ? "yes" : "no";
+  const host = location.host;
+  const cause = [
+    `No WebGPU adapter found (secureContext=${secure}, host=${host}).`,
+    "Likely causes: hardware acceleration disabled, remote desktop/software rendering,",
+    "browser policy/flags, or unsupported GPU/driver."
+  ].join(" ");
+  alert(cause);
+  throw new Error(cause);
 }
 
 const requestedLimits = {};
