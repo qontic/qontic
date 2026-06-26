@@ -363,6 +363,24 @@
 
 <script>
 let catalog = [];
+const RETURN_TAB_KEY = "qontic:returnTab";
+const VALID_TABS = new Set(["comparative", "pilot-wave", "notebook", "all"]);
+
+function currentTab() {
+  const hashTab = location.hash.slice(1);
+  if (VALID_TABS.has(hashTab)) return hashTab;
+
+  const activeTab = $(".tab.active").data("tab");
+  if (VALID_TABS.has(activeTab)) return activeTab;
+
+  return "comparative";
+}
+
+function withReturnTab(url, tab) {
+  const resolved = new URL(url, location.href);
+  resolved.searchParams.set("from", tab);
+  return resolved.href;
+}
 
 function sectionOf(item) {
   return item.type === "notebook" ? "notebook" : item.category;
@@ -395,7 +413,7 @@ function makeCard(item) {
       <p>${item.description}</p>
       <div class="card-footer">
         <div class="tags">${tags}</div>
-        <a class="button" href="${item.url}" target="_blank" rel="noopener">Open</a>
+        <a class="button" href="${item.url}" data-item-type="${item.type}">Open</a>
       </div>
     </article>
   `;
@@ -448,6 +466,15 @@ function applySearch() {
 $(function() {
   $(".tab").on("click", function() {
     showTab($(this).data("tab"));
+  });
+
+  $(document).on("click", ".card .button", function() {
+    const tab = currentTab();
+    sessionStorage.setItem(RETURN_TAB_KEY, tab);
+
+    if (this.dataset.itemType === "notebook") {
+      this.href = withReturnTab(this.getAttribute("href"), tab);
+    }
   });
 
   window.addEventListener("hashchange", function() {

@@ -1,0 +1,8 @@
+{
+  "title": "Pilot-Wave Tunneling — Notebook",
+  "type": "notebook",
+  "category": "pilot-wave",
+  "description": "Notebook-style presentation of Bohmian tunneling with guided trajectories, reflection, transmission, and embedded WebGL demonstrations.",
+  "tags": ["Notebook", "Pilot-wave", "Tunneling"],
+  "entry": "index.html"
+}

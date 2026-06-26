@@ -612,25 +612,35 @@ removeEmptySectionHeaders();
 
 document.getElementById("reset").onclick = () => resetAll();
 const pauseButton = document.getElementById("pause");
-function syncPauseButton() {
+
+function setPaused(nextPaused) {
+  paused = Boolean(nextPaused);
   pauseButton.textContent = paused ? "Resume" : "Pause";
-}
-pauseButton.onclick = () => {
-  paused = !paused;
-  syncPauseButton();
   requestRedraw();
-};
+}
+
+function togglePause() {
+  setPaused(!paused);
+}
+
+pauseButton.onclick = togglePause;
 
 window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "r") resetAll();
   if (e.key === " ") {
     e.preventDefault();
-    paused = !paused;
-    syncPauseButton();
-    requestRedraw();
+    togglePause();
   }
   handleCameraKey(e);
 });
+
+if (isEmbedded) {
+  window.addEventListener("message", (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (event.data?.type !== "qontic:set-paused" || !event.data.paused) return;
+    setPaused(true);
+  });
+}
 
 window.addEventListener("keyup", (e) => {
   handleCameraKeyUp(e);

@@ -18,6 +18,7 @@ const params = {
   hbar: 6.0,
   mass: 1.0,
   p0: 2.0,
+  packetAngleDeg: 0.0,
   dt: 0.04,
 
   packetX: 0.3,
@@ -38,22 +39,23 @@ const params = {
 
   showParticles: 1,
   nParticles: 100,
-  dotSize: 12.0,
+  dotSize: 16.0,
   dotSigma: 0.28,
   dotGain: 1.,
 
   showTrail: 1,
-  trailHalfLife: 10.0,
-  trailVisGain: 1.,
-  trailVisGamma: 1,
+  trailHalfLife: 30.0,
+  trailVisGain: 0.5,
+  trailVisGamma: 0.6,
   trailStampGain: 0.55,
-  trailWidth: 7.0,
+  trailWidth: 6.0,
   trailBlendMode: 1,
 
   paletteId: 5,
 };
 
 const urlParams = new URLSearchParams(window.location.search);
+const isEmbedded = urlParams.get("embed") === "1";
 const preset = urlParams.get("preset");
 
 const embeddedBasePreset = {
@@ -61,25 +63,26 @@ const embeddedBasePreset = {
   stepsPerFrame: 5,
   dt: 0.04,
   p0: 2.0,
+  packetAngleDeg: 0.0,
   packetSigma: 30.0,
   doubleGaussian: 0,
   gaussianSeparation: 200.0,
-  
+
   spinS: 0.5,
   guidingMode: 0,
   boundaryMode: 0,
   nParticles: 100,
-  dotSize: 12.0,
+  dotSize: 16.0,
   dotGain: 1.0,
   showTrail: 1,
-  trailHalfLife: 10.0,
-  trailWidth: 7.0,
+  trailHalfLife: 30.0,
+  trailWidth: 6.0,
 };
 
 const spreadingPreset = {
   ...embeddedBasePreset,
   nParticles: 1,
-  dotSize: 14.0,
+  dotSize: 16.0,
   trailWidth: 5.0,
   trailHalfLife: 5.0,
 };
@@ -88,7 +91,7 @@ const ensemblePreset = {
   ...embeddedBasePreset,
   nParticles: 500,
   showPhase: 1,
-  dotSize: 7.0,
+  dotSize: 9.0,
   trailWidth: 4.0,
   trailHalfLife: 3.0,
 };
@@ -99,7 +102,7 @@ const splitPreset = {
   p0: .9,
   gaussianSeparation: 100.0,
   nParticles: 500,
-  dotSize: 6.0,
+  dotSize: 7.0,
   trailWidth: 4.0,
   trailHalfLife: 5.0,
 };
@@ -108,16 +111,16 @@ const PRESETS = {
   // Preset params are fixed and hidden unless their key is listed in adjustable.
   spreading: {
     params: spreadingPreset,
-    adjustable: ["p0", "packetSigma"],
+    adjustable: ["p0", "packetAngleDeg", "packetSigma"],
   },
   ensemble: {
     params: ensemblePreset,
-    adjustable: ["p0","packetSigma","nParticles"],
+    adjustable: ["p0", "packetAngleDeg", "packetSigma", "nParticles"],
   },
   split: {
     params: splitPreset,
-    adjustable: ["p0","packetSigma","gaussianSeparation" ],
-   
+    adjustable: ["p0", "packetAngleDeg", "packetSigma", "gaussianSeparation"],
+
   },
 };
 
@@ -319,10 +322,11 @@ addSlider("dt", "dt", 0.01, 0.04, 0.01);
 
 addSectionHeader("Physical Parameters");
 addSlider("p0", "momentum p", 0., 4.0, 0.1, () => resetAll());
+addSlider("packetAngleDeg", "direction (deg)", -90.0, 90.0, 1.0, () => resetAll());
 
 //addSlider("packetX", "packet start x", 0.05, 0.95, 0.01, () => resetAll());
 //addSlider("packetY", "packet start y", 0.05, 0.95, 0.01, () => resetAll());
-addSlider("packetSigma", "packet sigma", 18.0, 80.0, 1.0, () => resetAll());
+addSlider("packetSigma", "packet sigma", 8.0, 80.0, 1.0, () => resetAll());
 addToggleInt("doubleGaussian", "split gaussian", () => resetAll());
 addSlider("gaussianSeparation", "split separation", 0.0, 300.0, 10.0, () => resetAll());
 addSlider("spinS", "spin s", 0.0, 2.0, 0.5);
@@ -426,11 +430,12 @@ if (!isControlFixed("boundaryMode")) {
 
 addSectionHeader("Visual Parameters");
 addToggleInt("showPhase", "show phase");
-addLinkedToggleInt(["showParticles", "showTrail"], "show particles");
+addToggleInt("showParticles", "show particles");
 addSlider("nParticles", "particle count", 1, 3000, 1, () => resetAll());
 addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
 addSlider("dotGain", "particle brightness", 0.1, 3.0, 0.1);
 
+addToggleInt("showTrail", "draw trails");
 addSlider("trailHalfLife", "trail half-life", 1.0, 100.0, 1.0);
 //addSlider("trailVisGain", "trail gain", 0.1, 1.0, 0.1);
 //addSlider("trailVisGamma", "trail gamma", 0.4, 2.0, 0.05);
@@ -442,14 +447,30 @@ addSlider("trailWidth", "trail width (px)", 3, 10.0, 1);
 removeEmptySectionHeaders();
 
 document.getElementById("reset").onclick = () => resetAll();
-document.getElementById("pause").onclick = (e) => {
-  paused = !paused;
-  e.target.textContent = paused ? "Resume" : "Pause";
-};
+const pauseButton = document.getElementById("pause");
+
+function setPaused(nextPaused) {
+  paused = Boolean(nextPaused);
+  pauseButton.textContent = paused ? "Resume" : "Pause";
+}
+
+function togglePause() {
+  setPaused(!paused);
+}
+
+pauseButton.onclick = togglePause;
 window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "r") resetAll();
-  if (e.key === " ") paused = !paused;
+  if (e.key === " ") togglePause();
 });
+
+if (isEmbedded) {
+  window.addEventListener("message", (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (event.data?.type !== "qontic:set-paused" || !event.data.paused) return;
+    setPaused(true);
+  });
+}
 
 const uiBody = document.getElementById("uibody");
 const minBtn = document.getElementById("minui");
@@ -588,6 +609,7 @@ function buildPrograms() {
     uHBAR: u(progWaveInit, "uHBAR"),
     uMass: u(progWaveInit, "uMass"),
     uP0: u(progWaveInit, "uP0"),
+    uPacketDir: u(progWaveInit, "uPacketDir"),
     uDT: u(progWaveInit, "uDT"),
     uPacketPosFrac: u(progWaveInit, "uPacketPosFrac"),
     uPacketSigmaPx: u(progWaveInit, "uPacketSigmaPx"),
@@ -631,7 +653,6 @@ function buildPrograms() {
     uPointSize: u(progPartView, "uPointSize"),
     uDotSigma: u(progPartView, "uDotSigma"),
     uDotGain: u(progPartView, "uDotGain"),
-    uPaletteId: u(progPartView, "uPaletteId"),
   };
 
   U.partStamp = {
@@ -653,7 +674,6 @@ function buildPrograms() {
     uDensity: u(progDensityRender, "uDensity"),
     uGain: u(progDensityRender, "uGain"),
     uGamma: u(progDensityRender, "uGamma"),
-    uPaletteId: u(progDensityRender, "uPaletteId"),
     uBlendMode: u(progDensityRender, "uBlendMode"),
   };
 }
@@ -680,6 +700,8 @@ function setWaveInitUniforms() {
   gl.uniform1f(U.waveInit.uHBAR, params.hbar);
   gl.uniform1f(U.waveInit.uMass, params.mass);
   gl.uniform1f(U.waveInit.uP0, params.p0);
+  const packetAngleRad = params.packetAngleDeg * Math.PI / 180.0;
+  gl.uniform2f(U.waveInit.uPacketDir, Math.cos(packetAngleRad), Math.sin(packetAngleRad));
   gl.uniform1f(U.waveInit.uDT, params.dt);
 
   gl.uniform2f(U.waveInit.uPacketPosFrac, params.packetX, params.packetY);
@@ -759,19 +781,19 @@ function rebuildParticles() {
 
   for (let i = 0; i < n; i++) {
     let x, y;
-    
+
     if (params.doubleGaussian) {
       // Randomly choose which gaussian to sample from (50/50)
       const useFirst = Math.random() < 0.5;
       const sep = params.gaussianSeparation / 2; // offset amount
-      
+
       x = x0 + randn() * sigma1D;
       y = y0 + randn() * sigma1D + (useFirst ? -sep : sep);
     } else {
       x = x0 + randn() * sigma1D;
       y = y0 + randn() * sigma1D;
     }
-    
+
     x = Math.max(0, Math.min(simW - 1, x));
     y = Math.max(0, Math.min(simH - 1, y));
     data[i * 4 + 0] = x;
@@ -949,7 +971,7 @@ function render() {
 
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-  if (params.showParticles) {
+  if (params.showTrail) {
     gl.enable(gl.BLEND);
 
     if (params.trailBlendMode === 0) {
@@ -973,7 +995,6 @@ function render() {
 
     gl.uniform1f(U.densityRender.uGain, params.trailVisGain);
     gl.uniform1f(U.densityRender.uGamma, params.trailVisGamma);
-    gl.uniform1i(U.densityRender.uPaletteId, params.paletteId | 0);
     gl.uniform1i(U.densityRender.uBlendMode, params.trailBlendMode | 0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -983,7 +1004,7 @@ function render() {
 
   if (params.showParticles) {
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     gl.useProgram(progPartView);
     gl.bindVertexArray(vaoParticles);
@@ -992,7 +1013,6 @@ function render() {
     gl.uniform1f(U.partView.uPointSize, params.dotSize);
     gl.uniform1f(U.partView.uDotSigma, params.dotSigma);
     gl.uniform1f(U.partView.uDotGain, params.dotGain);
-    gl.uniform1i(U.partView.uPaletteId, params.paletteId | 0);
 
     gl.drawArrays(gl.POINTS, 0, Math.floor(params.nParticles));
 

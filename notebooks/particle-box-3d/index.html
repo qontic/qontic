@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Eigenstates in 3D Box - Q-Ontic Lab</title>
   <meta name="description" content="An educational notebook about particle-in-a-box eigenstates, Pauli spin current, and Bohmian trajectories in three dimensions." />
+  <script src="../back-link.js"></script>
   <script>
     window.MathJax = {
       tex: {
@@ -295,11 +296,11 @@
         Let us start with the ground state.
       </p>
       <p>
-        The state \(n_x=n_y=n_z=1\) has no interior nodal planes. 
+        The state \(n_x=n_y=n_z=1\) has no interior nodal planes.
         The phase of the wave functionis spatially constant, and therefore the scalar guidance current vanishes,
-        making bohmian particles seem to stand still. 
+        making bohmian particles seem to stand still.
         However, if we take the spin into account, there will be an extra spin current in the guidance equation,
-        which can produce nontrivial motion even in the ground state. 
+        which can produce nontrivial motion even in the ground state.
         Switch the spin current on and off in the following demo.
       </p>
       <div class="applet-shell is-inactive">
@@ -318,8 +319,8 @@
       <p>
         Higher quantum numbers introduce nodal cells. The phase is still spatially constant within each nodal cell.
         Therefore the phase dependent guidance current vanishes everywhere, and the Bohmian particles again appear to be at rest.
-        But as before, the density gradients will induce spin current which has the effect of driving the bohmian particles around 
-        density level curves. Each particle remains confined to a single nodal cell, 
+        But as before, the density gradients will induce spin current which has the effect of driving the bohmian particles around
+        density level curves. Each particle remains confined to a single nodal cell,
         as the spin current can only circulate them along the density curves.
       </p>
       <div class="applet-shell is-inactive">
@@ -330,17 +331,17 @@
           <button class="applet-play" type="button" aria-label="Play excited-state simulation">Play</button>
         </div>
       </div>
-      <p class="caption">Spin current which has the effect of driving the bohmian particles around 
+      <p class="caption">Spin current which has the effect of driving the bohmian particles around
         density level curves.</p>
     </section>
 
     <section class="applet-section" aria-labelledby="magnetic-field">
       <h2 id="magnetic-field">Magnetic field</h2>
       <p>
-        We can also apply a uniform magnetic field. The field is indicated by red lines. 
+        We can also apply a uniform magnetic field. The field is indicated by red lines.
         As is well known, a magnetic field is represented through a vector potential,
-         which enters the kinetic term of the Pauli equation through minimal coupling. 
-         The magnetic field also couples directly to the particle’s spin. 
+         which enters the kinetic term of the Pauli equation through minimal coupling.
+         The magnetic field also couples directly to the particle’s spin.
         In Bohmian mechanics, the vector potential contributes an additional term to the particle’s guidance law.
         Visually it can create a visual precession of the spin orbits.
       </p>
@@ -441,6 +442,17 @@
   </footer>
 
   <script>
+    const appletVisibilityObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) return;
+        const frame = entry.target.querySelector("iframe[src]");
+        frame?.contentWindow?.postMessage(
+          { type: "qontic:set-paused", paused: true },
+          window.location.origin
+        );
+      });
+    });
+
     document.querySelectorAll(".applet-shell.is-inactive").forEach((shell) => {
       const frame = shell.querySelector("iframe[data-src]");
       const playButton = shell.querySelector(".applet-play");
@@ -448,6 +460,7 @@
         if (!frame.hasAttribute("src")) frame.setAttribute("src", frame.dataset.src);
         shell.classList.remove("is-inactive");
         playButton.remove();
+        appletVisibilityObserver.observe(shell);
       });
     });
   </script>

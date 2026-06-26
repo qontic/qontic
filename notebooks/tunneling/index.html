@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bohmian Tunneling - Q-Ontic Lab</title>
+  <meta name="description" content="An interactive notebook about quantum tunneling, reflected and transmitted wave packets, and Bohmian trajectories." />
+  <script src="../back-link.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+      },
+      svg: { fontCache: "global" }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    :root {
+      --blue-900: #003366;
+      --blue-800: #003f7f;
+      --blue-700: #0055aa;
+      --ink: #253142;
+      --muted: #5d6b7a;
+      --paper: #f9f9f9;
+      --surface: #fff;
+      --line: #dbe4f0;
+      --cyan: #007f9f;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 16px/1.65 "Segoe UI", system-ui, sans-serif;
+    }
+    a { color: var(--blue-700); }
+    a:hover { color: var(--blue-800); }
+
+    .site-banner {
+      padding: 1rem;
+      background: var(--blue-900);
+      color: #fff;
+      text-align: center;
+    }
+    .site-banner h1 {
+      margin: 0;
+      color: #fff;
+      font-size: 2.25rem;
+      line-height: 1.1;
+    }
+    .site-banner p {
+      margin: 0.45rem 0 0;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    main,
+    .site-footer-inner {
+      width: min(1120px, calc(100% - 2rem));
+      margin: 0 auto;
+    }
+    main { padding-bottom: 3.5rem; }
+    section {
+      margin-bottom: 2.8rem;
+      scroll-margin-top: 24px;
+    }
+
+    .page-nav {
+      display: flex;
+      padding-top: 1rem;
+    }
+    .nav-button,
+    .primary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0.55rem 0.9rem;
+      border-radius: 4px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-decoration: none;
+    }
+    .nav-button {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--blue-900);
+      box-shadow: 0 1px 3px rgba(0, 0, 51, 0.06);
+    }
+    .nav-button:hover {
+      border-color: #bdd0e6;
+      background: #f1f6fc;
+    }
+    .primary-button {
+      border: 1px solid var(--blue-700);
+      background: var(--blue-700);
+      color: #fff;
+    }
+    .primary-button:hover {
+      border-color: var(--blue-800);
+      background: var(--blue-800);
+      color: #fff;
+    }
+
+    .page-hero {
+      margin-bottom: 0.8rem;
+      padding: 1.4rem 0 0.7rem;
+    }
+    .kicker {
+      margin: 0 0 0.45rem;
+      color: var(--blue-700);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+    .page-hero h1 {
+      margin: 0;
+      color: var(--blue-900);
+      font-size: 3rem;
+      line-height: 1.12;
+    }
+    .page-hero p:last-child {
+      max-width: 800px;
+      margin: 0.9rem 0 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+      gap: 2rem;
+      align-items: start;
+    }
+    .header-image {
+      margin: 0;
+      overflow: hidden;
+      border: 1px solid #11294d;
+      border-radius: 8px;
+      background: #000;
+      box-shadow: 0 8px 24px rgba(0, 0, 45, 0.14);
+    }
+    .header-image img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1100 / 650;
+      object-fit: cover;
+    }
+    .note-box {
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--cyan);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .note-box h2 {
+      margin: 0 0 0.55rem;
+      color: var(--blue-900);
+      font-size: 1.1rem;
+    }
+    .note-list {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+    .note-list li { margin: 0.45rem 0; }
+
+    h2, h3 {
+      color: var(--blue-900);
+      line-height: 1.25;
+    }
+    h2 {
+      margin: 0 0 0.8rem;
+      font-size: 1.75rem;
+    }
+    .applet-section > p { max-width: 920px; }
+    .applet-shell {
+      overflow: hidden;
+      border: 1px solid #1d3558;
+      border-radius: 8px;
+      background: #000;
+      box-shadow: 0 9px 26px rgba(0, 0, 45, 0.16);
+    }
+    .applet-toolbar {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #28476e;
+      background: #172439;
+      color: #fff;
+      font-weight: 650;
+    }
+    .applet-stage {
+      position: relative;
+      height: 650px;
+      background: #000 center / cover no-repeat;
+    }
+    .applet-frame {
+      display: block;
+      width: 100%;
+      height: 650px;
+      border: 0;
+      background: #000;
+    }
+    .applet-shell.is-inactive .applet-frame { visibility: hidden; }
+    .applet-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 0;
+      background: rgba(0, 0, 0, 0.22);
+      color: rgba(255, 255, 255, 0.88);
+      font: 700 2rem/1 "Segoe UI", system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .applet-play:hover,
+    .applet-play:focus-visible {
+      background: rgba(0, 0, 0, 0.34);
+      color: #fff;
+    }
+    .caption {
+      margin: 0.7rem 0 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .theory-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.2rem 2rem;
+    }
+    .theory-grid > div { min-width: 0; }
+    .equation {
+      overflow-x: auto;
+      margin: 0.8rem 0;
+      padding: 0.8rem 1rem;
+      border-left: 3px solid var(--cyan);
+      background: #eef5fa;
+    }
+    .next-step {
+      padding: 1.4rem 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .site-footer {
+      background: var(--blue-900);
+      color: #fff;
+    }
+    .site-footer-inner { padding: 1.5rem 0; }
+
+    @media (max-width: 760px) {
+      .page-hero h1 { font-size: 2.25rem; }
+      .intro-grid,
+      .theory-grid { grid-template-columns: 1fr; }
+      .applet-stage,
+      .applet-frame { height: 560px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-banner">
+    <h1>Q-Ontic Lab</h1>
+    <p>Interactive quantum simulations for representational comparison</p>
+  </header>
+
+  <main>
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="nav-button" href="../../index.html">Back to Main Page</a>
+    </nav>
+
+    <section class="page-hero" aria-labelledby="page-title">
+      <p class="kicker">Educational notebook</p>
+      <h1 id="page-title">Bohmian Tunneling</h1>
+      <p>Follow a wave packet and its Bohmian trajectories as they meet a finite potential barrier.</p>
+    </section>
+
+    <section class="intro-grid" aria-label="Notebook preview and section navigation">
+      <figure class="header-image">
+        <img src="transmissionPoster.png" alt="A quantum wave packet and Bohmian trajectories interacting with a potential barrier">
+      </figure>
+      <aside class="note-box" aria-labelledby="sections-nav">
+        <h2 id="sections-nav">Sections</h2>
+        <ul class="note-list">
+          <li><a href="#transmission">Above-barrier transmission</a></li>
+          <li><a href="#tunneling">Quantum tunneling</a></li>
+          <li><a href="#ensemble">An ensemble of outcomes</a></li>
+          <li><a href="#theory">Theory and equations</a></li>
+          <li><a href="#full-applet">Full applet</a></li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="applet-section" aria-labelledby="transmission">
+      <h2 id="transmission">Above-barrier transmission</h2>
+      <p>
+        Begin with an incoming packet whose mean kinetic energy exceeds the barrier height.
+        The barrier still distorts the wave and can produce partial reflection, but transmission
+        is not classically forbidden.
+      </p>
+      <p>
+        Note, how some reflected particles never even "touch the wall".
+        The reflecting component of the wave pushes them back before they "get in contact".
+      </p>
+      <p>
+        Some particles almost seem to get "trapped inside the wall" for a time.
+        This happens since there is wave reflection also when "stepping from higher potential to lower one",
+        which is a bit counterintuitive classically.
+      </p>
+      <p>
+         Adjust the momentum and barrier height to move across the
+        boundary \(E=V_0\).
+      </p>
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Compare kinetic energy with barrier height</div>
+        <div class="applet-stage" style="background-image:url('transmissionPoster.png')">
+          <iframe class="applet-frame" title="Above-barrier Bohmian transmission"
+            data-src="full-applet.html?embed=1&amp;preset=transmission" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play above-barrier transmission simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">Incoming packet whose mean kinetic energy exceeds the potential barrier.</p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="tunneling">
+      <h2 id="tunneling">Quantum tunneling</h2>
+      <p>
+        When \(E&lt;V_0\), a classical particle cannot enter the barrier region.
+        Classically it cannot pass trough, no matter how thin the barrier is.
+
+      </p>
+      <p>
+        The quantum wave instead penetrates the barrier, although the amplitude decays exponentially.
+        Therefore, for a thin enough barrier, a substantial portion of the wave can pass trough!
+        Change the barrier height and thickness to see how strongly they suppress transmission.
+      </p>
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">A classically forbidden barrier</div>
+        <div class="applet-stage" style="background-image:url('tunnelingPoster.png')">
+          <iframe class="applet-frame" title="Bohmian quantum tunneling through a finite barrier"
+            data-src="full-applet.html?embed=1&amp;preset=tunneling" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play quantum tunneling simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">The red barrier indicates that its height exceeds the packet's mean kinetic energy.</p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="ensemble">
+      <h2 id="ensemble">A larger ensemble</h2>
+      <p>
+        Let us follow a larger ensemble to observe the equivariance in action again.
+        The inital position are sampled from \(|\psi|^2\).
+         displays the reflected and transmitted probabilities.
+      </p>
+      <p>
+        As usual, the particle density follows the squared modulus of the wave, testifying to the empirical equivalence of
+        the standard interpretation and the bohmian interpretation.
+      </p>
+      <p>
+        Play with
+      </p>
+      <div class="applet-shell is-inactive">
+        <div class="applet-toolbar">Reflected and transmitted particle populations</div>
+        <div class="applet-stage" style="background-image:url('ensemblePoster.png')">
+          <iframe class="applet-frame" title="Bohmian tunneling ensemble"
+            data-src="full-applet.html?embed=1&amp;preset=ensemble" allow="fullscreen"></iframe>
+          <button class="applet-play" type="button" aria-label="Play tunneling ensemble simulation">Play</button>
+        </div>
+      </div>
+      <p class="caption">Equivariance of the two distributions become evident with a larger sample.</p>
+    </section>
+
+    <section id="theory" aria-labelledby="theory-title">
+      <h2 id="theory-title">Theory and equations</h2>
+      <div class="theory-grid">
+        <div>
+          <h3>Wave evolution</h3>
+          <p>The packet evolves according to the time-dependent Schrödinger equation:</p>
+          <div class="equation">
+            \[
+              i\hbar\frac{\partial\psi}{\partial t}
+              =
+              \left[
+                -\frac{\hbar^2}{2m}\nabla^2+V(\mathbf x)
+              \right]\psi .
+            \]
+          </div>
+          <p>The finite barrier occupies a region of width \(a\) with potential \(V_0\).</p>
+        </div>
+        <div>
+          <h3>Evanescent penetration</h3>
+          <p>For a stationary component with \(E&lt;V_0\), the wave number inside the barrier is imaginary:</p>
+          <div class="equation">
+            \[
+              \kappa=\frac{\sqrt{2m(V_0-E)}}{\hbar},
+              \qquad
+              \psi_{\mathrm{barrier}}\sim e^{-\kappa y}.
+            \]
+          </div>
+          <p>For a sufficiently wide barrier, the transmission probability scales approximately as \(T\propto e^{-2\kappa a}\).</p>
+        </div>
+        <div>
+          <h3>Probability balance</h3>
+          <div class="equation">
+            \[
+              \rho=|\psi|^2,
+              \qquad
+              R+T=1 .
+            \]
+          </div>
+          <p>The reflected and transmitted packets are parts of one continuously evolving wave function.</p>
+        </div>
+        <div>
+          <h3>Bohmian guidance</h3>
+          <div class="equation">
+            \[
+              \dot{\mathbf x}
+              =
+              \frac{\mathbf j}{\rho},
+              \qquad
+              \mathbf j
+              =
+              \frac{\hbar}{m}\operatorname{Im}
+              \left(\psi^*\nabla\psi\right).
+            \]
+          </div>
+          <p>Each particle follows one continuous path into either the reflected or transmitted branch.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="next-step" aria-labelledby="full-applet">
+      <h2 id="full-applet">Full Applet</h2>
+      <p>Open the original-scale simulation with its complete controls in a separate browser tab.</p>
+      <a class="primary-button" href="full-applet.html" target="_blank" rel="noopener">Open Full Applet</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      An interactive Q-Ontic Lab notebook by Anssi Zander.
+    </div>
+  </footer>
+
+  <script>
+    const appletVisibilityObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) return;
+        const frame = entry.target.querySelector("iframe[src]");
+        frame?.contentWindow?.postMessage(
+          { type: "qontic:set-paused", paused: true },
+          window.location.origin
+        );
+      });
+    });
+
+    document.querySelectorAll(".applet-shell.is-inactive").forEach((shell) => {
+      const frame = shell.querySelector("iframe[data-src]");
+      const playButton = shell.querySelector(".applet-play");
+      playButton.addEventListener("click", () => {
+        if (!frame.hasAttribute("src")) frame.setAttribute("src", frame.dataset.src);
+        shell.classList.remove("is-inactive");
+        playButton.remove();
+        appletVisibilityObserver.observe(shell);
+      });
+    });
+  </script>
+</body>
+</html>

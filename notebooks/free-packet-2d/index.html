@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bohmian Free Particle - Q-Ontic Lab</title>
   <meta name="description" content="An educational notebook about free Gaussian wave packets and Bohmian trajectories, with interactive WebGL2 demonstrations." />
+  <script src="../back-link.js"></script>
   <script>
     window.MathJax = {
       tex: {
@@ -210,6 +211,116 @@
       margin: 0.45rem 0;
     }
 
+    .video-section {
+      margin-top: 2.4rem;
+    }
+
+    .video-section > p {
+      max-width: 860px;
+      color: var(--muted);
+    }
+
+    .video-section .video-card,
+    .applet-section .video-card {
+      margin: 1.4rem 0 1.2rem;
+    }
+
+    .video-card {
+      margin: 0;
+      overflow: hidden;
+      border: 1px solid #11294d;
+      border-radius: 8px;
+      background: #07101f;
+      box-shadow: 0 8px 24px rgba(0, 0, 45, 0.18);
+    }
+
+    .video-window {
+      position: relative;
+      background: #050b15;
+    }
+
+    .comparison-video {
+      display: block;
+      width: 100%;
+      height: 650px;
+      object-fit: contain;
+      cursor: pointer;
+    }
+
+    .comparison-video.is-double-height {
+      height: 1300px;
+    }
+
+    .comparison-video:focus-visible {
+      outline: 3px solid var(--cyan);
+      outline-offset: -3px;
+    }
+
+    .video-controls {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      display: grid;
+      grid-template-columns: auto auto minmax(6rem, 1fr);
+      gap: 0.45rem 0.65rem;
+      align-items: center;
+      padding: 0.6rem 0.75rem 0.7rem;
+      background: linear-gradient(180deg, rgba(5, 11, 21, 0.25), rgba(5, 11, 21, 0.95));
+      color: #f8fbff;
+    }
+
+    .video-seek {
+      grid-column: 1 / -1;
+      width: 100%;
+      accent-color: #55c7e7;
+      cursor: pointer;
+    }
+
+    .video-control-button {
+      min-width: 74px;
+      min-height: 34px;
+      padding: 0.35rem 0.6rem;
+      border: 1px solid rgba(217, 230, 248, 0.7);
+      border-radius: 4px;
+      background: rgba(6, 18, 37, 0.78);
+      color: #f8fbff;
+      cursor: pointer;
+      font: 700 0.86rem/1 "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .video-control-button:hover,
+    .video-control-button:focus-visible {
+      border-color: #fff;
+      background: rgba(0, 85, 170, 0.86);
+      outline: none;
+    }
+
+    .video-time {
+      justify-self: end;
+      color: #d9e6f8;
+      font-size: 0.86rem;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .video-card figcaption {
+      display: grid;
+      gap: 0.2rem;
+      padding: 0.75rem 0.85rem 0.85rem;
+      border-top: 1px solid rgba(125, 174, 255, 0.22);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .video-card strong {
+      color: var(--blue-900);
+      font-size: 0.98rem;
+    }
+
     h2 {
       margin: 0 0 0.7rem;
       color: var(--blue-900);
@@ -362,6 +473,14 @@
       .applet-frame {
         height: 560px;
       }
+
+      .comparison-video {
+        height: 560px;
+      }
+
+      .comparison-video.is-double-height {
+        height: 1120px;
+      }
     }
 
     @media (max-width: 520px) {
@@ -397,6 +516,31 @@
       .applet-frame {
         height: 620px;
       }
+
+      .comparison-video {
+        height: 620px;
+      }
+
+      .comparison-video.is-double-height {
+        height: 1240px;
+      }
+
+      .video-controls {
+        grid-template-columns: auto auto minmax(4.5rem, 1fr);
+        gap: 0.4rem 0.5rem;
+        padding: 0.5rem 0.55rem 0.6rem;
+      }
+
+      .video-control-button {
+        min-width: 62px;
+        min-height: 32px;
+        padding: 0.32rem 0.45rem;
+        font-size: 0.78rem;
+      }
+
+      .video-time {
+        font-size: 0.78rem;
+      }
     }
   </style>
 </head>
@@ -425,20 +569,164 @@
       <aside class="note-box" aria-labelledby="sections-nav">
         <h2 id="sections-nav">Sections</h2>
         <ul class="note-list">
-          <li><a href="#spreading-applet">Single Particle and its Pilot Wave</a></li>
+          <li><a href="#comparison-videos">Introduction</a></li>
+          <li><a href="#spreading-applet">The Bohmian Approach to the Free Particle</a></li>
           <li><a href="#ensemble-applet">Trajectory ensemble</a></li>
-          <li><a href="#split-applet">Non-symmetric wave packet</a></li>
+          <li><a href="#split-applet">Asymmetric wave packet</a></li>
           <li><a href="#theory">Theory &amp; Equations</a></li>
         </ul>
       </aside>
     </section>
 
-    <section class="applet-section" aria-labelledby="spreading-applet">
-      <h2 id="spreading-applet">Wave-packet spreading</h2>
+    <section id="comparison-videos" class="video-section" aria-labelledby="comparison-videos-title">
+      <h2 id="comparison-videos-title">Intro: From classical to Quantum to Pilot Wave</h2>
       <p>
-        A free Gaussian wave packet provides a simple setting for exploring the relationship between density,
-         phase, and Bohmian trajectories. 
+        Newton’s 1st law tells us that a particle in motion will remain in motion
+         at a constant speed and in a straight line if there are no external agents acting on it.
+      </p>
+
+      <figure class="video-card">
+        <div class="video-window">
+          <video
+            class="comparison-video"
+              src="videos/classicalParticle0000-0517.mp4"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              tabindex="0"
+              aria-label="Classical particle animation"
+          ></video>
+        </div>
+        <figcaption>
+          <strong>Classical particle</strong>
+          <span>Classical free particle in a box.</span>
+        </figcaption>
+      </figure>
+        <p>
+        In standard quantum mechanics the point particle is replaced by a wave. The evolution of the wave is described by
+        Schrödinger's equation. Schrödinger’s equation does not immediately describe particles following trajectories.
+        It’s a wave equation.  A free particle is therefore represented by the wave solution.
+        The colors here represent different values of the phase.
+        </p>
+
+
+      <figure class="video-card">
+        <div class="video-window">
+          <video
+            class="comparison-video"
+              src="videos/quantumWave0525-1134.mp4"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              tabindex="0"
+              aria-label="Standard quantum wave animation"
+          ></video>
+        </div>
+        <figcaption>
+          <strong>Standard quantum wave</strong>
+          <span>The state is represented by the spreading wave packet density and phase.</span>
+        </figcaption>
+      </figure>
+
+
+        <p>
+        The wave is not very localized and so intuitively do not represent a particle,
+        whose main property is having a localized position after all.
+        </p>
+        <p>
+        So what exactly does this tell us about the particle that we eventually detect?
+        Well, the packet’s amplitude—or more precisely the modulus square of the amplitude—at a given location
+        only describes the likelihood of detecting a particle if a detector were placed at that location.
+        For example, in this picture a particle is most likely to be found where the packet is red and has essentially
+        zero chance of being found in locations that are shaded black.  This is the Born interpretation of the wave.
+        </p>
+        <p>
+        If the packet starts off narrow, a particle would be initially found somewhere fairly limited.
+         The spreading packet also tells us that later it would be found in a much wider region.
+          But why is this?  Why wouldn’t the particle just move forward like Newton’s Laws predict?
+           Why would a lone particle’s choice to veer off depend on the size of the region of space that you initially chose it in?
+            For that matter, why is it veering off at all?
+        It’s “free” isn’t it?
+        </p>
+
+        <p>
+        Clearly something more interesting and subtle is going on here.
+        Sadly, standard quantum mechanics gives little insight.
+        </p>
+        <p>
+        You see, as we have said, standard quantum mechanics only tells us where we are likely to find a particle
+        if we make a measurement.  It makes no predictions about where an individual particle actually is,
+        how it got there, why it moves the way it does, or even if there is an actual particle to be spoken of!
+        Some may even go a bit further and tell you that there is no particle unless and until it is measured.
+        The fact is, the standard approach is very useful for predicting the statistics of measuring an ensemble
+        but it is not very useful for understanding individual particle behavior or the dynamics of the physical process
+         that is unfolding.
+        </p>
+    </section>
+
+    <section class="applet-section" aria-labelledby="spreading-applet">
+      <h2 id="spreading-applet">The Bohmian Approach to the Free Particle</h2>
+
+      <p>
+      In the Bohmian view a quantum free particle is still described by a wave packet according to Schrodinger’s equation.
+
         Observe how the Bohmian particle always moves such that its velocity is orthogonal to the phase gradient.
+        Basically the particle is surfing the Schrödinger's wave!
+      </p>
+
+      <figure class="video-card">
+        <div class="video-window">
+          <video
+            class="comparison-video"
+              src="videos/bohmianQuantum1146-2199.mp4"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              tabindex="0"
+              aria-label="Bohmian quantum packet animation"
+          ></video>
+        </div>
+        <figcaption>
+          <strong>Bohmian quantum packet</strong>
+          <span>The particle has a definite position while the wave supplies its guidance field.</span>
+        </figcaption>
+      </figure>
+
+        <p>
+        Bohmian mechanics allows a very nice gradual transition into classical physics.
+        By increasing the scale, the trajectory starts to resemble the Newtonian free motion more and more.
+      </p>
+
+      <figure class="video-card">
+        <div class="video-window">
+          <video
+            class="comparison-video is-double-height"
+              src="videos/bohmianSemiClassical1146-2087.mp4"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              tabindex="0"
+              aria-label="Bohmian semi-classical packet animation"
+          ></video>
+        </div>
+        <figcaption>
+          <strong>Semi-classical Bohmian packet</strong>
+          <span>In larger scales the bohmian trajectory turns increasingly similar to a classical path.</span>
+        </figcaption>
+      </figure>
+
+      <p>
+        Playing with Bohmian particle and its wave your self with the following demo.
+        Try narrowing down the inital wave packet and see how it affects the evolution.
+        That is Heisenberg's uncertainty principle in action.
       </p>
 
       <div class="applet-shell is-inactive">
@@ -465,6 +753,33 @@
         We can visualize many trajectories together to see how they collectively represent the evolving quantum flow.
       </p>
 
+      <p>
+      With Bohmian mechanics, we can further visualize the individual particle dynamics by tracking
+      an ensemble of possible initial positions and the trajectory bundle that results.
+      Seeing them animated will help you to develop more intuition and understanding of the dynamics that are inherent
+      in the equations of quantum mechanics, even if you don’t do the calculations yourself yet.
+      For instance, from this trajectory picture we can see a few new things:
+      </p>
+
+      <ol>
+        <li>Particles are guided by a flowing and propagating wave, just like streamlines in a fluid.</li>
+        <li>Particles follow paths that are perpendicular to the wavefronts, just like rays in optics.</li>
+        <li>Particles near the center of the packet tend to move in straight lines.</li>
+        <li>Particles near the edges tend to curve away from the packet center despite being “free.”</li>
+        <li>Particle speeds are correlated with initial position in the packet.</li>
+      </ol>
+
+      <p>
+      Even more than this, the trajectories, energies,
+      and velocities can all now be computed and modeled continuously throughout the process giving us
+      an unfolding picture of what the particles could be doing as they navigate through the quantum landscape.
+      Rather than just saying that Newton’s laws are violated, we can see how…and why!
+      </p>
+
+
+
+
+
       <div class="applet-shell is-inactive">
         <div class="applet-toolbar">Many Bohmian trajectories</div>
         <div class="applet-stage has-poster" style="background-image: url('manyParticleImage.jpg');">
@@ -480,19 +795,29 @@
       <p class="caption">
         The ensemble expands with the packet while individual paths display the local quantum flow.
       </p>
+
+      <p>
+      This may seem all well and good for a free particle, but isn’t that kind of boring?
+      Well, we can apply these same tools and techniques to help you develop more intuition and understanding
+      of even more interesting and complicated systems, when the free particle becomes “less free” by colliding with a barrier,
+      a slit, another particle, a magnetic field, or even if we include spin. At every stage using this
+      Bohmian picture to supplement the standard one covered in most classes will help you develop a good sense for
+      what so many may have told you is impossible, you can come to better understand how the quantum world behaves.
+      </p>
     </section>
 
     <section class="applet-section" aria-labelledby="split-applet">
-      <h2 id="split-applet">A non-symmetric wave packet</h2>
+      <h2 id="split-applet">Asymmetric wave packet</h2>
       <p>
-        The initial distribution does not have to be a single Gaussian. 
-        By starting with two separated peaks, we can see how the paths of the Bohmian particles 
-        become much more complex.
+        The initial distribution does not have to be symmetric like a single Gaussian.
+        Let us end this lesson with a quick look at bohmian evolution under a double peaked initial distribution.
+        This is still a free particle (apart from the walls), but an asymmetric wave will "drive" the Bohmian particles
+        along more complex trajectories, making them quickly depart from Newtonian vision of inertial movement.
       </p>
 
       <div class="applet-shell is-inactive">
         <div class="applet-toolbar">Two-component Gaussian packet</div>
-        <div class="applet-stage">
+        <div class="applet-stage has-poster" style="background-image: url('doublePeakImage.jpg');">
           <iframe
             class="applet-frame"
             title="Split Gaussian free-packet demonstration"
@@ -609,6 +934,166 @@
   </footer>
 
   <script>
+    const comparisonVideos = Array.from(document.querySelectorAll(".comparison-video"));
+
+    const formatVideoTime = (seconds) => {
+      if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, "0");
+      return `${minutes}:${remainingSeconds}`;
+    };
+
+    const updateComparisonVideoControls = (video) => {
+      const controls = video.qonticControls;
+      if (!controls) return;
+
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      const currentTime = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+
+      if (duration > 0 && video.dataset.seeking !== "true") {
+        controls.seek.value = Math.round((currentTime / duration) * Number(controls.seek.max));
+      } else if (duration === 0) {
+        controls.seek.value = 0;
+      }
+
+      controls.seek.disabled = duration === 0;
+      controls.toggle.textContent = video.paused ? "Continue" : "Pause";
+      controls.toggle.setAttribute("aria-label", `${video.getAttribute("aria-label") || "Video"} ${video.paused ? "continue" : "pause"}`);
+      controls.time.textContent = `${formatVideoTime(currentTime)} / ${formatVideoTime(duration)}`;
+    };
+
+    const createComparisonVideoControls = (video) => {
+      const label = video.getAttribute("aria-label") || "Video";
+      const controls = document.createElement("div");
+      controls.className = "video-controls";
+      controls.setAttribute("aria-label", `${label} controls`);
+
+      const seek = document.createElement("input");
+      seek.className = "video-seek";
+      seek.type = "range";
+      seek.min = "0";
+      seek.max = "1000";
+      seek.step = "1";
+      seek.value = "0";
+      seek.setAttribute("aria-label", `${label} timeline`);
+
+      const toggle = document.createElement("button");
+      toggle.className = "video-control-button";
+      toggle.type = "button";
+      toggle.textContent = "Pause";
+
+      const reset = document.createElement("button");
+      reset.className = "video-control-button";
+      reset.type = "button";
+      reset.textContent = "Reset";
+      reset.setAttribute("aria-label", `${label} reset`);
+
+      const time = document.createElement("output");
+      time.className = "video-time";
+      time.textContent = "0:00 / 0:00";
+
+      controls.append(seek, toggle, reset, time);
+      video.after(controls);
+      video.qonticControls = { controls, seek, toggle, reset, time };
+      updateComparisonVideoControls(video);
+    };
+
+    const playComparisonVideo = (video) => {
+      if (video.dataset.inView !== "true" || video.dataset.userPaused === "true") return;
+      const playRequest = video.play();
+      if (playRequest) playRequest.catch(() => {});
+    };
+
+    comparisonVideos.forEach((video) => {
+      video.dataset.inView = "false";
+      video.dataset.userPaused = "false";
+      video.dataset.seeking = "false";
+      createComparisonVideoControls(video);
+
+      const toggleVideo = () => {
+        if (video.paused) {
+          video.dataset.userPaused = "false";
+          playComparisonVideo(video);
+          updateComparisonVideoControls(video);
+          return;
+        }
+
+        video.dataset.userPaused = "true";
+        video.pause();
+        updateComparisonVideoControls(video);
+      };
+
+      video.addEventListener("click", toggleVideo);
+      video.addEventListener("keydown", (event) => {
+        if (event.key !== " " && event.key !== "Enter") return;
+        event.preventDefault();
+        toggleVideo();
+      });
+
+      video.qonticControls.toggle.addEventListener("click", toggleVideo);
+      video.qonticControls.reset.addEventListener("click", () => {
+        video.currentTime = 0;
+        video.dataset.userPaused = "false";
+        playComparisonVideo(video);
+        updateComparisonVideoControls(video);
+      });
+
+      video.qonticControls.seek.addEventListener("pointerdown", () => {
+        video.dataset.seeking = "true";
+      });
+
+      video.qonticControls.seek.addEventListener("pointerup", () => {
+        video.dataset.seeking = "false";
+        updateComparisonVideoControls(video);
+      });
+
+      video.qonticControls.seek.addEventListener("input", () => {
+        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+        if (duration === 0) return;
+        video.currentTime = (Number(video.qonticControls.seek.value) / Number(video.qonticControls.seek.max)) * duration;
+        updateComparisonVideoControls(video);
+      });
+
+      video.qonticControls.seek.addEventListener("change", () => {
+        video.dataset.seeking = "false";
+        updateComparisonVideoControls(video);
+      });
+
+      video.addEventListener("loadedmetadata", () => updateComparisonVideoControls(video));
+      video.addEventListener("durationchange", () => updateComparisonVideoControls(video));
+      video.addEventListener("timeupdate", () => updateComparisonVideoControls(video));
+      video.addEventListener("play", () => updateComparisonVideoControls(video));
+      video.addEventListener("pause", () => updateComparisonVideoControls(video));
+    });
+
+    const videoVisibilityObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const video = entry.target;
+        video.dataset.inView = entry.isIntersecting ? "true" : "false";
+
+        if (entry.isIntersecting) {
+          playComparisonVideo(video);
+        } else {
+          video.pause();
+        }
+      });
+    });
+
+    comparisonVideos.forEach((video) => {
+      videoVisibilityObserver.observe(video);
+    });
+
+    const appletVisibilityObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) return;
+        const frame = entry.target.querySelector("iframe[src]");
+        frame?.contentWindow?.postMessage(
+          { type: "qontic:set-paused", paused: true },
+          window.location.origin
+        );
+      });
+    });
+
     document.querySelectorAll(".applet-shell.is-inactive").forEach((shell) => {
       const frame = shell.querySelector("iframe[data-src]");
       const playButton = shell.querySelector(".applet-play");
@@ -619,6 +1104,7 @@
         }
         shell.classList.remove("is-inactive");
         playButton.remove();
+        appletVisibilityObserver.observe(shell);
       });
     });
   </script>

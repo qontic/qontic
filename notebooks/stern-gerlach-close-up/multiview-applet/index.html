@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stern-Gerlach 3D - Q-Ontic Lab</title>
+    <meta name="description" content="Interactive 3D simulation of the Stern-Gerlach experiment. A spin-½ particle travels through an inhomogeneous magnetic field and is deflected according to its spin projection along the field axis. Explore three quantum interpretations: Copenhagen (wavefunction collapse on measurement), Pilot-Wave / de Broglie-Bohm (particles follow deterministic trajectories guided by the wavefunction), and Many-Worlds / Everett (all outcomes occur simultaneously in branching parallel worlds). Live Born-rule histogram with ±σ statistical errors." />
+    <meta property="og:title" content="Stern-Gerlach 3D — Quantum Interpretations" />
+    <meta property="og:description" content="Visualise the Stern-Gerlach experiment through three interpretations: Copenhagen collapse, Bohmian pilot-wave trajectories, and Everett many-worlds branching. Adjustable spin angle θ and magnet orientation φ, live Born-rule histogram." />
+    <meta property="og:url" content="http://qonticlab.rice.edu/bm/" />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛</text></svg>" />
+    <style>
+      html, body, #root {
+        width: 100%; height: 100%;
+        overflow: hidden;
+        display: flex; flex-direction: column;
+        margin: 0; padding: 0;
+      }
+      @media (max-width: 700px) {
+        html.is-embedded #root > div > div:nth-child(2) > span:first-child {
+          display: none !important;
+        }
+        html.is-embedded #root > div > div:nth-child(3) {
+          position: relative;
+        }
+        html.is-embedded #root > div > div:nth-child(3) > div:first-child {
+          position: absolute !important;
+          inset: 0 auto 0 0;
+          z-index: 20;
+          width: min(190px, 55vw) !important;
+          min-width: 0 !important;
+          height: 100% !important;
+          box-shadow: 10px 0 22px rgba(0, 0, 20, 0.58);
+        }
+        html.is-embedded #root > div > div:nth-child(3) > .rh {
+          display: none !important;
+        }
+        html.is-embedded #root > div > div:nth-child(3) > div:last-child > div:nth-child(3) {
+          transform: scale(0.72);
+          transform-origin: top right;
+        }
+      }
+    </style>
+    <script>
+      const isEmbedded = new URLSearchParams(window.location.search).get("embed") === "1";
+      if (isEmbedded) document.documentElement.classList.add("is-embedded");
+
+      function setRangeValue(input, value) {
+        const valueSetter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value"
+        ).set;
+        valueSetter.call(input, String(value));
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
+      function configureEmbeddedControls() {
+        if (!isEmbedded) return;
+
+        const buttons = [...document.querySelectorAll("button")];
+        const viewButton = buttons.find((button) =>
+          /Collapse|Pilot Wave|Many Worlds/.test(button.textContent)
+        );
+
+        if (viewButton && !viewButton.textContent.includes("Pilot Wave")) {
+          viewButton.click();
+          return;
+        }
+
+        const viewControl = viewButton?.parentElement?.parentElement;
+        if (viewControl) viewControl.hidden = true;
+
+        const ranges = [...document.querySelectorAll('input[type="range"]')];
+        const spinControl = ranges.find((input) =>
+          input.parentElement?.textContent.trim().startsWith("Spin")
+        )?.parentElement;
+        if (spinControl) spinControl.hidden = true;
+
+        const speedInput = ranges.find((input) =>
+          input.parentElement?.textContent.trim().startsWith("Speed")
+        );
+        if (speedInput && speedInput.value !== "0.5") {
+          setRangeValue(speedInput, 0.5);
+        }
+        if (speedInput?.parentElement) speedInput.parentElement.hidden = true;
+
+        const expertButton = buttons.find(
+          (button) => button.textContent.trim().toLowerCase() === "expert"
+        );
+        if (expertButton) expertButton.hidden = true;
+      }
+
+      if (isEmbedded) {
+        new MutationObserver(configureEmbeddedControls).observe(
+          document.documentElement,
+          { childList: true, subtree: true }
+        );
+        window.addEventListener("DOMContentLoaded", configureEmbeddedControls);
+      }
+
+      window.addEventListener("message", (event) => {
+        if (!isEmbedded || event.origin !== window.location.origin) return;
+        if (event.data?.type !== "qontic:set-paused" || !event.data.paused) return;
+        const pauseButton = [...document.querySelectorAll("button")]
+          .find((button) => button.textContent.includes("Pause"));
+        pauseButton?.click();
+      });
+    </script>
+    <script type="module" crossorigin src="./assets/index-CgAyCMvm.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DRrV8hpS.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
