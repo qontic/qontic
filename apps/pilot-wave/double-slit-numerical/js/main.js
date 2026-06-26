@@ -816,25 +816,28 @@ function stepBohmian(psi, Np, Nx, Ny, Lx, Ly, Dt, absThick) {
 function initGPU() {
   try {
     gpuSim = new GPUSim();
-    useGPU = true;
     const backendEl = document.getElementById('hud-backend');
     if (gpuSim._softwareRenderer) {
       backendEl.textContent = '⚠ SW-GL';
       backendEl.title = `Software WebGL renderer detected${gpuSim._rendererName ? ': ' + gpuSim._rendererName : ''}`;
-
       const banner = document.createElement('div');
       banner.id = 'gpu-software-banner';
       banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#5a4b16;color:#fff;font:12px/1.5 monospace;padding:6px 36px 6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-      banner.textContent = '⚠ WebGL is running in software mode — performance may be slow. Enable hardware acceleration in your browser for best speed.';
+      banner.textContent = '⚠ WebGL is running in software mode — switching to the CPU fallback. Enable hardware acceleration in your browser for best speed.';
       const cls = document.createElement('span');
       cls.textContent = '✕';
       cls.style.cssText = 'position:absolute;right:10px;top:4px;cursor:pointer;font-size:14px';
       cls.onclick = () => banner.remove();
       banner.appendChild(cls);
       document.body.appendChild(banner);
-    } else {
-      backendEl.textContent = '⚡ GPU';
+
+      gpuSim = null;
+      useGPU = false;
+      return false;
     }
+
+    useGPU = true;
+    backendEl.textContent = '⚡ GPU';
     return true;
   } catch (e) {
     console.warn('GPU physics unavailable, falling back to CPU worker:', e.message);

@@ -85,6 +85,23 @@
       box-shadow:0 2px 10px rgba(0,30,80,.04);
     }
 
+    .compat-banner {
+      display:none;
+      margin:0 auto 1rem;
+      max-width:980px;
+      padding:.75rem .9rem;
+      border:1px solid #f0c36d;
+      background:#fff9e8;
+      color:#5f4600;
+      border-radius:10px;
+      font-size:.92rem;
+      line-height:1.35;
+    }
+
+    .compat-banner strong {
+      color:#3b2c00;
+    }
+
     .tabs {
       display:flex;
       gap:.45rem;
@@ -223,6 +240,11 @@
       color:var(--neutral-text);
     }
 
+    .tag-gpu {
+      background:#e8f5e9;
+      color:#1b5e20;
+    }
+
     .button {
       display:inline-block;
       white-space:nowrap;
@@ -306,6 +328,8 @@
     </p>
   </section>
 
+  <div id="compatBanner" class="compat-banner" role="status" aria-live="polite"></div>
+
   <div class="toolbar">
     <div class="tabs">
       <button class="tab active" data-tab="comparative">Comparative Apps</button>
@@ -365,6 +389,19 @@
 let catalog = [];
 const RETURN_TAB_KEY = "qontic:returnTab";
 const VALID_TABS = new Set(["comparative", "pilot-wave", "notebook", "all"]);
+const knownGpuPaths = [
+  "apps/pilot-wave/stern-gerlach-close-up/",
+  "apps/pilot-wave/hydrogen-atom/",
+  "apps/pilot-wave/double-slit-numerical/",
+  "apps/pilot-wave/tunneling/",
+  "apps/comparative/stern-gerlach/",
+  "apps/comparative/measurement/",
+  "apps/comparative/double-slit-analytical/",
+  "notebooks/double-slit-webgl/",
+  "notebooks/free-packet-2d/",
+  "notebooks/delayed-choice/",
+  "notebooks/particle-box-3d/"
+];
 
 function currentTab() {
   const hashTab = location.hash.slice(1);
@@ -382,11 +419,21 @@ function withReturnTab(url, tab) {
   return resolved.href;
 }
 
+function normalizePath(p) {
+  return String(p || "").replace(/^\//, "").toLowerCase();
+}
+
+function isGpuApp(item) {
+  const path = normalizePath(item.url);
+  return knownGpuPaths.some(prefix => path.startsWith(prefix));
+}
+
 function sectionOf(item) {
   return item.type === "notebook" ? "notebook" : item.category;
 }
 
 function tagClass(tag, item) {
+  if (tag.toLowerCase() === "gpu") return "tag-gpu";
   if (item.type === "notebook" || tag.toLowerCase() === "notebook") return "tag-notebook";
   if (item.category === "comparative") return "tag-comparative";
   if (item.category === "pilot-wave") return "tag-pilot-wave";
@@ -394,7 +441,10 @@ function tagClass(tag, item) {
 }
 
 function makeCard(item) {
-  const tags = (item.tags || []).map(t => {
+  const uiTags = [...(item.tags || [])];
+  if (isGpuApp(item) && !uiTags.some(t => String(t).toLowerCase() === "gpu")) uiTags.push("GPU");
+
+  const tags = uiTags.map(t => {
     const cls = tagClass(t, item);
     return `<span class="tag ${cls}">${t}</span>`;
   }).join("");
@@ -404,7 +454,7 @@ function makeCard(item) {
     item.type,
     item.category,
     item.description,
-    ...(item.tags || [])
+    ...uiTags
   ].join(" ").toLowerCase();
 
   return `
@@ -417,6 +467,46 @@ function makeCard(item) {
       </div>
     </article>
   `;
+}
+
+async function renderCompatibilityBanner() {
+  const banner = $("#compatBanner");
+  let hasWebGl2 = false;
+
+  try {
+    const canvas = document.createElement("canvas");
+    hasWebGl2 = !!canvas.getContext("webgl2");
+  } catch {
+    hasWebGl2 = false;
+  }
+
+  const hasWebGpu = typeof navigator !== "undefined" && !!navigator.gpu;
+  let hasWebGpuAdapter = false;
+  if (hasWebGpu) {
+    try {
+      const adapter = await navigator.gpu.requestAdapter();
+      hasWebGpuAdapter = !!adapter;
+    } catch {
+      hasWebGpuAdapter = false;
+    }
+  }
+
+  if (hasWebGpu && hasWebGl2 && hasWebGpuAdapter) {
+    banner.hide();
+    return;
+  }
+
+  const parts = [];
+  if (!hasWebGpu) parts.push("WebGPU not detected");
+  else if (!hasWebGpuAdapter) parts.push("WebGPU adapter unavailable");
+  if (!hasWebGl2) parts.push("WebGL2 not detected");
+
+  banner.html(
+    `<strong>Browser compatibility warning:</strong> ${parts.join("; ")}. ` +
+    `Some GPU-heavy apps may be slow or unavailable. If Chrome has issues, try Edge, ` +
+    `enable hardware acceleration, and check browser graphics settings.`
+  );
+  banner.show();
 }
 
 function renderCatalog() {
@@ -464,6 +554,8 @@ function applySearch() {
 }
 
 $(function() {
+  renderCompatibilityBanner();
+
   $(".tab").on("click", function() {
     showTab($(this).data("tab"));
   });

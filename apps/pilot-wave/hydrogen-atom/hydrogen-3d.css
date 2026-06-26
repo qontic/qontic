@@ -50,6 +50,24 @@ header .sub {
   font-style: italic;
 }
 
+.gpu-status-banner {
+  display: none;
+  padding: 10px 18px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.45);
+  background: linear-gradient(90deg, rgba(120, 53, 15, 0.92), rgba(80, 35, 10, 0.92));
+  color: #f8e7c4;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.gpu-status-banner.show {
+  display: block;
+}
+
+.gpu-status-banner b {
+  color: #ffd08a;
+}
+
 /* ── Layout ──────────────────────────────────────────────────── */
 .main   { display: flex; flex: 1; overflow: hidden; }
 

@@ -1,16 +1,13 @@
-const canvas = document.getElementById("c");
-if (!navigator.gpu) {
-  alert("WebGPU is not available. Use a current Chrome/Edge desktop browser with WebGPU enabled.");
-  throw new Error("WebGPU not available.");
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-// Try several adapter hints before failing. Some environments reject
-// high-performance but still provide a valid low-power/default adapter.
-let adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
-if (!adapter) adapter = await navigator.gpu.requestAdapter({ powerPreference: "low-power" });
-if (!adapter) adapter = await navigator.gpu.requestAdapter();
-if (!adapter) adapter = await navigator.gpu.requestAdapter({ forceFallbackAdapter: true });
-if (!adapter) {
+function getWebGpuContext() {
   const secure = window.isSecureContext ? "yes" : "no";
   const host = location.host;
   const ua = navigator.userAgent;
@@ -24,15 +21,72 @@ if (!adapter) {
   } catch {
     webgpuAllowed = "unknown";
   }
-  const cause = [
-    `No WebGPU adapter found (secureContext=${secure}, host=${host}).`,
-    "Likely causes: hardware acceleration disabled, remote desktop/software rendering,",
-    "browser policy/flags, or unsupported GPU/driver.",
-    `Context: inIframe=${inFrame}, permissionsPolicy.webgpu=${webgpuAllowed}.`,
-    `UA: ${ua}`
-  ].join(" ");
-  alert(cause);
-  throw new Error(cause);
+  return { secure, host, ua, inFrame, webgpuAllowed };
+}
+
+function showWebGpuTroubleshooting(message, context) {
+  const isChrome = /Chrome\//.test(context.ua) && !/Edg\//.test(context.ua);
+  const panel = document.createElement("div");
+  panel.style.cssText = [
+    "position:fixed",
+    "inset:16px",
+    "z-index:99999",
+    "max-width:900px",
+    "margin:auto",
+    "overflow:auto",
+    "padding:16px 18px",
+    "background:#0f172a",
+    "color:#e2e8f0",
+    "border:1px solid #334155",
+    "border-radius:12px",
+    "box-shadow:0 12px 36px rgba(0,0,0,0.4)",
+    "font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif"
+  ].join(";");
+
+  const browserHint = isChrome
+    ? "Chrome detected. If this works in Edge but not Chrome, reset Chrome graphics settings and test with a clean profile."
+    : "Try Microsoft Edge to verify whether this is a browser-specific GPU configuration issue.";
+
+  panel.innerHTML = `
+    <h2 style="margin:0 0 10px 0;font-size:18px;color:#f8fafc;">WebGPU is unavailable in this browser session</h2>
+    <p style="margin:0 0 12px 0;color:#cbd5e1;">${escapeHtml(message)}</p>
+    <p style="margin:0 0 10px 0;color:#cbd5e1;">${escapeHtml(browserHint)}</p>
+    <ol style="margin:0 0 10px 20px;padding:0;color:#cbd5e1;">
+      <li>Enable hardware acceleration in browser settings and restart the browser.</li>
+      <li>In Chrome, open <b>chrome://flags</b> and reset graphics/WebGPU flags to Default.</li>
+      <li>Check <b>chrome://gpu</b> for disabled graphics features or software rendering.</li>
+      <li>Try a clean browser profile or private window with extensions disabled.</li>
+      <li>If this is a managed machine, ask IT to allow WebGPU for this site.</li>
+    </ol>
+    <p style="margin:0 0 8px 0;color:#93c5fd;">Diagnostics</p>
+    <pre style="margin:0;background:#020617;border:1px solid #1e293b;border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-word;color:#cbd5e1;">secureContext=${escapeHtml(context.secure)}
+host=${escapeHtml(context.host)}
+inIframe=${escapeHtml(context.inFrame)}
+permissionsPolicy.webgpu=${escapeHtml(context.webgpuAllowed)}
+userAgent=${escapeHtml(context.ua)}</pre>
+  `;
+  document.body.appendChild(panel);
+}
+
+const canvas = document.getElementById("c");
+if (!navigator.gpu) {
+  const ctx = getWebGpuContext();
+  const msg = "WebGPU API is not available (navigator.gpu is missing).";
+  showWebGpuTroubleshooting(msg, ctx);
+  throw new Error(msg);
+}
+
+// Try several adapter hints before failing. Some environments reject
+// high-performance but still provide a valid low-power/default adapter.
+let adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+if (!adapter) adapter = await navigator.gpu.requestAdapter({ powerPreference: "low-power" });
+if (!adapter) adapter = await navigator.gpu.requestAdapter();
+if (!adapter) adapter = await navigator.gpu.requestAdapter({ forceFallbackAdapter: true });
+if (!adapter) {
+  const ctx = getWebGpuContext();
+  const msg = "No WebGPU adapter found. This browser session may be GPU-blocked or policy-limited.";
+  showWebGpuTroubleshooting(msg, ctx);
+  throw new Error(`${msg} secureContext=${ctx.secure} host=${ctx.host} inIframe=${ctx.inFrame} permissionsPolicy.webgpu=${ctx.webgpuAllowed}`);
 }
 
 const requestedLimits = {};

@@ -447,6 +447,7 @@ function autoCloudN(){
 let slicePlane='xz';
 let t=0,comps=[],particles=[];
 let camTheta=0.55,camPhi=0.5,camDist=1.0;
+let preferSliceFallback=false;
 
 // ════════════════════════════════════════════════════════════════
 //  SPIN — Pauli–Bohmian extension (completely non-destructive)
@@ -1407,11 +1408,103 @@ function blitVolume(){
 // ════════════════════════════════════════════════════════════════
 //  WEBGL2 LOBE RENDERER — GPU ray-march, full resolution, real-time
 // ════════════════════════════════════════════════════════════════
+function showGpuFallbackNotice() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar || document.getElementById('gpuFallbackNotice')) return;
+
+  const notice = document.createElement('div');
+  notice.id = 'gpuFallbackNotice';
+  notice.style.cssText = [
+    'margin:0 0 10px 0',
+    'padding:10px 11px',
+    'border:1px solid rgba(245,158,11,0.55)',
+    'border-radius:10px',
+    'background:rgba(120,53,15,0.22)',
+    'color:#f8e7c4',
+    'font-size:12px',
+    'line-height:1.4'
+  ].join(';');
+
+  notice.innerHTML = `
+    <b>GPU warning:</b> WebGL2 is unavailable in this browser session, so the
+    hydrogen atom app is using the CPU lobe renderer.
+    <div style="margin-top:6px;opacity:.95">
+      If this should be GPU-accelerated, try enabling hardware acceleration,
+      open the page in Edge, reset Chrome graphics/WebGL flags, or test with a
+      clean browser profile.
+    </div>
+  `;
+
+  showGpuStatusBanner('GPU unavailable', 'WebGL2 is unavailable in this browser session, so hydrogen atom is using the CPU renderer.');
+  sidebar.prepend(notice);
+}
+
+function showGpuSoftwareRendererNotice(rendererInfo) {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar || document.getElementById('gpuFallbackNotice')) return;
+
+  const notice = document.createElement('div');
+  notice.id = 'gpuFallbackNotice';
+  notice.style.cssText = [
+    'margin:0 0 10px 0',
+    'padding:10px 11px',
+    'border:1px solid rgba(245,158,11,0.55)',
+    'border-radius:10px',
+    'background:rgba(120,53,15,0.22)',
+    'color:#f8e7c4',
+    'font-size:12px',
+    'line-height:1.4'
+  ].join(';');
+
+  notice.innerHTML = `
+    <b>GPU warning:</b> WebGL2 is available, but this browser is using a software
+    renderer (${rendererInfo}), so hydrogen atom may run very slowly.
+    <div style="margin-top:6px;opacity:.95">
+      If this should use the GPU, try enabling hardware acceleration, open the
+      page in Edge, reset Chrome graphics/WebGL flags, or test with a clean
+      browser profile.
+    </div>
+  `;
+
+  showGpuStatusBanner('GPU software fallback', `WebGL2 is available, but this browser is using a software renderer (${rendererInfo}), so hydrogen atom is switching to the CPU renderer and may run very slowly.`);
+  sidebar.prepend(notice);
+}
+
+function showGpuStatusBanner(title, message) {
+  const banner = document.getElementById('gpuStatusBanner');
+  if (!banner) return;
+
+  banner.innerHTML = `<b>${title}:</b> ${message}`;
+  banner.hidden = false;
+  banner.classList.add('show');
+}
+
+function detectWebGl2Renderer(gl) {
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+  const vendor = dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR);
+  return {
+    text: `${vendor} / ${renderer}`,
+    hasDebugInfo: !!dbg
+  };
+}
+
+function isSoftwareRenderer(rendererInfo) {
+  return /SwiftShader|llvmpipe|softpipe|Microsoft Basic|Software|Mesa Offscreen|software rasterizer|ANGLE \(Software/i.test(rendererInfo);
+}
+
 function initLobeGL(){
   lobeGLCanvas=document.createElement('canvas');
   lobeGLCanvas.width=W; lobeGLCanvas.height=H;
   gl2=lobeGLCanvas.getContext('webgl2',{antialias:false,premultipliedAlpha:false,alpha:true});
-  if(!gl2){console.warn('WebGL2 unavailable — using CPU lobe renderer');return;}
+  if(!gl2){console.warn('WebGL2 unavailable — using CPU lobe renderer');showGpuFallbackNotice();return;}
+
+  const rendererInfo = detectWebGl2Renderer(gl2);
+  if (!rendererInfo.hasDebugInfo || isSoftwareRenderer(rendererInfo.text)) {
+    console.warn('WebGL2 software or unverified renderer detected:', rendererInfo.text);
+    showGpuSoftwareRendererNotice(rendererInfo.text);
+    preferSliceFallback=true;
+  }
 
   const vsrc=`#version 300 es
 in vec2 a_pos;
@@ -3193,7 +3286,8 @@ buildComps();
 particles=sampleParticles(nPart);
 updateLegend();
 initLobeGL();
-setView('volume');
+if(!gl2Ready) showGpuFallbackNotice();
+setView(preferSliceFallback?'slice':'volume');
 document.getElementById('insetBtn')?.classList.toggle('active',showInset);
 document.getElementById('projBtn')?.classList.toggle('active',showProjections);
 requestAnimationFrame(loop);
