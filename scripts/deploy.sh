@@ -7,7 +7,7 @@
 #   ./deploy.sh --prod-only — deploy production landing only (no dev build)
 set -e
 
-REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REMOTE_HOST="bonner-gpu.rice.edu"
 PROD_PATH="/var/www/html/bonner-gpu/bm"
 DEV_PATH="/var/www/html/bonner-gpu/bm/dev"
