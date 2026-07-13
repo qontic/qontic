@@ -3,6 +3,11 @@
   "type": "app",
   "category": "comparative",
   "description": "Free Gaussian wave packet with screen detection and alternative representational views of the same event.",
-  "tags": ["Multiview", "Wave packet", "Detector"],
-  "entry": "free-particle.html"
+  "tags": [
+    "Multiview",
+    "Wave packet",
+    "Detector"
+  ],
+  "entry": "free-particle.html",
+  "status": "approved"
 }

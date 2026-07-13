@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Q-Ontic Publication Manager</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #1f2937;
+    }
+    h1 { margin-bottom: .4rem; }
+    .note { color: #4b5563; margin-bottom: 1rem; }
+    .security-note {
+      margin: 0 0 1.5rem;
+      padding: .85rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: .45rem;
+      background: #f9fafb;
+      color: #374151;
+      font-size: .95rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: .35rem;
+    }
+    select,
+    input,
+    button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: .65rem .75rem;
+      font-size: 1rem;
+    }
+    #currentStatus,
+    #newStatus {
+      height: 2.75rem;
+      min-height: 0;
+    }
+    #item {
+      height: 3rem;
+      min-height: 0;
+    }
+    button {
+      margin-top: 1rem;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .count { margin: .7rem 0; color: #4b5563; }
+    .path {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      background: #f3f4f6;
+      padding: .7rem;
+      margin-top: .8rem;
+      word-break: break-all;
+    }
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Q-Ontic Publication Manager</h1>
+  <p class="note">Filter by current status, search by title or folder, choose an item, and request a new status. GitHub will open a prefilled issue for confirmation; an action will apply the change and close the issue.</p>
+
+  <div class="security-note">
+    This page is publicly viewable because qontic-dev is a public GitHub Pages site. Publication changes are restricted: GitHub sign-in is required to submit a request, and the workflow only accepts requests from authorised repository collaborators.
+  </div>
+
+  <div class="grid">
+    <div>
+      <label for="currentStatus">Show items with current status</label>
+      <select id="currentStatus">
+        <option value="draft" selected>draft</option>
+        <option value="review">review</option>
+        <option value="approved">approved</option>
+        <option value="all">all</option>
+      </select>
+    </div>
+    <div>
+      <label for="newStatus">Change selected item to</label>
+      <select id="newStatus">
+        <option value="draft">draft</option>
+        <option value="review">review</option>
+        <option value="approved" selected>approved</option>
+      </select>
+    </div>
+  </div>
+
+  <label for="search" style="margin-top:1rem">Search</label>
+  <input id="search" type="search" placeholder="Type part of the title or directory">
+  <div id="count" class="count"></div>
+
+  <label for="item">Notebook or app</label>
+  <select id="item" aria-label="Notebook or app"></select>
+  <div id="selectedPath" class="path">No item selected</div>
+
+  <button id="submit" type="button">Open status change request</button>
+
+<script>
+  const REPO = 'qontic/qontic-dev';
+  let items = [];
+  const statusEl = document.getElementById('currentStatus');
+  const newStatusEl = document.getElementById('newStatus');
+  const searchEl = document.getElementById('search');
+  const itemEl = document.getElementById('item');
+  const countEl = document.getElementById('count');
+  const pathEl = document.getElementById('selectedPath');
+
+  function render() {
+    const status = statusEl.value;
+    const query = searchEl.value.trim().toLowerCase();
+    const filtered = items.filter(item => {
+      const statusMatch = status === 'all' || item.status === status;
+      const text = `${item.title} ${item.path} ${item.type} ${item.category}`.toLowerCase();
+      return statusMatch && (!query || text.includes(query));
+    });
+
+    itemEl.innerHTML = '';
+    for (const item of filtered) {
+      const option = document.createElement('option');
+      option.value = item.path;
+      option.textContent = `${item.title} — ${item.path}`;
+      option.dataset.title = item.title;
+      option.dataset.status = item.status;
+      itemEl.appendChild(option);
+    }
+    countEl.textContent = `${filtered.length} item${filtered.length === 1 ? '' : 's'} shown`;
+    updatePath();
+  }
+
+  function updatePath() {
+    const option = itemEl.selectedOptions[0];
+    pathEl.textContent = option ? `${option.value}  [current: ${option.dataset.status}]` : 'No item selected';
+  }
+
+  statusEl.addEventListener('change', render);
+  searchEl.addEventListener('input', render);
+  itemEl.addEventListener('change', updatePath);
+
+  document.getElementById('submit').addEventListener('click', () => {
+    const option = itemEl.selectedOptions[0];
+    if (!option) {
+      alert('Select a notebook or app first.');
+      return;
+    }
+    const path = option.value;
+    const title = option.dataset.title;
+    const current = option.dataset.status;
+    const next = newStatusEl.value;
+    const issueTitle = `[publication-status] ${path} -> ${next}`;
+    const body = [
+      '<!-- publication-status-request -->',
+      `path: ${path}`,
+      `status: ${next}`,
+      '',
+      `Title: ${title}`,
+      `Current status: ${current}`,
+      '',
+      'Submitting this issue authorizes the publication-status workflow to update the corresponding app.json.'
+    ].join('\n');
+    const url = `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(body)}`;
+    window.open(url, '_blank', 'noopener');
+  });
+
+  fetch('../../publication-status.json', { cache: 'no-store' })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .then(data => { items = data; render(); })
+    .catch(error => {
+      countEl.textContent = `Could not load publication-status.json: ${error.message}`;
+    });
+</script>
+</body>
+</html>

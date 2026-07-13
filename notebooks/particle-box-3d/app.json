@@ -1,8 +1,16 @@
 {
-  "title": "Particle in a Box — 3D Notebook",
+  "title": "3D Box eigenstates — Notebook",
   "type": "notebook",
   "category": "pilot-wave",
-  "description": "Notebook-style presentation of three-dimensional particle-in-a-box dynamics.",
-  "tags": ["Notebook", "Pilot-wave", "3D box"],
-  "entry": "index.html"
+  "description": "Eigenstates and Bohmian trajectories of a particle in a box. Spin included.",
+  "tags": [
+    "Notebook",
+    "Pilot-wave",
+    "GPU",
+    "3D",
+    "Spin",
+    "Box eigenstates"
+  ],
+  "entry": "index.html",
+  "status": "approved"
 }

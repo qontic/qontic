@@ -3,6 +3,11 @@
   "type": "app",
   "category": "comparative",
   "description": "Detector-coupled tunneling simulation with explicit measurement back-action and outcome statistics.",
-  "tags": ["Multiview", "Measurement", "Detector"],
-  "entry": "index.html"
+  "tags": [
+    "Multiview",
+    "Measurement",
+    "Detector"
+  ],
+  "entry": "index.html",
+  "status": "approved"
 }

@@ -1,8 +1,16 @@
 {
-  "title": "Stern-Gerlach Close-Up — Notebook",
+  "title": "Stern-Gerlach — Notebook",
   "type": "notebook",
   "category": "pilot-wave",
-  "description": "Notebook-style presentation of Stern-Gerlach spin splitting, contextuality, and Bohmian trajectory dynamics.",
-  "tags": ["Notebook", "Pilot-wave", "Spin-1/2"],
-  "entry": "index.html"
+  "description": "Stern-Gerlach with Pilot wave theory. ",
+  "tags": [
+    "Notebook",
+    "Pilot-wave",
+    "GPU",
+    "3D",
+    "Spin",
+    "Stern-Gerlach"
+  ],
+  "entry": "index.html",
+  "status": "approved"
 }

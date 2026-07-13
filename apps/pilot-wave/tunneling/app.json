@@ -3,6 +3,11 @@
   "type": "app",
   "category": "pilot-wave",
   "description": "Pilot-wave tunneling simulation showing guided trajectories and wave-packet dynamics.",
-  "tags": ["Pilot-wave", "Tunneling", "WebGL2"],
-  "entry": "index.html"
+  "tags": [
+    "Pilot-wave",
+    "Tunneling",
+    "WebGL2"
+  ],
+  "entry": "index.html",
+  "status": "approved"
 }

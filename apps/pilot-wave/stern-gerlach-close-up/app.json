@@ -8,5 +8,6 @@
     "WebGPU",
     "Spin-1/2"
   ],
-  "entry": "index.html"
+  "entry": "index.html",
+  "status": "approved"
 }

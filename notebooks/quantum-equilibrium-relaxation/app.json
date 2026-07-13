@@ -1,0 +1,16 @@
+{
+  "title": "Relaxation to Quantum Equilibrium  — Notebook",
+  "type": "notebook",
+  "category": "pilot-wave",
+  "description": "Relaxation of an arbitrary distribution of Bohmian particles towards the Born-distribution.",
+  "tags": [
+    "Notebook",
+    "Pilot-wave",
+    "GPU",
+    "2D",
+    "Spin",
+    "Quantum equilibrium"
+  ],
+  "entry": "index.html",
+  "status": "approved"
+}

@@ -312,8 +312,7 @@
       }
     }
   </style>
-  
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZWF6YQM0YV"></script>
+   <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZWF6YQM0YV"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -422,7 +421,7 @@ function isGpuApp(item) {
   if (item.gpu === true) return true;
 
   const tags = Array.isArray(item.tags) ? item.tags : [];
-  return tags.some(tag => /^(gpu|webgpu|webgl2)$/i.test(String(tag).trim()));
+  return tags.some(tag => /^(gpu|webgpu|webgl2|webgl)$/i.test(String(tag).trim()));
 }
 
 function sectionOf(item) {
@@ -430,7 +429,7 @@ function sectionOf(item) {
 }
 
 function tagClass(tag, item) {
-  if (/^(gpu|webgpu|webgl2)$/i.test(String(tag).trim())) return "tag-gpu";
+  if (/^(gpu|webgpu|webgl2|webgl)$/i.test(String(tag).trim())) return "tag-gpu";
   if (item.type === "notebook" || tag.toLowerCase() === "notebook") return "tag-notebook";
   if (item.category === "comparative") return "tag-comparative";
   if (item.category === "pilot-wave") return "tag-pilot-wave";
@@ -439,7 +438,7 @@ function tagClass(tag, item) {
 
 function makeCard(item) {
   const uiTags = [...(item.tags || [])];
-  if (isGpuApp(item) && !uiTags.some(t => /^(gpu|webgpu|webgl2)$/i.test(String(t).trim()))) uiTags.push("GPU");
+  if (isGpuApp(item) && !uiTags.some(t => /^(gpu|webgpu|webgl2|webgl)$/i.test(String(t).trim()))) uiTags.push("GPU");
 
   const tags = uiTags.map(t => {
     const cls = tagClass(t, item);
@@ -510,6 +509,8 @@ function renderCatalog() {
   $("#grid-comparative,#grid-pilot-wave,#grid-notebook,#grid-all").empty();
 
   for (const item of catalog) {
+    if (item.hidden === true) continue;
+
     const s = sectionOf(item);
     const html = makeCard(item);
 

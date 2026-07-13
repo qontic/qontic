@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quantum Equilibrium Relaxation - Q-Ontic Lab</title>
+  <meta name="description" content="An educational notebook about quantum equilibrium, non-equilibrium ensembles, and Bohmian relaxation in a two-dimensional box." />
+  <script type="module" src="../simulation-speed-host.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+      },
+      svg: {
+        fontCache: "global"
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <script src="../back-link.js"></script>
+  <style>
+    :root {
+      --blue-900: #003366;
+      --blue-800: #003f7f;
+      --blue-700: #0055aa;
+      --ink: #253142;
+      --muted: #5d6b7a;
+      --paper: #f9f9f9;
+      --surface: #ffffff;
+      --line: #dbe4f0;
+      --cyan: #007f9f;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--blue-700); }
+    a:hover { color: var(--blue-800); }
+
+    .site-banner {
+      padding: 1rem;
+      background: var(--blue-900);
+      color: #fff;
+      text-align: center;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .site-banner h1 {
+      margin: 0;
+      color: #fff;
+      font-size: 2.25rem;
+      font-weight: 750;
+      line-height: 1.1;
+    }
+
+    .site-banner p {
+      margin: 0.45rem 0 0;
+      color: #fff;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    main,
+    .site-footer-inner {
+      width: min(1120px, calc(100% - 2rem));
+      margin: 0 auto;
+    }
+
+    main { padding-bottom: 3.5rem; }
+    section { margin-bottom: 2.8rem; scroll-margin-top: 120px; }
+
+    .page-nav {
+      display: flex;
+      padding-top: 1rem;
+    }
+
+    .nav-button,
+    .primary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0.55rem 0.9rem;
+      border-radius: 4px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-decoration: none;
+    }
+
+    .nav-button {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--blue-900);
+      box-shadow: 0 1px 3px rgba(0, 0, 51, 0.06);
+    }
+
+    .nav-button:hover {
+      border-color: #bdd0e6;
+      background: #f1f6fc;
+    }
+
+    .primary-button {
+      border: 1px solid var(--blue-700);
+      background: var(--blue-700);
+      color: #fff;
+    }
+
+    .primary-button:hover {
+      border-color: var(--blue-800);
+      background: var(--blue-800);
+      color: #fff;
+    }
+
+    .page-hero {
+      margin-bottom: 0.8rem;
+      padding: 1.4rem 0 0.7rem;
+    }
+
+    .kicker {
+      margin: 0 0 0.45rem;
+      color: var(--blue-700);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .page-hero h1 {
+      max-width: 900px;
+      margin: 0;
+      color: var(--blue-900);
+      font-size: 3rem;
+      font-weight: 750;
+      line-height: 1.12;
+    }
+
+    .page-hero p:last-child {
+      max-width: 780px;
+      margin: 0.9rem 0 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.8fr);
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .intro-card {
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 1px 4px rgba(0, 0, 51, 0.06);
+    }
+
+    .note-box {
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--cyan);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 1px 4px rgba(0, 0, 51, 0.06);
+    }
+
+    .note-box h2 {
+      margin: 0 0 0.55rem;
+      color: var(--blue-900);
+      font-size: 1.1rem;
+    }
+
+    .note-list {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+
+    .note-list li { margin: 0.45rem 0; }
+
+    h2 {
+      margin: 0 0 0.7rem;
+      color: var(--blue-900);
+      font-size: 1.5rem;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 1.4rem 0 0.35rem;
+      color: var(--blue-900);
+      font-size: 1.08rem;
+    }
+
+    p { margin: 0 0 1rem; }
+
+    .applet-section { margin-top: 3rem; }
+
+    .applet-list {
+      display: grid;
+      gap: 2rem;
+    }
+
+    .applet-demo {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .applet-demo h3 {
+      margin: 0;
+      color: var(--blue-900);
+      font-size: 1.08rem;
+    }
+
+    .applet-demo > p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .applet-shell {
+      overflow: hidden;
+      border: 1px solid #11294d;
+      border-radius: 8px;
+      background: #07101f;
+      box-shadow: 0 8px 24px rgba(0, 0, 45, 0.18);
+    }
+
+    .applet-toolbar {
+      padding: 0.7rem 0.9rem;
+      border-bottom: 1px solid rgba(125, 174, 255, 0.22);
+      background: #061225;
+      color: #d9e6f8;
+      font-size: 0.88rem;
+    }
+
+    .applet-stage {
+      position: relative;
+      min-height: 680px;
+      background: #000 center / cover no-repeat;
+    }
+
+    .applet-frame {
+      display: block;
+      width: 100%;
+      height: 680px;
+      border: 0;
+      background: #000;
+    }
+
+    .applet-shell.is-inactive .applet-frame { visibility: hidden; }
+
+    .applet-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      background: rgba(0, 0, 0, 0.18);
+      color: rgba(255, 255, 255, 0.78);
+      cursor: pointer;
+      font: 700 3rem/1 "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .applet-play:hover,
+    .applet-play:focus-visible {
+      background: rgba(0, 0, 0, 0.32);
+      color: rgba(255, 255, 255, 0.92);
+      outline: none;
+    }
+
+    .caption {
+      margin-top: 0.75rem;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .equation {
+      margin: 1rem 0 1.15rem;
+      padding: 0.85rem 1rem;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--blue-700);
+      border-radius: 8px;
+      background: var(--surface);
+      color: #162335;
+      font-size: 1.1rem;
+      line-height: 1.65;
+    }
+
+    .eq-label {
+      display: block;
+      margin-bottom: 0.3rem;
+      color: var(--blue-900);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .equation mjx-container { margin: 0.15rem 0 0 !important; }
+
+    .next-step {
+      padding-top: 2rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .site-footer {
+      padding: 1.5rem 1rem;
+      background: #eee;
+      color: #555;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .site-footer p { margin: 0.35rem 0; }
+
+    @media (max-width: 820px) {
+      .intro-grid { grid-template-columns: 1fr; }
+      .page-hero h1 { font-size: 2.3rem; }
+      .site-banner h1 { font-size: 1.9rem; }
+      .applet-stage { min-height: 620px; }
+      .applet-frame { height: 620px; }
+    }
+
+    @media (max-width: 520px) {
+      body { font-size: 15px; }
+      .page-hero h1 { font-size: 2rem; }
+      .site-banner { padding: 0.8rem 1rem; }
+      .site-banner h1 { font-size: 1.65rem; }
+      .site-banner p { font-size: 0.92rem; }
+      .nav-button,
+      .primary-button { width: 100%; }
+      .applet-stage { min-height: 640px; }
+      .applet-frame { height: 640px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-banner">
+    <h1>Q-Ontic Lab</h1>
+    <p>Interactive quantum simulations for representational comparison</p>
+  </header>
+
+  <main>
+    <nav class="page-nav" aria-label="Page navigation">
+      <a class="nav-button" href="../../index.html" aria-label="Back to the Q-Ontic Lab main page">Back to Main Page</a>
+    </nav>
+
+    <section class="page-hero" aria-labelledby="page-title">
+      <p class="kicker">Educational notebook</p>
+      <h1 id="page-title">Relaxation to Quantum Equilibrium </h1>
+      <p>
+        Does any Bohmian initial distribution relax towards the Born distribution?
+      </p>
+    </section>
+
+    <section class="intro-grid" aria-label="Notebook overview and section navigation">
+      <div class="intro-card">
+        <p>
+          If the initial particle distribution is \(\rho = |\psi|^2\), equivariance says it remains
+          matched to the Born density. 
+        </p>
+        <p>
+          However, if the particles begin in a different distribution,
+          the flow can stretch and fold that distribution in ways that resemble relaxation
+          toward quantum equilibrium.
+        </p>
+        <p>
+          Mixing towards the Born distribution does not happen for eigenstates.  
+          In general a superposition of eigen states is required for the mixing to happen. 
+          Moreover, including the spin-current into the guiding law greatly facilitates the mixing process.
+        </p>
+        
+      </div>
+
+      <aside class="note-box" aria-labelledby="sections-nav">
+        <h2 id="sections-nav">Sections</h2>
+        <ul class="note-list">
+          <li><a href="#applet">The Born Distribution and Equivariance</a></li>
+          <li><a href="#non-equilibrium">Non-equilibrium</a></li>
+          <li><a href="#spin">Spin Mixing</a></li>
+          <li><a href="#discussion">Significance</a></li>
+          <li><a href="#theory">Theory and Equations</a></li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="applet-section" id="applet" aria-labelledby="applet-title">
+      <h2 id="applet-title">The Born Distribution and Equivariance</h2>
+      <p>
+        First let us demonstrate that if we start with a distribution which follows Borns rule, then it will stay that way. 
+        This is called quantum equilibrium. Only in this equilibrium will the Pilot wave theory give the same empirical predictions 
+        as the standard interpretation.
+      </p>
+      <p>
+       
+        Try switching between different mixed states and different guiding laws.
+        Notice how adding spin will increase general mixing.
+      </p>
+
+
+
+      <div class="applet-list">
+        <div class="applet-demo">
+          <h3>Born equilibrium</h3>
+          <p>The particles start from the quantum equilibrium. Change the state and guiding law.</p>
+          <div class="applet-shell is-inactive">
+            <div class="applet-toolbar">Born distribution is equivariant with wave propability</div>
+            <div class="applet-stage" style="background-image: url('bornEquilibriumPoster.png');">
+              <iframe
+                class="applet-frame"
+                title="Born distribution relaxation applet"
+                data-src="full-applet.html?embed=1&amp;demo=born"
+                allow="fullscreen"
+              ></iframe>
+              <button class="applet-play" type="button" aria-label="Play Born distribution relaxation simulation">Play</button>
+            </div>
+          </div>
+        </div>
+
+
+
+        <div class="applet-demo">
+          <h2 id="non-equilibrium">Non-equilibrium starting distribution</h2>
+          <p>
+            This time we do not begin from the equilibrium.
+            Let us  pick for example an artificial uniform square distribution initially.
+            Will it relax towards the Born distribution as time evolves? 
+
+          </p>
+          <p>
+             Try it different wave states. You will see that the ground state and the second state are completely unable
+             to mix the starting distribution. The third superposition state, however, manages to create some mixing,
+            but it seems unclear weathers it is able to eventually reach the Born distribution.
+          </p>
+          <p>
+            It seems clear from these three states,
+             that more complicated states (more superpositions) are better able to reach the quantum equilibrium.
+          </p>
+          <div class="applet-shell is-inactive">
+            <div class="applet-toolbar">Square initial distribution with Schrodinger guidance</div>
+            <div class="applet-stage" style="background-image: url('squareDistributionPoster.png');">
+              <iframe
+                class="applet-frame"
+                title="Square initial distribution relaxation applet"
+                data-src="full-applet.html?embed=1&amp;demo=square"
+                allow="fullscreen"
+              ></iframe>
+              <button class="applet-play" type="button" aria-label="Play square initial distribution relaxation simulation">Play</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="applet-demo">
+          <h2 id="spin">Spin current increases mixing</h2>
+          <p>
+            This time we take into account the spin.
+            The guiding wave is two component spinorial wave, Pauli wave. 
+            In the guiding law we add the spin current, 
+            which has the effect of driving particles around the density level curves. 
+          </p>
+          <p>
+            This time even the second state mixes well and pretty fast. 
+            With spin-current added the relaxation into quantum equilibrium quickly starts to seem believable.
+            Only the ground state, which is a pure eigen state, remains unmixing. 
+          </p>
+          
+          <div class="applet-shell is-inactive">
+            <div class="applet-toolbar">Spin-current greatly increases the relaxation</div>
+            <div class="applet-stage" style="background-image: url('pauliSquarePoster.png');">
+              <iframe
+                class="applet-frame"
+                title="Pauli-guided square distribution relaxation applet"
+                data-src="full-applet.html?embed=1&amp;demo=pauli-square"
+                allow="fullscreen"
+              ></iframe>
+              <button class="applet-play" type="button" aria-label="Play Pauli-guided square distribution relaxation simulation">Play</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </section>
+
+      <section id="discussion" >
+      <h2 > Summary </h2>
+      <p>
+        These tentative experiments suggest that the relaxation into quantum equilibrium
+        seems to happen naturally as soon as the wave is in a superposition of eigen states.
+        The more superpositions, the better the mixing. 
+        Adding spin-current into the guiding law also greatly increases the mixing.
+        
+        However, we also saw that for eigen states the mixing does not happen.  
+        For very simple superpositions of eigen states, the mixing happens but it is very slow.
+      </p>
+
+      <p>   
+        In any complex situation, the wave is expected to interact with the environment and 
+        become a superposition of many eigen states, so the relaxation would seem inevitable
+         and the quantum equilibrium to be a natual state in nature.
+         
+      </p>
+
+      <p>   
+        These simulation are not conclusive, but the results have been proven in with more 
+        rigorous mathematical arguments in the literature.
+      </p>
+      <h2 > Significance </h2>
+
+      <p>
+        The question of spontaneous relaxation is philosophically important. 
+        It explains why the bohmian particles "happen to be distributed" according to the Born distribution,
+        which is an essential requirement for the Pilot wave theory to reproduce the same empirical predictions
+        as the standard quantum mechanics. 
+        Spontaneous relaxation means that the universe does not need to be in a quantum equilibrium at the beginning of time.
+      </p>
+
+      <p>
+        We can also turn the question around and ask: "Can we somehow find violations of the equilibrium?"
+        If we could, that would open a door to new physics.
+        First, it would prove Born's rule to be only an approximation. 
+        Second, it would mean faster than light signaling is possible,
+        since the non-local nature of the guiding law would become observable. Thus the theory of relativity
+        would be openly contradicted.
+      </p>
+      <p>
+        There may indeed be at least two ways to find violations of the equilibrium. 
+        One is to look for them in the micro wave background of the early universe,
+        where the universe may not have had time to relax into the equilibrium. 
+        
+        The other is to look for them in black holes, where the particles may be trapped and unable to relax.
+        It is possible that gravity may be able to break the equilibrium.
+      </p>
+    </section>
+
+    <section id="theory" aria-labelledby="equilibrium-title">
+      <h2 id="equilibrium-title">Equilibrium and equivariance</h2>
+      <p>
+        Quantum equilibrium is the special distribution \(\rho(\mathbf{x},t)=|\psi(\mathbf{x},t)|^2\).
+        In Bohmian mechanics, particles move with the velocity field determined by the wave,
+        so both the Born density and an ensemble of Bohmian positions satisfy the same continuity equation.
+      </p>
+      <div class="equation">
+        <span class="eq-label">Equivariance</span>
+        \[
+          \rho(\mathbf{x},0)=|\psi(\mathbf{x},0)|^2
+          \quad\Longrightarrow\quad
+          \rho(\mathbf{x},t)=|\psi(\mathbf{x},t)|^2 .
+        \]
+      </div>
+      <p>
+        This is why Born seeding should remain visually matched to the wave density, apart from sampling
+        noise and numerical error. It is also a useful diagnostic for the trajectory integrator.
+      </p>
+    </section>
+
+    <section  aria-labelledby="relaxation-title">
+      <h2 id="relaxation-title">A relaxation experiment</h2>
+      <p>
+        The Square and Uniform initializations deliberately violate quantum equilibrium.
+        Under a time-dependent superposition, the velocity field can develop stretching, folding,
+        and mixing. At coarse resolution this can make a non-equilibrium distribution look more
+        like the Born distribution, even though the exact fine-grained distribution is simply transported.
+      </p>
+      <div class="equation">
+        <span class="eq-label">Box eigenstate superposition</span>
+        \[
+          \psi(x,y,t)
+          =
+          \sum_k c_k
+          \sin\!\left(\frac{n_{x,k}\pi x}{L_x}\right)
+          \sin\!\left(\frac{n_{y,k}\pi y}{L_y}\right)
+          e^{-iE_k t/\hbar}.
+        \]
+      </div>
+      <p>
+        The preset states mix different \(x\) and \(y\) quantum numbers so that the density, phase,
+        and trajectories are genuinely two-dimensional. The ground state is included as a stationary
+        reference where the Born distribution does not move.
+      </p>
+    </section>
+
+    <section id="guidance" aria-labelledby="guidance-title">
+      <h2 id="guidance-title">Guidance law</h2>
+      <p>
+        The applet supports the standard Schrodinger current and an optional Pauli spin-current term.
+      </p>
+      <div class="equation">
+        <span class="eq-label">Schrodinger current</span>
+        \[
+          \dot{\mathbf{x}}
+          =
+          \frac{\mathbf{j}}{\rho},
+          \qquad
+          \mathbf{j}
+          =
+          \frac{\hbar}{m}
+          \operatorname{Im}\left(\psi^*\nabla\psi\right),
+          \qquad
+          \rho=|\psi|^2 .
+        \]
+      </div>
+      <div class="equation">
+        <span class="eq-label">2D Pauli spin-current option</span>
+        \[
+          \dot{\mathbf{x}}_{\mathrm{Pauli}}
+          =
+          \frac{\mathbf{j}}{\rho}
+          +
+          \frac{\hbar s}{m\rho}
+          \left(\partial_y\rho,-\partial_x\rho\right).
+        \]
+      </div>
+    </section>
+
+    <section class="next-step" aria-labelledby="full-applet">
+      <h2 id="full-applet">Full Applet</h2>
+      <p>Open the simulation with its complete control panel in a separate browser tab.</p>
+      <a class="primary-button" href="full-applet.html" target="_blank" rel="noopener">Open Full Applet</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <p>The Q-Ontic Lab supports research, teaching, and outreach through interactive quantum visualization.</p>
+      <p><a href="../collaborators.html">Meet the team</a> &nbsp;|&nbsp; <a href="mailto:yepes@rice.edu">yepes@rice.edu</a></p>
+    </div>
+  </footer>
+
+  <script>
+    const appletVisibilityObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) return;
+        const frame = entry.target;
+        const targetOrigin = window.location.protocol === "file:" ? "*" : window.location.origin;
+        frame?.contentWindow?.postMessage(
+          { type: "qontic:set-paused", paused: true },
+          targetOrigin
+        );
+      });
+    }, { threshold: 0.05 });
+
+    document.querySelectorAll(".applet-shell.is-inactive").forEach((shell) => {
+      const frame = shell.querySelector("iframe[data-src]");
+      const playButton = shell.querySelector(".applet-play");
+
+      playButton.addEventListener("click", () => {
+        if (!frame.hasAttribute("src")) {
+          frame.setAttribute("src", frame.dataset.src);
+        }
+        shell.classList.remove("is-inactive");
+        playButton.remove();
+        appletVisibilityObserver.observe(frame);
+      });
+    });
+  </script>
+</body>
+</html>

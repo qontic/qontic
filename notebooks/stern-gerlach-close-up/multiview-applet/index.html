@@ -46,16 +46,6 @@
       const isEmbedded = new URLSearchParams(window.location.search).get("embed") === "1";
       if (isEmbedded) document.documentElement.classList.add("is-embedded");
 
-      function setRangeValue(input, value) {
-        const valueSetter = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
-          "value"
-        ).set;
-        valueSetter.call(input, String(value));
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-
       function configureEmbeddedControls() {
         if (!isEmbedded) return;
 
@@ -81,9 +71,6 @@
         const speedInput = ranges.find((input) =>
           input.parentElement?.textContent.trim().startsWith("Speed")
         );
-        if (speedInput && speedInput.value !== "0.5") {
-          setRangeValue(speedInput, 0.5);
-        }
         if (speedInput?.parentElement) speedInput.parentElement.hidden = true;
 
         const expertButton = buttons.find(
@@ -107,6 +94,61 @@
           .find((button) => button.textContent.includes("Pause"));
         pauseButton?.click();
       });
+    </script>
+    <script type="module">
+      import {
+        getSimulationSpeed,
+        initSimulationSpeedControl,
+        onSimulationSpeedChange,
+        setSimulationSpeed,
+      } from "../../simulation-speed.js";
+
+      const embedded = new URLSearchParams(window.location.search).get("embed") === "1";
+      initSimulationSpeedControl({ visible: !embedded });
+
+      const wiredSpeedInputs = new WeakSet();
+
+      function setSharedRangeValue(input, value) {
+        const valueSetter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value"
+        ).set;
+        valueSetter.call(input, String(value));
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
+      function findSpeedInput() {
+        return [...document.querySelectorAll('input[type="range"]')]
+          .find((input) => input.parentElement?.textContent.trim().startsWith("Speed"));
+      }
+
+      function syncSharedSpeedInput(speed = getSimulationSpeed()) {
+        const input = findSpeedInput();
+        if (!input) return;
+
+        input.min = "0.1";
+        input.max = "5";
+        input.step = "0.05";
+
+        if (!wiredSpeedInputs.has(input)) {
+          wiredSpeedInputs.add(input);
+          input.addEventListener("input", () => setSimulationSpeed(Number(input.value)));
+        }
+
+        if (Math.abs(Number(input.value) - speed) > 1e-6) {
+          setSharedRangeValue(input, speed);
+        }
+
+        if (input.parentElement) input.parentElement.hidden = true;
+      }
+
+      onSimulationSpeedChange(syncSharedSpeedInput);
+      new MutationObserver(() => syncSharedSpeedInput()).observe(
+        document.documentElement,
+        { childList: true, subtree: true }
+      );
+      window.addEventListener("DOMContentLoaded", () => syncSharedSpeedInput());
     </script>
     <script type="module" crossorigin src="./assets/index-CgAyCMvm.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-DRrV8hpS.css">

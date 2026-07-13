@@ -1,3 +1,5 @@
+import { effectiveDt, effectiveStepsPerFrame, initSimulationSpeedControl, setSimulationFrameDuration } from "../simulation-speed.js";
+
 const canvas = document.getElementById("c");
 const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, depth: false, stencil: false });
 if (!gl) throw new Error("WebGL2 not available.");
@@ -56,7 +58,6 @@ const params = {
   trailVisGain: 1.,
   trailVisGamma: 1,
   trailStampGain: 0.55,
-  trailWidth: 5.0,
   trailBlendMode: 1,
 
   paletteId: 0,
@@ -67,6 +68,7 @@ const DEFAULT_AUTO_RESTART_MOMENTUM = params.p0;
 const urlParams = new URLSearchParams(window.location.search);
 const isEmbedded = urlParams.get("embed") === "1";
 const preset = urlParams.get("preset");
+initSimulationSpeedControl({ visible: !isEmbedded });
 const oneParticlePreset = {
   dt: 0.02,
   simScale: 0.5,
@@ -88,7 +90,6 @@ const oneParticlePreset = {
   showParticles: 1,
   dotSize: 20.0,
   dotGain: 2.,
-  trailWidth: 15.0,
   trailVisGain: .3,
   trailHalfLife: 190.0,
   showTrail: 1,
@@ -98,7 +99,6 @@ const particleCountPreset = { ...oneParticlePreset };
 
 particleCountPreset.nParticles= 500,
 particleCountPreset.dotSize = 7.0;
-particleCountPreset.trailWidth = 5.0;
 particleCountPreset.trailVisGain = .5;
 particleCountPreset.trailGamma = .5;
 particleCountPreset.trailHalfLife = 19.0;
@@ -108,7 +108,6 @@ equivariancePreset.showPhase = 0;
 equivariancePreset.nParticles = 5000;
 equivariancePreset.dotSize = 4.0;
 equivariancePreset.dotGain = 0.6;
-equivariancePreset.trailWidth = 1.0;
 equivariancePreset.trailVisGain = 0.2;
 equivariancePreset.trailHalfLife = 5.0;
 
@@ -138,6 +137,11 @@ const fixedControls = new Set(
 if (presetParams) {
   Object.assign(params, presetParams);
 }
+
+const TRAIL_FADE_FRAME_DT = Math.max(
+  1e-12,
+  params.dt * Math.max(1, Math.floor(params.stepsPerFrame))
+);
 
 function isControlFixed(key) {
   if (adjustableControls.has(key)) return false;
@@ -171,6 +175,22 @@ function fmt(v) {
   const av = Math.abs(v);
   if (av >= 1000 || (av > 0 && av < 0.01)) return v.toExponential(2);
   return v.toFixed(3).replace(/\.?0+$/, "");
+}
+
+function simulationDt() {
+  return effectiveDt(params.dt);
+}
+
+function simulationStepsPerFrame() {
+  return effectiveStepsPerFrame(params.stepsPerFrame);
+}
+
+function trailFadeFrameDt() {
+  return TRAIL_FADE_FRAME_DT;
+}
+
+function particleTrailWidth() {
+  return params.dotSize * 0.7;
 }
 
 function addSlider(key, label, min, max, step, onChange = null) {
@@ -347,9 +367,8 @@ addSlider("dt", "dt", 0.01, 0.03, 0.01);
 addSlider("packetSigma", "packet sigma", 8.0, 80.0, 1.0, () => resetAll());
 addSlider("slitWidth", "slit width", 6.0, 40.0, 1.0);
 addSlider("slitSep", "slit separation", 18.0, 140.0, 1.0);
-addSlider("absorbPx", "absorb boundary", 0.0, 60.0, 1.0);
-addSlider("nParticles", "particle count", 1, 3000, 10, () => resetAll());
-addSlider("spinMagnitude", "spin |s|", 0.0, 2.0, 0.5);
+//addSlider("absorbPx", "absorb boundary", 0.0, 60.0, 1.0);
+//addSlider("spinMagnitude", "spin |s|", 0.0, 2.0, 0.5);
 addChoiceButtons("guidingChoice", "guiding law", GUIDING_CHOICE_NAMES, (choice) => {
   params.guidingMode = choice === 0 ? 0 : 1;
   params.spinSign = choice === 2 ? -1 : 1;
@@ -359,6 +378,8 @@ addChoiceButtons("guidingChoice", "guiding law", GUIDING_CHOICE_NAMES, (choice) 
 addSectionHeader("Visual Parameters");
 addToggleInt("showPhase", "show phase");
 addToggleInt("showParticles", "show particles");
+addSlider("nParticles", "particle count", 1, 3000, 10, () => resetAll());
+
 addSlider("dotSize", "particle size", 2.0, 16.0, 0.5);
 addSlider("dotGain", "particle brightness", 0.1, 3.0, 0.1);
 
@@ -366,7 +387,6 @@ addToggleInt("showTrail", "draw trails");
 addSlider("trailHalfLife", "trail half-life", 1.0, 150.0, 1.0);
 //addSlider("trailVisGain", "trail gain", 0.1, 1.0, 0.1);
 //addSlider("trailVisGamma", "trail gamma", 0.4, 2.0, 0.05);
-addSlider("trailWidth", "trail width (px)", 0.5, 10.0, 0.1);
 
 //addSlider("visGain", "wave gain", 0.5, 20.0, 0.5);
 //addSlider("visGamma", "wave gamma", 0.3, 2.0, 0.05);
@@ -738,7 +758,7 @@ function setWaveInitUniforms() {
   gl.uniform1f(U.waveInit.uHBAR, params.hbar);
   gl.uniform1f(U.waveInit.uMass, params.mass);
   gl.uniform1f(U.waveInit.uP0, params.p0);
-  gl.uniform1f(U.waveInit.uDT, params.dt);
+  gl.uniform1f(U.waveInit.uDT, simulationDt());
 
   gl.uniform2f(U.waveInit.uPacketPosFrac, params.packetX, params.packetY);
   gl.uniform1f(U.waveInit.uPacketSigmaPx, params.packetSigma);
@@ -762,7 +782,7 @@ function setWaveStepUniforms(srcTex) {
   gl.uniform1f(U.waveStep.uHBAR, params.hbar);
   gl.uniform1f(U.waveStep.uMass, params.mass);
   gl.uniform1f(U.waveStep.uP0, params.p0);
-  gl.uniform1f(U.waveStep.uDT, params.dt);
+  gl.uniform1f(U.waveStep.uDT, simulationDt());
 
   gl.uniform1f(U.waveStep.uBarrierXFrac, params.barrierX);
   gl.uniform1f(U.waveStep.uBarrierThickPx, params.barrierThick);
@@ -871,7 +891,7 @@ function particleUpdate() {
   gl.uniform2i(U.partUpdate.uSimRes, simW, simH);
   gl.uniform1f(U.partUpdate.uHBAR, params.hbar);
   gl.uniform1f(U.partUpdate.uMass, params.mass);
-  gl.uniform1f(U.partUpdate.uDT, params.dt);
+  gl.uniform1f(U.partUpdate.uDT, simulationDt());
   gl.uniform1i(U.partUpdate.uGuidingMode, params.guidingMode | 0);
   gl.uniform1f(U.partUpdate.uSpinMagnitude, params.spinMagnitude);
   gl.uniform1f(U.partUpdate.uSpinSign, params.spinSign);
@@ -946,7 +966,7 @@ function clearDensity() {
 }
 
 function densityStepAndStamp() {
-  const dtTotal = params.dt * Math.floor(params.stepsPerFrame);
+  const dtTotal = trailFadeFrameDt();
 
   const src = densFlip ? densTexB : densTexA;
   const dstFbo = densFlip ? densFboA : densFboB;
@@ -979,7 +999,7 @@ function densityStepAndStamp() {
   gl.uniform1f(U.partStamp.uDotGain, params.dotGain);
   gl.uniform1f(U.partStamp.uStampGain, params.trailStampGain);
   gl.uniform1i(U.partStamp.uNumParticles, params.nParticles);
-  gl.uniform1f(U.partStamp.uTrailWidth, params.trailWidth);
+  gl.uniform1f(U.partStamp.uTrailWidth, particleTrailWidth());
 
   gl.drawArrays(gl.POINTS, 0, Math.floor(params.nParticles));
 
@@ -1260,7 +1280,7 @@ window.addEventListener("resize", () => {
 });
 
 function advanceSimulationFrame() {
-  const steps = Math.max(0, Math.floor(params.stepsPerFrame));
+  const steps = simulationStepsPerFrame();
   for (let i = 0; i < steps; i++) {
     waveStep();
     particleUpdate();
@@ -1313,7 +1333,11 @@ async function main() {
 
   params.trailHalfLife*=0.99;
 
-  requestAnimationFrame(function loop() {
+  let lastFrameTime = performance.now();
+  requestAnimationFrame(function loop(now = performance.now()) {
+    const frameSeconds = Math.min(0.05, Math.max(0, (now - lastFrameTime) / 1000));
+    lastFrameTime = now;
+    setSimulationFrameDuration(frameSeconds);
     if (!frameRecordingActive) {
       drawSimulationFrame(!paused);
     }

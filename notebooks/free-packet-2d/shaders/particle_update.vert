@@ -12,6 +12,7 @@ uniform float uHBAR;
 uniform float uMass;
 uniform float uDT;
 uniform int uGuidingMode;
+uniform vec2 uClassicalVelocity;
 uniform float uSpinS;
 uniform int uBoundaryMode;
 
@@ -130,6 +131,38 @@ vec2 applyBoundaryConditions(vec2 xPx, int boundaryMode) {
   }
 }
 
+vec4 classicalFreeStep(vec2 xPx, float packedSigns) {
+  float bits = floor(packedSigns + 0.5);
+  float sx = mod(bits, 2.0) < 0.5 ? 1.0 : -1.0;
+  float sy = mod(floor(bits / 2.0), 2.0) < 0.5 ? 1.0 : -1.0;
+
+  vec2 xn = xPx + uDT * uClassicalVelocity * vec2(sx, sy);
+
+  if (uBoundaryMode == 1) {
+    return vec4(applyPeriodicBC(xn), 1.0, bits);
+  }
+
+  vec2 maxX = vec2(uSimRes) - vec2(1.0);
+  if (xn.x < 0.0) {
+    xn.x = -xn.x;
+    sx = -sx;
+  } else if (xn.x > maxX.x) {
+    xn.x = 2.0 * maxX.x - xn.x;
+    sx = -sx;
+  }
+
+  if (xn.y < 0.0) {
+    xn.y = -xn.y;
+    sy = -sy;
+  } else if (xn.y > maxX.y) {
+    xn.y = 2.0 * maxX.y - xn.y;
+    sy = -sy;
+  }
+
+  float nextBits = (sx < 0.0 ? 1.0 : 0.0) + (sy < 0.0 ? 2.0 : 0.0);
+  return vec4(clamp(xn, vec2(0.0), maxX), 1.0, nextBits);
+}
+
 void main() {
   vec2 x = aState.xy;
   float mode = aState.z;
@@ -142,6 +175,12 @@ void main() {
 
   if (mode > 1.5) {
     vState = aState;
+    gl_Position = vec4(-2.0);
+    return;
+  }
+
+  if (uGuidingMode == 3) {
+    vState = classicalFreeStep(x, aState.w);
     gl_Position = vec4(-2.0);
     return;
   }

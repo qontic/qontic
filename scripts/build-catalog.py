@@ -14,7 +14,7 @@ def is_gpu_item(item):
     tags = item.get("tags", [])
     fields.extend(tags if isinstance(tags, list) else [])
     blob = " ".join(str(field) for field in fields).lower()
-    return any(keyword in blob for keyword in ("webgpu", "webgl2", "gpu"))
+    return any(keyword in blob for keyword in ("webgpu", "webgl2", "webgl", "gpu"))
 
 for root in ROOTS:
     if not root.exists():

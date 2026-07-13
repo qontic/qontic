@@ -2,7 +2,15 @@
   "title": "Pilot-Wave Tunneling — Notebook",
   "type": "notebook",
   "category": "pilot-wave",
-  "description": "Notebook-style presentation of Bohmian tunneling with guided trajectories, reflection, transmission, and embedded WebGL demonstrations.",
-  "tags": ["Notebook", "Pilot-wave", "Tunneling"],
-  "entry": "index.html"
+  "description": "Tunneling with Pilot wave theory. Bohmian trajectories and wave-packet dynamics are shown.",
+  "tags": [
+    "Notebook",
+    "Pilot-wave",
+    "GPU",
+    "2D",
+    "Spin",
+    "Tunneling"
+  ],
+  "entry": "index.html",
+  "status": "approved"
 }
