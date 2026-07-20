@@ -1,7 +1,20 @@
 {
+  "id": "double-slit-analytical-simulation",
   "title": "Double-Slit Experiment — Analytical",
   "type": "app",
   "category": "comparative",
+  "module": "double-slit",
+  "topics": [
+    "wave-mechanics",
+    "interference",
+    "measurement"
+  ],
+  "interpretations": [
+    "orthodox",
+    "pilot-wave",
+    "many-worlds"
+  ],
+  "level": "introductory",
   "description": "Analytical multiview simulation comparing collapse, pilot-wave, and branching-style descriptions of the double-slit experiment.",
   "tags": [
     "Multiview",
@@ -9,5 +22,5 @@
     "Born rule"
   ],
   "entry": "index.html",
-  "status": "approved"
+  "status": "published"
 }

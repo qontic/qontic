@@ -1,6 +1,4 @@
 (() => {
-  const RETURN_TAB_KEY = "qontic:returnTab";
-  const VALID_TABS = new Set(["comparative", "pilot-wave", "notebook", "all"]);
   const NOTEBOOKS = [
     { slug: "delayed-choice", title: "Delayed Choice" },
     { slug: "double-slit-webgl", title: "Double Slit in Bohmian Mechanics" },
@@ -13,28 +11,33 @@
     { slug: "tunneling", title: "Tunneling" }
   ];
 
-  function normalizeTab(tab) {
-    return VALID_TABS.has(tab) ? tab : null;
-  }
-
-  function returnTab() {
+  function safeReturnHref() {
     const params = new URLSearchParams(window.location.search);
-    return (
-      normalizeTab(params.get("from")) ||
-      normalizeTab(sessionStorage.getItem(RETURN_TAB_KEY)) ||
-      "notebook"
-    );
+    const explicit = params.get("returnTo");
+
+    if (explicit) {
+      try {
+        const url = new URL(explicit, window.location.href);
+        if (url.origin === window.location.origin) return url.href;
+      } catch (_) {}
+    }
+
+    if (document.referrer) {
+      try {
+        const referrer = new URL(document.referrer);
+        if (referrer.origin === window.location.origin && referrer.href !== window.location.href) {
+          return referrer.href;
+        }
+      } catch (_) {}
+    }
+
+    return "../../index.html";
   }
 
   function getCurrentNotebookSlug() {
     const segments = window.location.pathname.split("/").filter(Boolean);
     const lastSegment = segments[segments.length - 1] || "";
-
-    if (lastSegment === "index.html") {
-      return segments[segments.length - 2] || null;
-    }
-
-    return lastSegment || null;
+    return lastSegment === "index.html" ? segments[segments.length - 2] || null : lastSegment || null;
   }
 
   function createLink(label, href, extraClass) {
@@ -46,9 +49,7 @@
   }
 
   function addNavigationFooter() {
-    if (document.querySelector(".notebook-footer-nav")) {
-      return;
-    }
+    if (document.querySelector(".notebook-footer-nav")) return;
 
     const currentSlug = getCurrentNotebookSlug();
     const currentIndex = NOTEBOOKS.findIndex((notebook) => notebook.slug === currentSlug);
@@ -56,8 +57,9 @@
     footer.className = "notebook-footer-nav";
     footer.setAttribute("aria-label", "Notebook navigation");
 
-    const backLink = createLink("Back to Main Page", `../../index.html#${returnTab()}`, "footer-nav-button footer-nav-button-main");
-    footer.appendChild(backLink);
+    footer.appendChild(
+      createLink("Back", safeReturnHref(), "footer-nav-button footer-nav-button-main")
+    );
 
     if (currentIndex > 0) {
       const previous = NOTEBOOKS[currentIndex - 1];
@@ -74,17 +76,11 @@
     }
 
     const main = document.querySelector("main");
-    if (main) {
-      main.appendChild(footer);
-    } else {
-      document.body.appendChild(footer);
-    }
+    (main || document.body).appendChild(footer);
   }
 
   function injectStyles() {
-    if (document.getElementById("notebook-footer-styles")) {
-      return;
-    }
+    if (document.getElementById("notebook-footer-styles")) return;
 
     const style = document.createElement("style");
     style.id = "notebook-footer-styles";
@@ -97,26 +93,22 @@
         margin: 2.25rem 0 1.5rem;
         padding: 0 1rem;
       }
-
       .footer-nav-button {
         background: linear-gradient(135deg, #2f7ccf 0%, #4f9bd8 100%);
         color: #fff;
         border: 1px solid rgba(255,255,255,0.2);
         box-shadow: 0 10px 22px rgba(47, 124, 207, 0.24);
       }
-
       .footer-nav-button-main {
         background: linear-gradient(135deg, #0f4c81 0%, #1c6cb2 100%);
         box-shadow: 0 10px 22px rgba(15, 76, 129, 0.24);
       }
-
       .footer-nav-button:hover,
       .footer-nav-button:focus-visible {
         background: linear-gradient(135deg, #2568ab 0%, #3b7fb9 100%);
         color: #fff;
         transform: translateY(-1px);
       }
-
       @media (max-width: 700px) {
         .notebook-footer-nav {
           flex-direction: column;
@@ -127,11 +119,12 @@
     document.head.appendChild(style);
   }
 
-  function updateBackLinks() {
-    const href = `../../index.html#${returnTab()}`;
+  function updateExistingBackLinks() {
+    const href = safeReturnHref();
     document.querySelectorAll("a.nav-button").forEach((link) => {
-      if (/back to main page/i.test(link.textContent || "")) {
+      if (/back/i.test(link.textContent || "")) {
         link.setAttribute("href", href);
+        if (/back to main page/i.test(link.textContent || "")) link.textContent = "Back";
       }
     });
   }
@@ -139,7 +132,7 @@
   function initialize() {
     injectStyles();
     addNavigationFooter();
-    updateBackLinks();
+    updateExistingBackLinks();
   }
 
   if (document.readyState === "loading") {

@@ -1,8 +1,13 @@
 {
+  "id": "stern-gerlach-pilot-wave-notebook",
   "title": "Stern-Gerlach — Notebook",
   "type": "notebook",
   "category": "pilot-wave",
-  "description": "Stern-Gerlach with Pilot wave theory. ",
+  "module": "stern-gerlach",
+  "topics": ["spin", "measurement", "stern-gerlach"],
+  "interpretations": ["pilot-wave"],
+  "level": "intermediate",
+  "description": "Stern-Gerlach with pilot-wave theory.",
   "tags": [
     "Notebook",
     "Pilot-wave",
@@ -12,5 +17,5 @@
     "Stern-Gerlach"
   ],
   "entry": "index.html",
-  "status": "approved"
+  "status": "published"
 }

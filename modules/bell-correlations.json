@@ -1,0 +1,9 @@
+{
+  "id": "bell-correlations",
+  "title": "Bell Correlations",
+  "summary": "Explore entanglement, measurement settings, correlations, and Bell inequalities across quantum representations.",
+  "topics": ["entanglement", "measurement", "quantum-foundations"],
+  "interpretations": ["orthodox", "pilot-wave", "many-worlds"],
+  "order": 60,
+  "relatedModules": ["stern-gerlach", "measurement"]
+}

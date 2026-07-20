@@ -1,0 +1,25 @@
+{
+  "id": "example-course",
+  "type": "course",
+  "title": "Example Course",
+  "description": "Template showing how a course can reference whole modules and individual resources.",
+  "sections": [
+    {
+      "id": "example-section",
+      "title": "Example section",
+      "items": [
+        {
+          "type": "module",
+          "id": "free-particle"
+        },
+        {
+          "type": "resource",
+          "id": "replace-with-a-stable-resource-id",
+          "label": "In-class demonstration",
+          "note": "Optional course-specific instructions.",
+          "mode": "concise"
+        }
+      ]
+    }
+  ]
+}

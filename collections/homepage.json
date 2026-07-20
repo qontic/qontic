@@ -1,0 +1,42 @@
+{
+  "id": "homepage",
+  "type": "homepage",
+  "title": "Q-Ontic Lab",
+  "description": "Primary homepage organization for the Q-Ontic Lab modules.",
+  "order": 0,
+  "sections": [
+    {
+      "id": "core-concepts",
+      "title": "Core Concepts",
+      "description": "Central quantum concepts and experiments used across introductory study.",
+      "items": [
+        { "type": "module", "id": "free-particle" },
+        { "type": "module", "id": "double-slit" },
+        { "type": "module", "id": "quantum-tunneling" },
+        { "type": "module", "id": "potential-well" },
+        { "type": "module", "id": "stern-gerlach" },
+        { "type": "module", "id": "bell-correlations" }
+      ]
+    },
+    {
+      "id": "beyond-the-basics",
+      "title": "Beyond the Basics",
+      "description": "Extensions, deeper conceptual questions, and more specialized topics.",
+      "items": [
+        { "type": "module", "id": "measurement" },
+        { "type": "module", "id": "delayed-choice" },
+        { "type": "module", "id": "michelson-morley" }
+      ]
+    },
+    {
+      "id": "advanced-modules",
+      "title": "Advanced Modules",
+      "description": "Relativistic quantum mechanics and other advanced topics.",
+      "items": [
+        { "type": "module", "id": "quantum-non-equilibrium" },
+        { "type": "module", "id": "dirac-momentum" },
+        { "type": "module", "id": "klein-tunneling" }
+      ]
+    }
+  ]
+}

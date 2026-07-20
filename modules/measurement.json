@@ -1,0 +1,9 @@
+{
+  "id": "measurement",
+  "title": "Quantum Measurement",
+  "summary": "Explore measurement interactions, outcomes, records, collapse, trajectories, and branching.",
+  "topics": ["measurement", "quantum-foundations"],
+  "interpretations": ["orthodox", "pilot-wave", "many-worlds"],
+  "order": 40,
+  "relatedModules": ["double-slit", "stern-gerlach"]
+}

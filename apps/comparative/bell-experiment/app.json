@@ -1,7 +1,20 @@
 {
+  "id": "bell-experiment-comparative-simulation",
   "title": "Bell Experiment — Entanglement",
   "type": "app",
   "category": "comparative",
+  "module": "bell-correlations",
+  "topics": [
+    "entanglement",
+    "bell-inequalities",
+    "nonlocality"
+  ],
+  "interpretations": [
+    "orthodox",
+    "pilot-wave",
+    "many-worlds"
+  ],
+  "level": "intermediate",
   "description": "Interactive Bell-pair simulation with angle-dependent correlations and contrasting representational views.",
   "tags": [
     "Multiview",
@@ -9,5 +22,5 @@
     "Nonlocality"
   ],
   "entry": "index.html",
-  "status": "approved"
+  "status": "published"
 }

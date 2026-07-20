@@ -1,0 +1,17 @@
+{
+  "id": "quantum-non-equilibrium",
+  "title": "Quantum Non-Equilibrium",
+  "summary": "Explore distributions that differ from the Born-rule equilibrium distribution and their relaxation in pilot-wave dynamics.",
+  "topics": [
+    "pilot-wave-theory",
+    "born-rule",
+    "statistical-mechanics"
+  ],
+  "interpretations": [
+    "pilot-wave"
+  ],
+  "order": 90,
+  "relatedModules": [
+    "free-particle"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "free-particle",
+  "title": "Free Particle and Wave Packets",
+  "summary": "Explore free quantum motion, wave-packet spreading, and alternative representations of particle dynamics.",
+  "topics": ["wave-mechanics"],
+  "interpretations": ["orthodox", "pilot-wave", "many-worlds"],
+  "order": 10,
+  "relatedModules": ["double-slit", "quantum-tunneling"]
+}

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Klein Tunneling 2D</title>
+  <link rel="icon" href="data:," />
+  <script>
+    if (new URLSearchParams(window.location.search).get("embed") === "1") {
+      document.documentElement.classList.add("is-embedded");
+    }
+  </script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+      },
+      svg: { fontCache: "global" }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family:system-ui, sans-serif; }
+    #wrap { position:relative; width:100%; height:100%; }
+    canvas { width:100%; height:100%; display:block; }
+    #ui {
+      position:absolute; left:12px; top:12px; width:370px;
+      background:rgba(5,16,36,0.62); color:#d9e6f8; padding:12px 12px 10px;
+      border:1px solid rgba(116,174,255,0.22); border-radius:10px;
+      backdrop-filter:blur(6px); user-select:none; box-sizing:border-box;
+      max-height:calc(100vh - 24px); display:flex; flex-direction:column;
+    }
+    #ui h3 { margin:0; font-size:14px; font-weight:600; color:#fff; }
+    #uibody { flex:1 1 auto; min-height:0; overflow-y:auto; padding-right:4px; scrollbar-width:thin; }
+    .row { display:flex; align-items:center; gap:8px; margin:6px 0; }
+    .row label { flex:0 0 112px; font-size:12px; color:#b9cce5; }
+    .row input[type="range"] { flex:1; min-width:0; }
+    .row .val { flex:0 0 70px; text-align:right; font-variant-numeric:tabular-nums; font-size:12px; color:#fff; }
+    .row.no-value .val { display:none; }
+    .btns { display:flex; gap:10px; margin-top:8px; }
+    button {
+      flex:1; padding:8px 10px; border-radius:8px; border:1px solid rgba(132,192,255,0.26);
+      background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
+    }
+    button:hover { background:rgba(86,150,232,0.22); }
+    .stat { margin-top:8px; font-size:12px; color:#b9cce5; line-height:1.35; }
+    .stat b { color:#fff; font-weight:600; }
+    #theory {
+      position:absolute; right:12px; top:12px; width:410px; max-width:calc(100vw - 24px);
+      max-height:calc(100vh - 24px); overflow:auto;
+      background:rgba(5,16,36,0.62); color:#d9e6f8; padding:12px;
+      border:1px solid rgba(116,174,255,0.22); border-radius:10px;
+      backdrop-filter:blur(6px); user-select:none; box-sizing:border-box;
+    }
+    #theory.is-minimized { width:160px; overflow:hidden; }
+    .panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .panel-head h3 { margin:0; font-size:14px; font-weight:600; color:#fff; }
+    .panel-toggle {
+      flex:0 0 auto; width:34px; height:28px; padding:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px; line-height:1;
+    }
+    #theorybody { margin-top:10px; font-size:13px; line-height:1.45; color:#c8d9ef; }
+    #theorybody[hidden] { display:none; }
+    #theorybody p { margin:0 0 10px; }
+    .math {
+      margin:8px 0 10px; padding:9px 11px; overflow-x:auto;
+      border:1px solid rgba(132,192,255,0.18); border-radius:8px;
+      background:rgba(8,23,51,0.54); color:#eef7ff;
+      font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;
+      font-size:16px; line-height:1.55;
+    }
+    .math mjx-container { margin:0 !important; min-width:max-content; }
+    .mi { font-style:italic; }
+    .frac {
+      display:inline-grid; grid-template-rows:auto auto; vertical-align:middle;
+      text-align:center; line-height:1.05; margin:0 0.12em;
+    }
+    .frac .top { border-bottom:1px solid currentColor; padding:0 0.18em 0.05em; }
+    .frac .bottom { padding:0.05em 0.18em 0; }
+    .note { color:#9fbce0; }
+    @media (max-width:760px) {
+      #ui { width:calc(100vw - 48px); }
+      #theory { top:auto; bottom:12px; width:calc(100vw - 48px); }
+      #theory.is-minimized { width:160px; }
+    }
+    html.is-embedded #theory {
+      display:none !important;
+    }
+    html.is-embedded #ui {
+      width:min(370px, calc(100vw - 24px));
+      max-height:calc(100vh - 24px);
+      overflow:auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="c"></canvas>
+    <div id="ui">
+      <div class="applet-ui-header" style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+        <h3>Klein Tunneling 2D</h3>
+        <button id="minui" title="Minimize/expand" style="
+          width:34px; height:28px; padding:0; flex:0 0 auto;
+          border-radius:8px; border:1px solid rgba(132,192,255,0.26);
+          background:rgba(68,130,210,0.14); color:#fff; cursor:pointer;
+          display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1;
+        ">-</button>
+      </div>
+      <div id="uibody">
+        <div id="controls"></div>
+        <div class="btns">
+          <button id="reset">Reset (R)</button>
+          <button id="pause">Pause</button>
+        </div>
+      </div>
+    </div>
+    <div id="theory" class="is-minimized" aria-label="Theory panel">
+      <div class="panel-head">
+        <h3>Theory</h3>
+        <button id="mintheory" class="panel-toggle" title="Minimize/expand" aria-expanded="false">+</button>
+      </div>
+      <div id="theorybody" hidden>
+        <p>A positive-energy 2D Dirac Gaussian packet starts on the left and hits a vertical scalar potential barrier.
+          </p>
+        <div class="math">
+          \[
+            i\hbar\frac{\partial\psi}{\partial t}
+            =
+            \left[-i\hbar c\left(\sigma_x\partial_x+\sigma_y\partial_y\right)
+            + mc^2\sigma_z + V(x)\right]\psi
+          \]
+        </div>
+        <p>The yellow dots are Bohmian positions in the 2D guidance field of the full spinor.</p>
+        <div class="math">
+          \[
+            \rho=\psi^\dagger\psi,\qquad
+            \mathbf{j}=c\,\psi^\dagger(\sigma_x,\sigma_y)\psi,\qquad
+            \dot{\mathbf{r}}=\frac{\mathbf{j}}{\rho}.
+          \]
+        </div>
+        <p>The amplitude view button only changes the background diagnostic: total spinor density or lower-component density.
+          The particles still use the full Dirac spinor guidance field.</p>
+        <p class="note">For incident total energy \(E\), the wall is in the Klein zone when \(V > E + mc^2\).</p>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

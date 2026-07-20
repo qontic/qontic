@@ -1,0 +1,7 @@
+{
+  "id": "potential-well",
+  "title": "Potential Wells and Bound States",
+  "summary": "Bound-state wave functions, energy eigenstates, and particle motion in confining potentials.",
+  "topics": ["potential-wells", "bound-states", "eigenstates"],
+  "order": 35
+}

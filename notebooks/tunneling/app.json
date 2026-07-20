@@ -1,8 +1,18 @@
 {
+  "id": "tunneling-pilot-wave-notebook",
   "title": "Pilot-Wave Tunneling — Notebook",
   "type": "notebook",
   "category": "pilot-wave",
-  "description": "Tunneling with Pilot wave theory. Bohmian trajectories and wave-packet dynamics are shown.",
+  "module": "quantum-tunneling",
+  "topics": [
+    "wave-mechanics",
+    "potential-barriers"
+  ],
+  "interpretations": [
+    "pilot-wave"
+  ],
+  "level": "intermediate",
+  "description": "Tunneling with pilot-wave theory. Bohmian trajectories and wave-packet dynamics are shown.",
   "tags": [
     "Notebook",
     "Pilot-wave",
@@ -12,5 +22,5 @@
     "Tunneling"
   ],
   "entry": "index.html",
-  "status": "approved"
+  "status": "published"
 }

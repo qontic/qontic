@@ -1,16 +1,26 @@
 {
-  "title": "Pilot-Wave Double Slit —  Notebook",
+  "id": "double-slit-pilot-wave-notebook",
+  "title": "Pilot-Wave Double Slit — Notebook",
   "type": "notebook",
   "category": "pilot-wave",
-  "description": "Classic double-slit experiment with real time pilot-wave visualization.",
+  "module": "double-slit",
+  "topics": [
+    "interference",
+    "wave-mechanics",
+    "measurement"
+  ],
+  "interpretations": [
+    "pilot-wave"
+  ],
+  "level": "intermediate",
+  "description": "Classic double-slit experiment with real-time pilot-wave visualization.",
   "tags": [
     "Notebook",
     "Pilot-wave",
     "GPU",
     "2D",
-    "Spin",
     "Double slit"
   ],
   "entry": "index.html",
-  "status": "approved"
+  "status": "published"
 }

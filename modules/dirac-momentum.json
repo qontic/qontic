@@ -1,0 +1,7 @@
+{
+  "id": "dirac-momentum",
+  "title": "Dirac Momentum",
+  "summary": "Relativistic Dirac wave packets, momentum, and Bohmian particle motion.",
+  "topics": ["dirac-equation", "relativistic-quantum-mechanics", "momentum"],
+  "order": 90
+}

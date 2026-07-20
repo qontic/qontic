@@ -1,0 +1,9 @@
+{
+  "id": "quantum-tunneling",
+  "title": "Quantum Tunneling",
+  "summary": "Explore transmission through classically forbidden regions using wave packets and alternative quantum representations.",
+  "topics": ["wave-mechanics", "potential-barriers"],
+  "interpretations": ["orthodox", "pilot-wave", "many-worlds"],
+  "order": 30,
+  "relatedModules": ["free-particle"]
+}

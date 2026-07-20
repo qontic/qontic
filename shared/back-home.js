@@ -1,5 +1,28 @@
 (function () {
-  const mainHref = '../../../index.html';
+  const fallbackHref = '../../../index.html';
+
+  function safeReturnHref() {
+    const params = new URLSearchParams(window.location.search);
+    const explicit = params.get('returnTo');
+
+    if (explicit) {
+      try {
+        const url = new URL(explicit, window.location.href);
+        if (url.origin === window.location.origin) return url.href;
+      } catch (_) {}
+    }
+
+    if (document.referrer) {
+      try {
+        const referrer = new URL(document.referrer);
+        if (referrer.origin === window.location.origin && referrer.href !== window.location.href) {
+          return referrer.href;
+        }
+      } catch (_) {}
+    }
+
+    return fallbackHref;
+  }
 
   function ensureThemeToggleLabels() {
     document.querySelectorAll('.theme-toggle-btn').forEach(function (btn) {
@@ -43,14 +66,14 @@
     const link = document.createElement('a');
     link.id = 'qontic-back-home';
     link.className = 'qontic-back-home';
-    link.href = mainHref;
-    link.textContent = '← Back to Main Page';
-    link.setAttribute('aria-label', 'Back to the Q-Ontic Lab main page');
+    link.href = safeReturnHref();
+    link.textContent = '← Back';
+    link.setAttribute('aria-label', 'Return to the page that opened this resource');
     document.body.appendChild(link);
   }
 
   if (document.readyState === 'loading') {
-    init();
+    document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }

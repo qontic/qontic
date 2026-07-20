@@ -1,7 +1,18 @@
 {
+  "id": "double-slit-numerical-simulation",
   "title": "Double-Slit Experiment — Numerical",
   "type": "app",
   "category": "pilot-wave",
+  "module": "double-slit",
+  "topics": [
+    "wave-mechanics",
+    "interference",
+    "trajectories"
+  ],
+  "interpretations": [
+    "pilot-wave"
+  ],
+  "level": "intermediate",
   "description": "GPU-based numerical wave-packet propagation through a double slit with trajectory visualization.",
   "tags": [
     "Pilot-wave",
@@ -9,5 +20,5 @@
     "GPU"
   ],
   "entry": "index.html",
-  "status": "approved"
+  "status": "published"
 }

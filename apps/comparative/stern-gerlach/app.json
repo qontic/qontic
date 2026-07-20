@@ -1,7 +1,19 @@
 {
+  "id": "stern-gerlach-comparative-simulation",
   "title": "Stern-Gerlach Experiment — 3D",
   "type": "app",
   "category": "comparative",
+  "module": "stern-gerlach",
+  "topics": [
+    "spin",
+    "measurement"
+  ],
+  "interpretations": [
+    "orthodox",
+    "pilot-wave",
+    "many-worlds"
+  ],
+  "level": "introductory",
   "description": "Three-dimensional Stern-Gerlach simulation comparing collapse, pilot-wave, and branching-style descriptions.",
   "tags": [
     "Multiview",
@@ -9,5 +21,5 @@
     "Measurement"
   ],
   "entry": "index.html",
-  "status": "approved"
+  "status": "published"
 }

@@ -1,0 +1,8 @@
+{
+  "id": "klein-tunneling",
+  "title": "Klein Tunneling",
+  "summary": "Relativistic tunneling and the Klein paradox for Dirac wave packets.",
+  "topics": ["klein-tunneling", "dirac-equation", "relativistic-quantum-mechanics"],
+  "order": 91,
+  "status": "published"
+}

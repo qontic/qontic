@@ -1,7 +1,12 @@
 {
+  "id": "quantum-measurement-detector-simulation",
   "title": "Quantum Measurement with Detector",
   "type": "app",
   "category": "comparative",
+  "module": "measurement",
+  "topics": ["measurement", "detectors", "measurement-back-action"],
+  "interpretations": ["orthodox", "pilot-wave", "many-worlds"],
+  "level": "intermediate",
   "description": "Detector-coupled tunneling simulation with explicit measurement back-action and outcome statistics.",
   "tags": [
     "Multiview",
@@ -9,5 +14,5 @@
     "Detector"
   ],
   "entry": "index.html",
-  "status": "approved"
+  "status": "published"
 }

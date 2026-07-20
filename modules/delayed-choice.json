@@ -1,0 +1,7 @@
+{
+  "id": "delayed-choice",
+  "title": "Delayed Choice",
+  "summary": "Interferometry and delayed-choice experiments viewed through alternative quantum representations.",
+  "topics": ["delayed-choice", "interferometry", "measurement"],
+  "order": 60
+}

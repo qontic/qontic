@@ -1,0 +1,9 @@
+{
+  "id": "stern-gerlach",
+  "title": "Stern–Gerlach",
+  "summary": "Explore spin measurement, spatial separation, trajectories, and branching in Stern–Gerlach experiments.",
+  "topics": ["spin", "measurement"],
+  "interpretations": ["orthodox", "pilot-wave", "many-worlds"],
+  "order": 50,
+  "relatedModules": ["measurement", "bell-correlations"]
+}
