@@ -11,6 +11,7 @@
  */
 (function () {
   'use strict';
+  document.documentElement.dataset.qsfAnalyticsScriptLoaded = 'true';
 
   const MEASUREMENT_ID = 'G-ZWF6YQM0YV';
   const EVENT_DEBOUNCE_MS = 250;
@@ -283,13 +284,22 @@
   }
 
   function init() {
-    ensureGtag();
+    document.documentElement.dataset.qsfAnalyticsInitStarted = 'true';
+    try {
+      ensureGtag();
+    } catch (error) {
+      document.documentElement.dataset.qsfAnalyticsError = cleanValue(error && error.message ? error.message : error);
+      console.error('Q-Ontic Analytics initialization failed', error);
+      return;
+    }
+    document.documentElement.dataset.qsfAnalyticsReady = 'true';
     telemetry.lastView = currentView();
     telemetry.lastViewStartedMs = Date.now();
 
     sendEvent('demo_open', {
       interpretation: telemetry.lastView
     });
+    document.documentElement.dataset.qsfAnalyticsOpenSent = 'true';
     attachControlListeners();
     window.setTimeout(function () { trackCurrentState('initial'); }, 500);
 
