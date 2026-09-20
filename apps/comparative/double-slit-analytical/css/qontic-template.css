@@ -1,0 +1,300 @@
+body.analytical-template { padding: 0 18px 12px; }
+.analytical-template qontic-controls {
+  --qontic-run-background:#15803d;
+  --qontic-run-border:#22c55e;
+  --qontic-run-color:#fff;
+  --qontic-run-hover-background:#166534;
+  --qontic-run-hover-border:#4ade80;
+  --qontic-run-background-light:#15803d;
+  --qontic-run-color-light:#fff;
+  --qontic-reset-background:#b91c1c;
+  --qontic-reset-border:#ef4444;
+  --qontic-reset-color:#fff;
+  --qontic-reset-hover-background:#991b1b;
+  --qontic-reset-hover-border:#f87171;
+}
+.analytical-template .analytical-shell { width: 100%; max-width: none; margin: auto; }
+.analytical-template #superContainer { padding: 16px 0 0; background: transparent; border: 0; }
+.analytical-template #superContainer > ul,
+.analytical-template #psiTabs > ul,
+.analytical-template #toggleView,
+.analytical-template #startButton,
+.analytical-template #resetButton,
+.analytical-template #animationStep-group,
+.analytical-template #physics-mirror-sliders,
+.analytical-template #setup-mirror-sliders,
+.analytical-template #particle-parameter-container > .wave-range-box,
+.analytical-template .basics-advanced-toggle,
+.analytical-template #versionInfo,
+.analytical-template #modeExplanation,
+.analytical-template #setupBtnStatus { display: none !important; }
+.analytical-template #mainContainer { padding: 0; width: 100%; }
+.analytical-template .main-container { width: 100%; max-width: calc(var(--qontic-sidebar-width, 340px) + 18px + max(320px, (100dvh - 230px) * 4 / 3)); margin-inline: auto; align-items: flex-start; gap: 18px; }
+.analytical-template #leftPanel { width: var(--qontic-sidebar-width, 340px); flex: 0 0 var(--qontic-sidebar-width, 340px); min-width: 0; gap: 12px; }
+.analytical-template #psiTabs { padding: 12px; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; }
+.analytical-template #sharedControls { margin-bottom: 8px; }
+.analytical-template #psiTabs [hidden] { display: none !important; }
+.analytical-template #basics-container,
+.analytical-template #analytical-advanced,
+.analytical-template #graphics-parameter-container { padding: 12px 0 0 !important; }
+.analytical-template #particle-parameter-container,
+.analytical-template #detector-parameter-container { padding: 0 !important; }
+.analytical-template #psiTabs h3 { margin: 10px 0; font-size: 13px; color: var(--text-primary); }
+.analytical-template #experiment-bar { display: flex; gap: 8px; padding: 0; border: 0; margin: 0 0 12px; }
+.analytical-template #experiment-bar button { flex: 1; width: auto; }
+.analytical-template #canvas-wrapper { flex: 1 1 0; min-width: 0; }
+.analytical-template #canvas-container { width: 100%; height: auto; aspect-ratio: 4 / 3; min-width: 0; min-height: 0; max-width: none; max-height: none; margin: 8px auto; box-sizing: border-box; }
+.analytical-template #canvas-container > canvas:not([id^="palette"]) { left: 0; top: 0; }
+.analytical-template #Info { box-sizing: border-box; padding: 12px; }
+.analytical-template .info-layout { display: block; }
+.analytical-template .info-controls fieldset { margin-bottom: 0; }
+.analytical-template .info-highlight td { background: var(--bg-tertiary); color: var(--text-primary); }
+.analytical-template .info-highlight td span { color: var(--text-primary); }
+.analytical-template #rationale,
+.analytical-template #superContainer > #math-container { max-width: 1080px; margin: auto; padding: 20px; color: var(--text-primary); background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; line-height: 1.6; }
+.analytical-template #math-container > div { margin-bottom: 18px !important; }
+.analytical-template .comparison-table .view-link { display: inline-block; white-space: nowrap; padding: 4px 0; }
+.analytical-template .eyebrow { font-size: 10px; }
+.analytical-template .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.analytical-template .tabs button { background: #0d202e; color: #b9cfdb; border: 1px solid #294b60; border-radius: 6px; }
+.analytical-template .tabs button.active { background: #12394b; color: #7cecff; border-color: #55d8e6; }
+.analytical-template #psiTabs button:not(.pick-color) { background: #162d3d; color: #d9edf7; border: 1px solid #294b60; border-radius: 6px; padding: 6px 10px; font: 400 13px Inter, Arial, sans-serif; }
+.analytical-template #psiTabs button:not(.pick-color):hover { border-color: #55d8e6; }
+.analytical-template.qontic-light #psiTabs button:not(.pick-color) { background: #edf5f8; color: #203746; border-color: #aec2cb; }
+.analytical-template .qontic-footer { box-sizing: border-box; }
+.analytical-template .input-group label { min-width: 72px; }
+.analytical-template #graphics-parameter-container table label { min-width: 0; }
+@media (max-width: 1000px) {
+  .analytical-template .main-container { flex-direction: column; max-width: 100%; }
+  .analytical-template #leftPanel { width: 100%; flex-basis: auto; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(220px, 1fr); align-items: start; }
+  .analytical-template #canvas-wrapper { width: 100%; }
+  .analytical-template #canvas-container { height: auto; aspect-ratio: 4 / 3; }
+}
+@media (max-width: 560px) {
+  body.analytical-template { padding-inline: 10px; }
+  .analytical-template .qontic-app-header { margin-inline: -10px; padding-inline: 10px; }
+  .analytical-template #rationale, .analytical-template #superContainer > #math-container { padding: 12px; }
+}
+
+@media (max-width: 600px) {
+  .analytical-template #leftPanel { display: flex; }
+  .analytical-template .qontic-app-header { min-height: 0; padding-block: 8px; }
+  .analytical-template .qontic-brand img { width: 42px; height: 42px; }
+  .analytical-template .qontic-app-title h1 { font-size: 25px; }
+  .analytical-template .qontic-app-title .eyebrow { font-size: 8px; margin: 0 0 4px; }
+  .analytical-template .qontic-header-actions { display: none; }
+  .analytical-template #superContainer { padding-top: 10px; }
+  .analytical-template #psiTabs { padding: 10px; }
+  .analytical-template .main-container { gap: 8px; }
+  .analytical-template #canvas-wrapper { flex: none; }
+  .analytical-template #Info { width: 100%; }
+}
+
+@media (max-width: 600px) {
+  .analytical-template #psiTabs { width: 100%; min-width: 0; box-sizing: border-box; }
+  .analytical-template .input-group label { width: 72px; min-width: 72px; }
+  .analytical-template .input-group input[type=range] { min-width: 20px; width: 0; }
+  .analytical-template .input-group input[type=number] { width: 48px; }
+}
+
+/* Let the range shrink before sacrificing numeric values or units. */
+.analytical-template #psiTabs { min-width:0; width:100%; box-sizing:border-box; }
+.analytical-template .input-group input[type=range] { min-width:20px; width:0; }
+.analytical-template .input-group input[type=number] { width:64px; box-sizing:border-box; }
+.analytical-template .input-group select { max-width:100%; }
+.analytical-template .analytical-path-options { display:flex; flex-wrap:wrap; gap:4px 12px; margin-bottom:8px; }
+.analytical-template .analytical-path-options .input-group { gap:4px; margin:0; }
+.analytical-template .analytical-path-options label { width:auto; min-width:0; margin:0; font-size:12px; white-space:nowrap; }
+.analytical-template .analytical-path-options input { margin:0; }
+
+/* Compact Advanced rows, with plain units and room for labels to stay on one line. */
+.analytical-template #analytical-advanced select[id$="-units"] { display:none !important; }
+.analytical-template .analytical-unit { flex:0 0 auto; font-size:12px; color:var(--text-secondary); margin-left:3px; }
+.analytical-template .analytical-unit[hidden] { display:none; }
+.analytical-template #analytical-advanced .input-group:has(input[type=range]) { margin-bottom:8px; min-height:28px; }
+.analytical-template #analytical-advanced .input-group:has(input[type=range]) > label { width:110px; min-width:110px; font-size:13px; }
+.analytical-template #analytical-advanced #detector-parameter-container { margin-top:10px; }
+
+/* Display layers: switches and labeled color actions, without a cramped table. */
+.analytical-template .analytical-layers { padding:4px 10px; margin:0 0 12px; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-secondary); }
+.analytical-template .analytical-layer { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:32px; }
+.analytical-template .analytical-layer + .analytical-layer { border-top:1px solid var(--border-color); }
+.analytical-template .analytical-layer label { display:flex; align-items:center; gap:10px; flex:1; min-width:0; cursor:pointer; font-size:13px; color:var(--text-primary); padding:5px 0; }
+.analytical-template .analytical-layer input[type=checkbox] { appearance:none; -webkit-appearance:none; position:relative; flex:0 0 28px; width:28px; height:16px; margin:0; border:1px solid var(--text-muted); border-radius:20px; background:var(--bg-tertiary); cursor:pointer; }
+.analytical-template .analytical-layer input[type=checkbox]::after { content:''; position:absolute; top:2px; left:2px; width:10px; height:10px; border-radius:50%; background:var(--text-muted); transition:transform .15s; }
+.analytical-template .analytical-layer input:checked { border-color:#38bdce; background:#126274; }
+.analytical-template .analytical-layer input:checked::after { transform:translateX(12px); background:#baf7ff; }
+.analytical-template .analytical-layer input:focus-visible,
+.analytical-template .analytical-layer button:focus-visible { outline:2px solid #55d8e6; outline-offset:3px; }
+.analytical-template .analytical-layer .pick-color { flex:0 0 28px; width:28px; height:22px; min-width:28px; padding:0; margin:0; border:2px solid var(--border-color); border-radius:7px; cursor:pointer; box-shadow:0 0 0 1px var(--text-muted); }
+.analytical-template #psiTabs .analytical-palette-button { width:38px; height:24px; padding:2px; flex:0 0 38px; border-radius:7px; overflow:hidden; }
+.analytical-template .analytical-palette-button canvas { display:block; width:100%; height:100%; border-radius:3px; cursor:pointer; }
+.analytical-template .analytical-font-row { justify-content:space-between; font-size:13px; }
+.analytical-template #fontTarget { color:var(--text-primary); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:5px; }
+.analytical-template #opacity-box { background:transparent; border:1px solid var(--border-color); border-radius:10px; padding:8px 10px; }
+.analytical-template #opacity-box .opacity-box-title { font-size:12px; color:var(--text-secondary); font-weight:500; }
+
+/* Keep Display short without shrinking its text or color targets. */
+.analytical-template #graphics-parameter-container > [hidden] { display:none !important; }
+.analytical-template .analytical-layers { margin-bottom:8px; padding-block:2px; }
+.analytical-template .analytical-layer { min-height:28px; }
+.analytical-template .analytical-layer label { padding-block:3px; }
+.analytical-template #opacity-box { padding:6px 0 0; margin:0 0 6px; border:0; border-radius:0; }
+.analytical-template #opacity-box .opacity-box-title { display:none; }
+.analytical-template #opacity-box .input-group label { width:95px; min-width:95px; font-size:13px; }
+.analytical-template #opacity-box .input-group { margin-bottom:6px; }
+
+/* One type system, independent of legacy saved font preferences. */
+body.analytical-template { --font-size-base:13px; --font-size-sm:13px; --font-size-xs:13px; --font-size-info:13px; font-family:Inter,Arial,sans-serif; }
+.analytical-template #psiTabs label,
+.analytical-template #psiTabs input,
+.analytical-template #psiTabs select,
+.analytical-template #psiTabs button,
+.analytical-template #Info,
+.analytical-template #Info td,
+.analytical-template #Info td span { font-family:Inter,Arial,sans-serif !important; font-size:13px !important; line-height:1.35 !important; font-weight:400 !important; }
+.analytical-template #Info td.value,
+.analytical-template #Info td.value span { font-weight:500 !important; font-variant-numeric:tabular-nums; }
+.analytical-template .main-container { max-width:calc(var(--qontic-sidebar-width,340px) + 18px + max(320px,(100dvh - 270px)*4/3)); }
+/* One compact control row; expanded canvas fills the remaining viewport. */
+.analytical-template .qontic-expanded-dialog[open] {
+  display:grid; grid-template-columns:360px minmax(0,1fr);
+  grid-template-rows:44px minmax(0,1fr); gap:4px 12px;
+  padding:8px; overflow:hidden;
+}
+.analytical-template .qontic-expanded-dialog #sharedControls {
+  grid-column:1; grid-row:1; width:100%; margin:0; align-self:center;
+}
+.analytical-template .qontic-expanded-dialog #canvas-wrapper { display:contents; }
+.analytical-template .qontic-expanded-dialog #canvas-wrapper .qontic-media-toolbar {
+  grid-column:2; grid-row:1; width:100%; margin:0; flex-wrap:nowrap;
+}
+.analytical-template .qontic-expanded-dialog #canvas-container {
+  grid-column:1 / -1; grid-row:2; align-self:center; justify-self:center;
+  width:100%; height:100% !important;
+  aspect-ratio:auto; margin:0;
+}
+@media(max-width:800px) {
+  .analytical-template .qontic-expanded-dialog[open] {
+    grid-template-columns:minmax(0,1fr); grid-template-rows:44px 36px minmax(0,1fr);
+    column-gap:0;
+  }
+  .analytical-template .qontic-expanded-dialog #sharedControls { width:min(360px,100%); }
+  .analytical-template .qontic-expanded-dialog #canvas-wrapper .qontic-media-toolbar {
+    grid-column:1; grid-row:2; gap:4px;
+  }
+  .analytical-template .qontic-expanded-dialog #canvas-container {
+    grid-row:3;
+  }
+}
+.analytical-template .qontic-expanded-dialog #shortcut-hint { display:none; }
+@media(max-width:1000px) { .analytical-template .main-container { max-width:100%; } }
+
+/* Keep the interpretation label compact above the canvas. */
+.analytical-template #canvas-wrapper .qontic-media-toolbar { align-items:center; }
+.analytical-template #canvas-wrapper #view-label { margin:0 auto 0 0; text-align:left; font:400 14px/1.35 Inter,Arial,sans-serif; }
+
+/* One compact opacity slider per layer; zero hides without changing the model. */
+.analytical-template .analytical-layer {display:grid;grid-template-columns:minmax(0,1fr) 68px 38px;gap:8px;min-height:30px;}
+.analytical-template .analytical-layer label {cursor:default;margin:0;min-width:0;}
+.analytical-template .analytical-layer .analytical-opacity-slider {width:68px;min-width:0;margin:0;accent-color:#55d8e6;cursor:pointer;}
+.analytical-template .analytical-layer.is-transparent label {color:var(--text-muted);}
+.analytical-template .analytical-layer > button {justify-self:center;}
+.analytical-template #opacity-box[hidden] {display:none!important;}
+
+/* Reading tabs use a document layout independent of compact control sizing. */
+.analytical-template #superContainer > #math-container,
+.analytical-template #superContainer > #rationale {
+  width:min(100%,1040px)!important;max-width:1040px!important;min-width:0;
+  box-sizing:border-box;font:400 16px/1.65 Inter,Arial,sans-serif;
+  padding:clamp(18px,3vw,36px)!important;
+}
+.analytical-template #math-container h1,
+.analytical-template #rationale h1 {font-size:28px;line-height:1.25;margin:0 0 16px;}
+.analytical-template #math-container h2,
+.analytical-template #rationale h2 {font-size:21px;line-height:1.35;margin:24px 0 10px;}
+.analytical-template #math-container h3 {font-size:17px;margin:16px 0 8px;}
+.analytical-template #math-container p {margin:10px 0 16px;}
+.analytical-template #math-container .math-section + .math-section {border-top:1px solid var(--border-color);margin-top:24px;padding-top:4px;}
+.analytical-template #math-container .math-equation {padding:12px 16px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;overflow-x:auto;}
+.analytical-template #math-container .katex {font-size:1.15em;}
+.analytical-template #math-container .katex-display {margin:10px 0;}
+.analytical-template #mathLegend {font-size:16px;line-height:1.8;}
+.analytical-template #rationale .comparison-table-scroll {overflow-x:auto;}
+
+/* One slider treatment across Core, Advanced, and Display. */
+.analytical-template #psiTabs input[type=range] {
+  --slider-track:#536578;
+  --slider-thumb:#55d8e6;
+  appearance:none;-webkit-appearance:none;
+  height:20px;padding:0;border:0;background:transparent;
+  accent-color:var(--slider-thumb);cursor:pointer;
+}
+.analytical-template.qontic-light #psiTabs input[type=range] {
+  --slider-track:#b8c6cf;--slider-thumb:#087487;
+}
+.analytical-template #psiTabs input[type=range]::-webkit-slider-runnable-track {
+  height:5px;background:var(--slider-track);border:0;border-radius:999px;
+}
+.analytical-template #psiTabs input[type=range]::-webkit-slider-thumb {
+  appearance:none;-webkit-appearance:none;width:15px;height:15px;
+  margin-top:-5px;border:0;border-radius:50%;background:var(--slider-thumb);
+}
+.analytical-template #psiTabs input[type=range]::-moz-range-track {
+  height:5px;background:var(--slider-track);border:0;border-radius:999px;
+}
+.analytical-template #psiTabs input[type=range]::-moz-range-progress {
+  height:5px;background:var(--slider-track);border-radius:999px;
+}
+.analytical-template #psiTabs input[type=range]::-moz-range-thumb {
+  width:15px;height:15px;border:0;border-radius:50%;background:var(--slider-thumb);
+}
+.analytical-template #psiTabs input[type=range]:focus-visible {
+  outline:2px solid var(--slider-thumb);outline-offset:3px;border-radius:4px;
+}
+
+
+/* Custom expanded sizes never affect the normal view or physical geometry. */
+.analytical-template .expanded-canvas-resize { display:none; }
+.analytical-template .qontic-expanded-dialog #canvas-container.has-expanded-size {
+  width:var(--expanded-canvas-width); height:var(--expanded-canvas-height) !important;
+  aspect-ratio:auto;
+}
+.analytical-template .qontic-expanded-dialog .expanded-canvas-resize {
+  display:flex; position:absolute; right:0; bottom:0; z-index:30;
+  align-items:center; justify-content:center; width:28px; height:28px;
+  min-width:28px; padding:3px; border:1px solid #7ee9fb; border-radius:5px 0 0 0;
+  color:#d9f8ff; background:#162d3d; cursor:nwse-resize; touch-action:none;
+}
+.analytical-template .expanded-canvas-resize svg {
+  width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2;
+}
+.analytical-template .expanded-canvas-resize:focus-visible { outline:2px solid #7ee9fb; outline-offset:2px; }
+
+.analytical-template .expanded-world-count { display:none; }
+.analytical-template .qontic-expanded-dialog .expanded-world-count:not([hidden]) {
+  display:block; position:absolute; top:10px; right:12px; z-index:20;
+  padding:6px 10px; border:1px solid #476477; border-radius:6px;
+  background:rgba(15,23,42,.9); color:#edf8ff;
+  font:500 30px/1.4 Inter,Arial,sans-serif; font-variant-numeric:tabular-nums;
+  pointer-events:none;
+}
+.analytical-template .expanded-world-count sup { font-size:.75em; }
+
+
+/* Version 85: use the same quiet solid divider for every control row. */
+.analytical-template #psiTabs label[data-tip],
+.analytical-template #psiTabs div[data-tip] { border-bottom:0; }
+.analytical-template #psiTabs .input-group:has(input[type=range]),
+.analytical-template .analytical-layer {
+  border-bottom:1px solid var(--border-color);
+}
+.analytical-template .analytical-layer + .analytical-layer { border-top:0; }
+.analytical-template #analytical-advanced .input-group:has(input[type=range]) {
+  min-height:25px;
+  margin-bottom:4px;
+  padding-bottom:3px;
+}
+.analytical-template #analytical-advanced .input-group:has(input[type=range]) > label {
+  font-size:12px;
+}

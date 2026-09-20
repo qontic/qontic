@@ -15,9 +15,31 @@
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="js/palette.js"></script>
-    <script src="js/double-slit.js"></script>
-    <link rel="stylesheet" href="css/qsf-style.css">
+    <script>window.qonticTemplateLayout = true;</script>
+    <script src="js/double-slit.js?v=2.87-state"></script>
+    <link rel="stylesheet" href="css/qsf-style.css?v=20260908-layout3">
     <script defer src="../../../shared/back-home.js"></script>
+    <style>
+      #infoBranchCount {
+        display: inline-block;
+        padding: 0.2em 0;
+        font-size: 1.1em;
+        line-height: 1.5;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      #infoBranchCount sup {
+        position: relative;
+        top: -0.4em;
+        margin-left: 0.08em;
+        font-size: 0.9em;
+        line-height: 0;
+        vertical-align: baseline;
+      }
+    </style>
+    <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=resources-20260916">
+    <link rel="stylesheet" href="css/qontic-template.css?v=2.87">
+    <script type="module" src="js/qontic-template.js?v=2.87"></script>
 </head>
 <body>
   <!-- Loading overlay — visible until JS init completes -->
@@ -58,7 +80,7 @@
         <div id="experiment-bar">
             <button id="toggleSlits" data-tip="Click to cycle: Both slits open → Slit 1 only → Slit 2 only.">Both Slits</button>
             <button id="toggleWhichPath" data-tip="Click to toggle a which-path detector at one of the slits. Destroys interference.">No Detector</button>
-            <button id="toggleView" data-tip="Cycle view: Collapse (standard detection) → Pilot-Wave (guided trajectories) → Many-Worlds (branching outcomes).">Collapse</button>
+            <button id="toggleView" data-tip="Cycle view: Orthodox (sampled detections) → Pilot-Wave (guided trajectories) → Many-Worlds (outcome weights and one record). Changing interpretation preserves the run and accumulated hits.">Orthodox</button>
             <div id="setupBtnStatus" class="btn-status-line">&nbsp;</div>
         </div>
         <ul>
@@ -103,10 +125,9 @@
               <div class="input-group">
                 <label data-tip="What to show for the wave visualization" for="basicsWaveFunctionOption">Show:</label>
                 <select id="basicsWaveFunctionOption">
-                  <option value="Phase">&Psi; phase</option>
+                  <option value="Phase">Phase (cos &theta;)</option>
                   <option value="Psi2">|&Psi;|&sup2;</option>
                   <option value="LogPsi2">log(|&Psi;|&sup2;)</option>
-                  <option value="QPotential">sgn(Q)log(|Q|)</option>
                 </select>
               </div>
             </div>
@@ -156,39 +177,13 @@
 	</div>
 
         <!-- Math / Formulas tab -->
-        <div id="math-container" style="padding-top: 6px;">
-
-          <h3 style="margin: 0 0 6px 0; font-size: 1.05em; color: var(--text-primary);">Wave Function</h3>
-
-          <div style="margin-bottom: 6px;">
-            <div style="font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 2px;">Domain 1 &mdash; Before the wall</div>
-            <div id="mathDomain1" style="padding: 4px 8px; background: var(--bg-tertiary); border-radius: var(--radius-md); border: 1px solid var(--border-color); overflow-x: auto;"></div>
-          </div>
-
-          <div style="margin-bottom: 6px;">
-            <div style="font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 2px;">Domain 2 &mdash; After the wall</div>
-            <div id="mathDomain2" style="padding: 4px 8px; background: var(--bg-tertiary); border-radius: var(--radius-md); border: 1px solid var(--border-color); overflow-x: auto;"></div>
-          </div>
-
-          <div id="mathDetectorNote" style="display: none; margin-bottom: 6px;">
-            <div style="font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 2px;">Detector state</div>
-            <div id="mathDetectorExplain" style="padding: 4px 8px; background: var(--bg-tertiary); border-radius: var(--radius-md); border: 1px solid var(--border-color); overflow-x: auto; font-size: 0.88em; color: var(--text-primary); line-height: 1.5;"></div>
-          </div>
-
-          <div id="mathBohmSection" style="margin-bottom: 6px;">
-            <div style="font-weight: 600; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 2px;">Particle velocity</div>
-            <div id="mathBohmV" style="padding: 4px 8px; background: var(--bg-tertiary); border-radius: var(--radius-md); border: 1px solid var(--border-color); overflow-x: auto;"></div>
-          </div>
-
-          <div style="font-size: 0.82em; color: var(--text-muted); line-height: 1.4;">
-            <div id="mathLegend"></div>
-          </div>
-        </div>
+        <!-- The packet engine inserts the authoritative Physics content here. -->
+        <div id="math-container" aria-busy="true"></div>
 
         <div id="particle-parameter-container">
           <div id="manyBranchesInfo" style="margin-bottom: 6px;">
-            <button id="resampleHitsButton" class="branch-button" style="font-size: 12px; padding: 5px 10px;">Resample</button>
-            <button id="resetBranches" class="branch-button" style="font-size: 12px; padding: 5px 10px;">Reset</button>
+            <button id="resampleHitsButton" class="branch-button" style="font-size: 12px; padding: 5px 10px;">Sample another branch</button>
+            <button id="resetBranches" title="Restart the branch count only" class="branch-button" style="font-size: 12px; padding: 5px 10px;">Reset branches</button>
           </div>
           <div class="wave-range-box">
             <div class="input-group">
@@ -197,19 +192,8 @@
 	        <option value="Phase">&Psi; phase</option>
 	        <option value="Psi2">|&Psi;|&sup2;</option>
 	        <option value="LogPsi2">log(|&Psi;|&sup2;)</option>
-	        <option value="QPotential">sgn(Q)log(|Q|)</option>
               </select>
             </div>
-          </div>
-
-          <div class="input-group bohmian-only">
-            <label data-tip="Whether the wave function is shown continous or for each particle" for="wave-type">Continuous:</label>
-            <input id="wave-continous" type="checkbox" checked>
-          </div>
-
-          <div class="input-group bohmian-only">
-            <label data-tip="If checked, particles are effectively generated from detector-wall hits so all trajectories terminate on the wall. If unchecked, particles are emitted from the source and can reach the detector or escape through the upper/lower boundaries." for="onlyWallMode">Only wall hits:</label>
-            <input id="onlyWallMode" type="checkbox">
           </div>
 
           <div class="input-group particle-second-line bohmian-only">
@@ -272,7 +256,7 @@
           </tr>
           <tr>
            <td>
-             <label data-tip="Whether the wave or Q are shown. The palette of the image can be selected.">
+             <label data-tip="Whether the wave is shown. The palette of the image can be selected.">
                <input type="checkbox" id="plot_wave" class="replot" checked> Psi
              </label>
            </td>
@@ -320,9 +304,9 @@
            </tr>
            <tr class="info-box bohmian-only info-highlight" data-tip="Particles currently shown / maximum allowed">
                <td class="label">Particles:</td>
-               <td align=right class="value"><span id="shownParticles">0</span> / <span id="maxParticlesDisplay">100</span></td> 
+               <td align=right class="value"><span id="shownParticles">0</span> active<span id="maxParticlesDisplay" hidden>100</span></td> 
            </tr>
-           <tr class="info-box manyworlds-only info-highlight" data-tip="Number of branches produced since the beginning of the simulation">
+           <tr class="info-box manyworlds-only info-highlight" data-tip="Finite detector model: each detection splits every existing branch into N sensor-outcome branches. After m detections the count is N^m; weights need not be equal.">
                <td class="label">Branches:</td>
                <td align=right class="value"><span id="infoBranchCount">1</span></td> 
            </tr>
@@ -348,7 +332,8 @@
              </div><!-- end leftPanel -->
 
              <div id="canvas-wrapper">
-             <div id="view-label">Collapse</div>
+             <div id="view-label">Orthodox</div>
+             <p id="modeExplanation" class="mode-explanation" aria-live="polite"></p>
              <div id="canvas-container">
            <canvas id="setupCanvas" width="800" height="600"></canvas>
            <canvas id="waveCanvas" width="800" height="600"></canvas>
@@ -378,33 +363,8 @@
   </div>
   </div>
 </div>
-  <div id="rationale">
-<p>
-  
-<article>
-    <header>
-    <h1>The Double-Slit Experiment</h1>
-    </header>
-
-
-    <p>The double-slit experiment was first performed by Thomas Young in 1801 to demonstrate the wave behavior of visible light. In 1927, at the advent of quantum mechanics, the experiment was reproduced with electrons, and since then, with atoms and ever larger molecules. The observations are qualitatively the same.</p>
-
-    <p>A beam of particles is directed at a plate with two small, parallel slits. On a detector screen behind, one observes an interference pattern, alternating bands of high and low intensity. Crucially, this interference pattern is created by the statistical distribution of individual impact points. If one sends in a single particle at a time, each produces a small dot on the screen in a seemingly random position. A large number of particles build up the interference pattern: alternating regions where many particles are detected and regions where few or none are.</p>
-
-    <p>Interference is a typical wave phenomenon: when two waves overlap, their amplitudes combine, so that in some places, the waves reinforce each other (<strong>constructive interference</strong>), while in others, they reduce or cancel each other (<strong>destructive interference</strong>). On the other hand, the individual dots appearing on the screen suggest the impact of localized particles rather than extended waves.</p>
-
-    <p>The double-slit experiment is therefore a key demonstration of the so-called <em>wave-particle duality</em>. The microscopic constituents of light and matter, photons, electrons, atoms, etc., exhibit both wave-like and particle-like properties.</p>
-
-<p>Different representational approaches motivate different explanatory narratives about the same interference pattern. This demo includes (i)&nbsp;<a href="#" class="view-link" data-view="bohmian">trajectory-based visualizations</a>, (ii)&nbsp;<a href="#" class="view-link" data-view="copenhagen">measurement-centered renderings</a>, and (iii)&nbsp;<a href="#" class="view-link" data-view="manyworlds">wave-only views</a>. These modes are intended to support comparison of explanatory strategies rather than to endorse a single interpretation.
-
-    <p style="font-size: 0.85em; color: var(--text-muted);">
-    <strong>Note:</strong> The screen must interact with the particles in order to detect them. The simulation ignores the effect of this interaction on the particle&lsquo;s wave function and trajectories. In most cases, this effect is small, but in principle, it could alter the trajectories, especially in situations where the detector screen is placed very close to the slits.</p>
-
-
-  </article>
-
-
-  </div>
+  <!-- The packet engine inserts the authoritative Views content here. -->
+  <div id="rationale" aria-busy="true"></div>
 
 </div>
 </div>
@@ -426,7 +386,7 @@
   <button id="closePopup2Btn" onclick="$('#palettePopup2').hide()">Close</button>
 </div>
 
-<div id="versionInfo" style="text-align: center; font-size: 0.85em; color: var(--text-muted); margin-top: 16px; padding: 12px; border-top: 1px solid var(--border-color);"> Quantum Simulation Framework v1.0</div>
+<div id="versionInfo" style="text-align: center; font-size: 0.85em; color: var(--text-muted); margin-top: 16px; padding: 12px; border-top: 1px solid var(--border-color);"> Q-Ontic analytical double slit · Version 26</div>
 <!-- Visitor counter removed to avoid browser warnings about
   parser-blocking cross-site scripts injected via document.write. -->
 

@@ -1,0 +1,22 @@
+.qontic-distance-scale {position:absolute;left:8px;top:8px;width:154px;height:126px;max-width:100%;z-index:30;cursor:move;touch-action:none;border-radius:6px;overflow:hidden;}
+.qontic-distance-scale[hidden]{display:none;}
+.qontic-distance-scale canvas {position:static!important;display:block;width:154px;height:126px;max-width:100%;}
+.qontic-distance-scale:focus-visible {outline:2px solid #55d8e6;outline-offset:2px;}
+.qontic-value-range {width:78px!important;min-width:0;height:160px;border:0!important;background:none!important;z-index:31;}
+.qontic-value-range input[type=range] {position:absolute;left:0;top:0;width:22px;height:100%;margin:0;padding:0;writing-mode:vertical-lr;direction:rtl;appearance:none;-webkit-appearance:none;background:transparent;pointer-events:none;}
+.qontic-value-range input::-webkit-slider-runnable-track {width:5px;background:#60798b;border-radius:4px;}
+.qontic-value-range input::-webkit-slider-thumb {appearance:none;-webkit-appearance:none;width:18px;height:10px;margin-left:-6.5px;border:1px solid #163647;border-radius:3px;background:#9cf4ff;pointer-events:auto;cursor:ns-resize;}
+.qontic-value-range input::-moz-range-track {width:5px;background:#60798b;}
+.qontic-value-range input::-moz-range-thumb {width:18px;height:10px;border:1px solid #163647;border-radius:3px;background:#9cf4ff;pointer-events:auto;cursor:ns-resize;}
+.qontic-value-range input:focus-visible {outline:2px solid #55d8e6;outline-offset:3px;}
+.qontic-value-range output {position:absolute;left:26px;padding:2px 3px;color:#e9faff;background:#102333dd;border-radius:3px;font:11px/1.3 Inter,Arial,sans-serif;pointer-events:none;white-space:nowrap;}
+.qontic-range-upper{top:0;}.qontic-range-lower{bottom:0;}
+
+.qontic-range-panel {position:absolute;width:124px;height:224px;z-index:31;}
+.qontic-range-panel[hidden],.qontic-value-range[hidden] {display:none!important;}
+
+/* The panel moves like the distance scale; slider handles retain their own gesture. */
+.qontic-range-draggable {cursor:move;touch-action:none;}
+.qontic-range-draggable canvas,.qontic-range-draggable output {cursor:move;}
+
+.qontic-range-draggable:focus-visible {outline:2px solid #55d8e6;outline-offset:2px;}

@@ -161,7 +161,9 @@ body {
 #leftPanel {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  align-self: flex-start;
+  height: auto;
   gap: 12px;
   width: 380px;
   min-width: 250px;
@@ -477,7 +479,7 @@ button[data-tip]:hover::after {
 #psiTabs {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-panel);
@@ -1126,3 +1128,13 @@ body.show-advanced fieldset.advanced-info {
   border: 1px solid #999;
   cursor: ns-resize;
 }
+
+/* Interpretation comparison: keep the simulation as the primary surface. */
+.mode-explanation, .comparison-caption { max-width: 800px; font-size: 14px; line-height: 1.5; color: var(--text-primary); }
+.mode-explanation { margin: 4px 0 0; min-height: 4.5em; }
+.comparison-caption p { margin: 4px 0; }
+.comparison-caption { padding: 8px 12px; border-left: 3px solid var(--canvas-border); }
+.comparison-table-scroll { overflow-x: auto; }
+.comparison-table { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.5; }
+.comparison-table th, .comparison-table td { padding: 12px; border: 1px solid var(--border-color); vertical-align: top; text-align: left; }
+#rationale article { max-width: 1100px; margin: auto; font-size: 16px; line-height: 1.6; }

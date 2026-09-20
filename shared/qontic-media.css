@@ -1,0 +1,39 @@
+.qontic-media-toolbar {display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin:0 0 8px;font:400 13px Inter,Arial,sans-serif;}
+.qontic-media-toolbar button,.qontic-record-dialog button,.qontic-record-dialog a {font:inherit;color:#d9edf7;background:#162d3d;border:1px solid #36576c;border-radius:7px;padding:8px 12px;cursor:pointer;text-decoration:none;}
+.qontic-media-toolbar button:hover {border-color:#55d8e6;}
+.qontic-expanded-dialog {position:fixed;inset:0;box-sizing:border-box;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:12px;background:#0f172a;color:#d9edf7;border:0;overflow:auto;}
+.qontic-expanded-dialog[open] {display:flex;flex-direction:column;align-items:center;gap:8px;}
+.qontic-expanded-dialog > qontic-controls {width:min(360px,100%);align-self:flex-start;}
+.qontic-expanded-dialog > :not(qontic-controls) {width:100%;min-height:0;}
+.qontic-record-dialog {box-sizing:border-box;width:min(440px,calc(100vw - 24px));max-height:90dvh;border:1px solid #36576c;border-radius:12px;padding:18px;background:#142334;color:#d9edf7;font:400 13px/1.5 Inter,Arial,sans-serif;}
+.qontic-record-dialog::backdrop {background:#0009;}
+.qontic-record-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.qontic-record-heading h2 {font:600 18px Inter,Arial,sans-serif;margin:0;}
+.qontic-record-dialog label {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;}
+.qontic-record-dialog input,.qontic-record-dialog select {box-sizing:border-box;width:160px;max-width:50%;padding:6px;border:1px solid #36576c;border-radius:5px;background:#0f172a;color:#d9edf7;font:inherit;}
+.qontic-record-dialog video {width:100%;max-height:220px;margin:8px 0;}
+.qontic-record-dialog progress {width:100%;margin-top:12px;}
+.qontic-record-dialog [hidden] {display:none;}
+.qontic-light .qontic-media-toolbar button {color:#203746;background:#edf5f8;border-color:#aec2cb;}
+
+.qontic-media-toolbar { position:relative; z-index:5; }
+
+.qontic-expanded-dialog > :not(qontic-controls) { flex:1 1 auto; }
+
+/* Consistent compact actions, with labels on hover and keyboard focus. */
+.qontic-media-toolbar .qontic-media-action {position:relative;display:inline-flex;align-items:center;justify-content:center;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;flex:0 0 36px!important;padding:7px!important;box-sizing:border-box;}
+.qontic-media-action svg {width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
+.qontic-media-action:focus-visible {outline:2px solid #55d8e6;outline-offset:3px;}
+.qontic-media-action::after {content:attr(data-tooltip);position:absolute;top:calc(100% + 7px);right:0;width:max-content;max-width:min(230px,80vw);padding:6px 9px;border:1px solid #36576c;border-radius:6px;background:#102333;color:#eefaff;font:400 12px/1.4 Inter,Arial,sans-serif;white-space:normal;pointer-events:none;opacity:0;visibility:hidden;z-index:100;}
+.qontic-media-action:hover::after,.qontic-media-action:focus-visible::after {opacity:1;visibility:visible;}
+.qontic-media-action.is-recording {color:#ff7e7e;border-color:#ff7e7e;}
+.qontic-media-status {position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+
+/* Header tools share the section tabs' vertical center and wrap as groups. */
+.qontic-title-row.qontic-title-with-tools {align-items:center;flex-wrap:wrap;gap:10px 18px;}
+.qontic-header-tools {display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px 16px;min-width:0;margin-left:auto;}
+.qontic-header-tools .qontic-view-tabs {margin:0;align-items:center;}
+.qontic-header-tools .qontic-media-toolbar {margin:0;flex-wrap:nowrap;gap:6px;}
+@media(max-width:900px) {
+  .qontic-header-tools {margin-left:0;justify-content:flex-start;}
+}

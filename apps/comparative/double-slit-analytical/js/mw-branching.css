@@ -1,0 +1,25 @@
+.mw-branch-settings{margin:12px 0;padding:10px 0;border-top:1px solid #385061;font:inherit;display:grid;gap:8px}
+.mw-branch-settings[hidden],.mw-branch-settings [hidden],.mw-branch-overlay[hidden],.mw-branch-overlay [hidden]{display:none!important}
+.mw-branch-settings label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mw-branch-settings select{max-width:100%;font:inherit;background:var(--panel,#172b3b);color:inherit;border:1px solid #476477;border-radius:5px;padding:5px}
+.mw-branch-settings small{font-size:.85em;line-height:1.4;opacity:.8}
+.mw-branch-overlay{position:absolute;inset:0;z-index:45;background:#0b1725;color:#e9faff;border-radius:4px;overflow:hidden;display:flex;flex-direction:column}
+.mw-branch-status{padding:8px 10px;font:13px/1.4 Inter,Arial,sans-serif;min-height:18px;z-index:2;background:#102333e8}
+.mw-branch-scroll{position:relative;overflow:hidden;flex:1;min-height:0;padding:5px}
+.mw-branch-grid{position:absolute;top:5px;left:5px;display:grid;gap:5px;align-content:stretch}
+.mw-branch-tile{display:flex;flex-direction:column;min-width:0;min-height:0;padding:0;border:1px solid #496577;border-radius:4px;overflow:hidden;background:#142737;color:#e9faff;cursor:pointer;font:11px/1.5 Inter,Arial,sans-serif}
+.mw-branch-tile:disabled{opacity:1;cursor:default}
+.mw-branch-tile:not(:disabled):hover,.mw-branch-tile:focus-visible{border-color:#ffe476;outline:2px solid #ffe476;outline-offset:-2px}
+.mw-branch-tile canvas{position:static!important;display:block;width:100%!important;height:0!important;flex:1;min-height:0;object-fit:fill;border:0!important}
+.mw-branch-tile span{display:block;flex:none;white-space:nowrap}
+.mw-branch-zoom{position:absolute!important;inset:0;width:100%!important;height:100%!important;z-index:1;pointer-events:none}
+
+.mw-branch-settings,.mw-branch-settings label,.mw-branch-settings small{color:#dcecf4!important}
+[data-theme="light"] .mw-branch-settings,[data-theme="light"] .mw-branch-settings label,[data-theme="light"] .mw-branch-settings small{color:#183343!important}
+.mw-branch-tile span{font-size:10px;overflow:hidden;text-overflow:ellipsis}
+
+.mw-branch-settings .mw-dwell-control{display:grid;grid-template-columns:auto minmax(50px,1fr) 3.5em;gap:8px;align-items:center}
+.mw-dwell-control input{width:100%;min-width:0;margin:0}
+.mw-dwell-control output{text-align:right;font:inherit;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.mw-branch-settings .mw-choice-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}.mw-choice-row select{flex:1;min-width:0}.mw-choice-row .mw-probability{margin-left:auto;white-space:nowrap;flex-wrap:nowrap;font-size:12px;cursor:help}.mw-choice-row .mw-probability input{margin:0}
