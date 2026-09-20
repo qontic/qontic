@@ -1,12 +1,12 @@
 import { mountExpandedResize } from './expanded-resize.js?v=72';
-import { mountPacketEngine } from './packet-engine.js?v=2.87-truth';
-import { mountMWBranching } from './mw-branching.js?v=2.87-marker-continuity';
-import { APP_RELEASE } from './release.js?v=2.87';
+import { mountPacketEngine } from './packet-engine.js?v=2.88-truth';
+import { mountMWBranching } from './mw-branching.js?v=2.88-marker-continuity';
+import { APP_RELEASE } from './release.js?v=2.88';
 import { mountDistanceScale, mountValueRange } from '../../../../shared/qontic-overlays.js?v=4';
 import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=range-25';
 import { enableResizableSidebar } from '../../../../shared/qontic-resize.js?v=1';
 import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=resources-20260916';
-import '../../../../shared/qontic-controls.js?v=2.87-controls';
+import '../../../../shared/qontic-controls.js?v=2.88-controls';
 
 // Adapt the existing controls in place so their listeners and physics stay intact.
 $(function () {
@@ -348,16 +348,16 @@ $(function () {
       sync();
     },
   });
-  // Keep the finite detector model's world count visible in expanded MW view.
+  // Keep the finite detector model's branch count visible in expanded MW view.
   const worldCount = document.createElement('div');
   worldCount.className = 'expanded-world-count';
   worldCount.title = document.getElementById('infoBranchCount').closest('tr').dataset.tip;
   const syncWorldCount = () => {
     worldCount.hidden = interpretation !== 'manyworlds';
     const exponent = logNBranches.toFixed(0);
-    const html = 'Worlds: ' + (logNBranches > 0 ? `10<sup>${exponent}</sup>` : '1');
+    const html = 'Branches: ' + (logNBranches > 0 ? `10<sup>${exponent}</sup>` : '1');
     if (worldCount.innerHTML !== html) worldCount.innerHTML = html;
-    worldCount.setAttribute('aria-label', logNBranches > 0 ? `Worlds: 10 to the power of ${exponent}` : 'Worlds: 1');
+    worldCount.setAttribute('aria-label', logNBranches > 0 ? `Branches: 10 to the power of ${exponent}` : 'Branches: 1');
   };
   container.append(worldCount);
   const worldCountObserver = new MutationObserver(syncWorldCount);
