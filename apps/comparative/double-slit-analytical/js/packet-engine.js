@@ -259,11 +259,11 @@ export function mountPacketEngine({core,advanced}){
     context.globalAlpha=elementOpacity('plot_hits');
     const slitResolved=interpretation==='bohmian'&&colorBySlit.checked&&context===setupCtx;
     if(slitResolved){
+     const drawMarker=(count,side,offset)=>{if(!count)return;const slitX=histo+count*scale,slitError=Math.sqrt(count)*scale,slitY=y+offset;context.strokeStyle=context.fillStyle=side?slitColors[side]:colorHit;context.beginPath();context.moveTo(slitX-slitError,slitY);context.lineTo(slitX+slitError,slitY);context.stroke();context.beginPath();context.arc(slitX,slitY,3,0,2*Math.PI);context.fill();};
      for(const [side,offset] of [['upper',-2.5],['lower',2.5]]){
-      const count=slitHits[side]?.[i]||0;if(!count)continue;
-      const slitX=histo+count*scale,slitError=Math.sqrt(count)*scale,slitY=y+offset;
-      context.strokeStyle=context.fillStyle=slitColors[side];context.beginPath();context.moveTo(slitX-slitError,slitY);context.lineTo(slitX+slitError,slitY);context.stroke();context.beginPath();context.arc(slitX,slitY,3,0,2*Math.PI);context.fill();
+      drawMarker(slitHits[side]?.[i]||0,side,offset);
      }
+     drawMarker(n-(slitHits.upper?.[i]||0)-(slitHits.lower?.[i]||0),null,0);
     }else{context.strokeStyle=context.fillStyle=colorHit;context.beginPath();context.moveTo(x-error,y);context.lineTo(x+error,y);context.stroke();context.beginPath();context.arc(x,y,3,0,2*Math.PI);context.fill();}
    }
   });context.restore();

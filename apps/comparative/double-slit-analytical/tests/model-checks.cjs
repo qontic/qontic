@@ -49,6 +49,7 @@ assert(engine.includes("slitColors={upper:'#22d3ee',lower:'#ff9f43'}"));
 assert(engine.includes('pending.push({index,cohort:a.cohort,slitSide:a.slitSide})'));
 assert(engine.includes("for(const [side,offset] of [['upper',-2.5],['lower',2.5]])"));
 assert(engine.includes('slitError=Math.sqrt(count)*scale'));
+assert(engine.includes("drawMarker(n-(slitHits.upper?.[i]||0)-(slitHits.lower?.[i]||0),null,0)"));
 assert(engine.includes('clearHitsForPreview()'));
 assert(engine.includes("sampleTransmittedSource(p,Math.random,null,3)"));
 assert(engine.includes('const half=3*(slitPreviewWidth??p.sy*100)*toCanvasY'));
