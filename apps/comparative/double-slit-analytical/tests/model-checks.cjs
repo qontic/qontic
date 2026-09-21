@@ -41,4 +41,11 @@ assert(model.includes('finite Gaussian mixture'));
 assert(engine.includes('sampleTransmittedSource(p,Math.random,a.x0)'));
 assert(!engine.includes('const attempts=') && !engine.includes('attempt<20000'));
 
+// Slit coloring is display-only metadata assigned after successful wall
+// transmission, and live geometry previews discard the obsolete hit record.
+assert(model.indexOf("return 'absorbed'") < model.indexOf('a.slitSide='));
+assert(engine.includes('packet-color-by-slit'));
+assert(engine.includes("slitColors={upper:'#22d3ee',lower:'#ff9f43'}"));
+assert(engine.includes('clearHitsForPreview()'));
+
 console.log('PASS: packet engine is authoritative; Physics and Views match the active model.');

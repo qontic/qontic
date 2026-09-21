@@ -27,13 +27,13 @@ const coeff=sourceCoefficients(p),results=[];let absorbed=0;
 for(let i=0;i<12000;i++){
  const a=sampleSource(p,random);
  for(let n=0;n<3000&&!a.done;n++){const outcome=stepSource(a,.0008,p,coeff,random);if(outcome==='absorbed')absorbed++;}
- assert(a.done);if(!a.absorbed)results.push(a.y);
+ assert(a.done);if(!a.absorbed){assert(['upper','lower'].includes(a.slitSide),'transmitted particle keeps slit-region metadata');results.push(a.y);}else assert.equal(a.slitSide,undefined,'absorbed particle is not labeled as transmitted');
 }
 const directedResults=[];
 for(let i=0;i<4000;i++){
  const a=sampleTransmittedSource(p,random);
  for(let n=0;n<3000&&!a.done;n++){const outcome=stepSource(a,.0008,p,coeff,random);assert.notEqual(outcome,'absorbed');}
- assert(a.done&&!a.absorbed,'conditioned source always transmits');directedResults.push(a.y);
+ assert(a.done&&!a.absorbed,'conditioned source always transmits');assert(['upper','lower'].includes(a.slitSide),'conditioned particle keeps slit-region metadata');directedResults.push(a.y);
 }
 // A fixed longitudinal coordinate is used when an unresolved Orthodox/MW
 // preparation is re-expressed as a Pilot-Wave ensemble.

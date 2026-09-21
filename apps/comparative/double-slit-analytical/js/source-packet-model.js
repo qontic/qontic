@@ -2,7 +2,7 @@
 // i (partial_t + k partial_x) u = -partial_y^2 u / 2.
 // The longitudinal envelope translates; longitudinal dispersion and reflection
 // are outside this approximation. No numerical wave-equation solver is used.
-import {gaussian} from './packet-model.js?v=2.88';
+import {gaussian} from './packet-model.js?v=2.89';
 
 export function aperture(y,p){
  const sum=p.centers.reduce((n,c)=>n+Math.exp(-((y-c)**2)/(4*p.sy*p.sy)),0);
@@ -108,6 +108,14 @@ export function stepSource(a,dt,p,coeff,random=Math.random){
  if(!a.passed&&end>=p.wall){
   a.y=advanceSourceY(a.y,a.x,p.wall-a.x,p,coeff);a.x=p.wall;a.passed=true;
   if(!a.conditionedTransmission&&random()>aperture(a.y,p)**2){a.done=a.absorbed=true;return 'absorbed';}
+  // Display metadata only: associate a transmitted particle's actual
+  // wall-crossing position with the nearest open aperture. This never enters
+  // the guidance dynamics or the transmission decision above.
+  if(p.centers.length){
+   let nearest=0;
+   for(let i=1;i<p.centers.length;i++)if(Math.abs(a.y-p.centers[i])<Math.abs(a.y-p.centers[nearest]))nearest=i;
+   a.slitSide=p.centers[nearest]<0?'upper':p.centers[nearest]>0?'lower':(a.y<=0?'upper':'lower');
+  }
  }
  const target=Math.min(end,p.screen);
  a.y=advanceSourceY(a.y,a.x,target-a.x,p,coeff);a.x=target;

@@ -1,3 +1,9 @@
+## Version 2.89 — 2026-09-21
+
+- Added an optional Pilot-Wave “Color by slit” display: transmitted paths nearest the upper aperture are cyan and those nearest the lower aperture are orange. The slit-region label is visual metadata and does not alter guidance or outcomes.
+- Clear accumulated detector hits as soon as a geometry, slit-width or slit-separation drag changes the live predicted histogram, so observations from the old setup are never shown against a new prediction.
+- Aligned the displayed release and active module cache versions.
+
 ## Version 2.88 — 2026-09-20
 
 - Renamed the expanded Many-Worlds counter from “Worlds” to “Branches,” including its accessibility label, to avoid implying a literal count of worlds.
@@ -367,4 +373,3 @@ The displayed release is defined in `js/release.js`. For each published app chan
 - Replace Display switches with independent opacity sliders and unify slider styles across Core, Advanced, and Display.
 - Remove particle-based wave masking and fix screen-endpoint initialization.
 - Expand Math and Rationale with readable typography and explicit model limitations.
-
