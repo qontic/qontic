@@ -38,7 +38,7 @@ for (const statement of ['forward, paraxial approximation', 'Direct PW', 'Part./
 // New packets and in-flight interpretation changes use analytical conditional
 // transmission sampling; no bounded rejection loop remains.
 assert(model.includes('finite Gaussian mixture'));
-assert(engine.includes('sampleTransmittedSource(p,Math.random,a.x0)'));
+assert(engine.includes('sampleTransmittedSource(p,Math.random,a.x0,directed.checked?3:null)'));
 assert(!engine.includes('const attempts=') && !engine.includes('attempt<20000'));
 
 // Slit coloring is display-only metadata assigned after successful wall
@@ -47,5 +47,8 @@ assert(model.indexOf("return 'absorbed'") < model.indexOf('a.slitSide='));
 assert(engine.includes('packet-color-by-slit'));
 assert(engine.includes("slitColors={upper:'#22d3ee',lower:'#ff9f43'}"));
 assert(engine.includes('clearHitsForPreview()'));
+assert(engine.includes("sampleTransmittedSource(p,Math.random,null,3)"));
+assert(engine.includes('const half=3*(slitPreviewWidth??p.sy*100)*toCanvasY'));
+assert(content.includes('finite slit core extending ±3σₐ'));
 
 console.log('PASS: packet engine is authoritative; Physics and Views match the active model.');

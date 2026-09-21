@@ -2,7 +2,7 @@
 // i (partial_t + k partial_x) u = -partial_y^2 u / 2.
 // The longitudinal envelope translates; longitudinal dispersion and reflection
 // are outside this approximation. No numerical wave-equation solver is used.
-import {gaussian} from './packet-model.js?v=2.89';
+import {gaussian} from './packet-model.js?v=2.90';
 
 export function aperture(y,p){
  const sum=p.centers.reduce((n,c)=>n+Math.exp(-((y-c)**2)/(4*p.sy*p.sy)),0);
@@ -46,6 +46,37 @@ export function sourceEnvelope(x,t,p){
  return {rho,phase:p.k*x-p.k*p.k*t/2};
 }
 function normal(random){return Math.sqrt(-2*Math.log(Math.max(1e-15,random())))*Math.cos(2*Math.PI*random());}
+function erfcPositive(x){
+ const t=1/(1+.5*x);
+ let polynomial=.17087277;
+ for(const coefficient of [-.82215223,1.48851587,-1.13520398,.27886807,-.18628806,.09678418,.37409196,1.00002368])polynomial=coefficient+t*polynomial;
+ return t*Math.exp(-x*x-1.26551223+t*polynomial);
+}
+function lowerNormalCdf(z){return z<=0?.5*erfcPositive(-z/Math.SQRT2):1-.5*erfcPositive(z/Math.SQRT2);}
+function inverseNormalCdf(p){
+ p=Math.max(1e-300,Math.min(1-1e-16,p));
+ const a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.357751867269,-30.66479806614716,2.506628277459239];
+ const b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572];
+ const c=[-.007784894002430293,-.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783];
+ const d=[.007784695709041462,.3224671290700398,2.445134137142996,3.754408661907416],cut=.02425;
+ if(p<cut){const q=Math.sqrt(-2*Math.log(p));return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+ if(p>1-cut){const q=Math.sqrt(-2*Math.log(1-p));return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+ const q=p-.5,r=q*q;return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+function normalIntervalMass(lo,hi){
+ if(lo>=0)return lowerNormalCdf(-lo)-lowerNormalCdf(-hi);
+ return lowerNormalCdf(hi)-lowerNormalCdf(lo);
+}
+function sampleTruncatedNormal(lo,hi,random){
+ let p;
+ if(lo>=0){const a=lowerNormalCdf(-hi),b=lowerNormalCdf(-lo);p=a+random()*(b-a);return -inverseNormalCdf(p);}
+ const a=lowerNormalCdf(lo),b=lowerNormalCdf(hi);p=a+random()*(b-a);return inverseNormalCdf(p);
+}
+function mergedSlitIntervals(p,extentSigma){
+ const half=extentSigma*p.sy,raw=p.centers.map(c=>[c-half,c+half]).sort((a,b)=>a[0]-b[0]),merged=[];
+ for(const interval of raw){const last=merged.at(-1);if(last&&interval[0]<=last[1])last[1]=Math.max(last[1],interval[1]);else merged.push([...interval]);}
+ return merged;
+}
 function sourceWidth(x,p){return p.sourceSigma*Math.sqrt(1+(x/(2*p.k*p.sourceSigma**2))**2);}
 function sampleLongitudinalX(p,random){
  // Optional upstream preparation keeps every sampled particle outside the canvas.
@@ -57,7 +88,7 @@ export function sampleSource(p,random=Math.random,fixedX=null){
  const x=fixedX===null?sampleLongitudinalX(p,random):fixedX;
  return {x0:x,x,y:sourceWidth(x,p)*normal(random),done:false,passed:false,absorbed:false,path:[]};
 }
-export function sampleTransmittedSource(p,random=Math.random,fixedX=null){
+export function sampleTransmittedSource(p,random=Math.random,fixedX=null,slitExtentSigma=null){
  // At the wall, the conditional density is exactly
  // |phi(y,L)|^2 T(y)^2.  Expanding the squared sum of Gaussian apertures
  // makes this a finite Gaussian mixture (one component per ordered slit pair).
@@ -81,9 +112,25 @@ export function sampleTransmittedSource(p,random=Math.random,fixedX=null){
   component.weight=Math.exp(component.logWeight-maxLogWeight);
   totalWeight+=component.weight;
  }
- let pick=random()*totalWeight,selected=components[components.length-1];
- for(const component of components){pick-=component.weight;if(pick<=0){selected=component;break;}}
- const yWall=selected.mean+Math.sqrt(variance)*normal(random);
+ let selected,yWall;
+ if(slitExtentSigma===null){
+  let pick=random()*totalWeight;selected=components[components.length-1];
+  for(const component of components){pick-=component.weight;if(pick<=0){selected=component;break;}}
+  yWall=selected.mean+Math.sqrt(variance)*normal(random);
+ }else{
+  // Direct PW adds a finite, explicitly documented slit-core condition.
+  // Sample the analytically expanded Gaussian mixture after truncation to the
+  // union of the displayed intervals. This remains fast even in remote tails.
+  const sigma=Math.sqrt(variance),choices=[];let maxLogChoice=-Infinity;
+  for(const component of components)for(const interval of mergedSlitIntervals(p,slitExtentSigma)){
+   const lo=(interval[0]-component.mean)/sigma,hi=(interval[1]-component.mean)/sigma,mass=normalIntervalMass(lo,hi);
+   if(mass>0){const logWeight=component.logWeight+Math.log(mass);choices.push({component,lo,hi,logWeight});maxLogChoice=Math.max(maxLogChoice,logWeight);}
+  }
+  let sum=0;for(const choice of choices){choice.weight=Math.exp(choice.logWeight-maxLogChoice);sum+=choice.weight;}
+  if(!(sum>0))throw new Error('No probability mass lies inside the displayed slit cores.');
+  let pick=random()*sum;selected=choices[choices.length-1];for(const choice of choices){pick-=choice.weight;if(pick<=0){selected=choice;break;}}
+  yWall=selected.component.mean+sigma*sampleTruncatedNormal(selected.lo,selected.hi,random);
+ }
  const x=fixedX===null?sampleLongitudinalX(p,random):fixedX;
  // Incident Gaussian Bohmian trajectories scale with the packet width.
  // Map the wall sample back analytically to the requested preparation plane.

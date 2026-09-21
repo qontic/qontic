@@ -1,18 +1,18 @@
-import {physicsHTML,viewsHTML,physicsEquations} from './physics-content.js?v=2.89-truth';
+import {physicsHTML,viewsHTML,physicsEquations} from './physics-content.js?v=2.90-truth';
 import {drawBinPulse,DETECTOR_PULSE_SECONDS} from './detector-pulse.js?v=59';
-import {mountPacketGeometry,mountSlitWidth,mountSlitSeparation,trimTail,tailOpacity} from './packet-interaction.js?v=2.89';
-import {histogramLayout} from './packet-model.js?v=2.89';
-import {aperture,sourceCoefficients,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile} from './source-packet-model.js?v=2.89-truth';
-import {detectorLaw,quantumSchedule,recordWithHit,samplePixel} from './packet-outcomes.js?v=2.89';
+import {mountPacketGeometry,mountSlitWidth,mountSlitSeparation,trimTail,tailOpacity} from './packet-interaction.js?v=2.90';
+import {histogramLayout} from './packet-model.js?v=2.90';
+import {aperture,sourceCoefficients,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile} from './source-packet-model.js?v=2.90-truth';
+import {detectorLaw,quantumSchedule,recordWithHit,samplePixel} from './packet-outcomes.js?v=2.90';
 export function mountPacketEngine({core,advanced}){
  const panel=document.createElement('div');panel.className='packet-settings';
  panel.innerHTML="<div class=\"input-group packet-inline\"><label for=\"packet-source-width\">Source width σ</label><input id=\"packet-source-width\" aria-label=\"Packet source width\" type=\"range\" min=\"50\" max=\"400\" step=\"5\" value=\"200\"><input aria-label=\"Packet source width value\" type=\"number\" min=\"50\" max=\"400\" step=\"5\" value=\"200\"><output>nm</output></div><div class=\"input-group packet-inline\"><label for=\"packet-length\">Packet length σ</label><input id=\"packet-length\" aria-label=\"Packet length\" type=\"range\" min=\"50\" max=\"200\" step=\"5\" value=\"50\"><input aria-label=\"Packet length value\" type=\"number\" min=\"50\" max=\"200\" step=\"5\" value=\"50\"><output>nm</output></div><div class=\"input-group packet-inline\"><label for=\"packet-slit-width\">Slit width σ</label><input id=\"packet-slit-width\" aria-label=\"Packet slit width\" type=\"range\" min=\"30\" max=\"200\" step=\"5\" value=\"30\"><input aria-label=\"Packet slit width value\" type=\"number\" min=\"30\" max=\"200\" step=\"5\" value=\"30\"><output>nm</output></div>";advanced.prepend(panel);
  const [sourceWidth,length,width]=panel.querySelectorAll('input[type=range],input[type=checkbox]');
- function slitWidthHelp(){const fwhm=2*Math.sqrt(2*Math.log(2))*Number(width.value);width.title='Gaussian transmission σ = '+width.value+' nm. The clear opening and cyan ticks mark the full width at half maximum: '+fwhm.toFixed(1)+' nm (2.355 σ). Openings are schematic; the wave model retains Gaussian transmission.';width.parentElement.querySelector('label').title=width.title;width.parentElement.querySelector('input[type=number]').title=width.title;}slitWidthHelp();
+ function slitWidthHelp(){const span=6*Number(width.value);width.title='Gaussian transmission σ = '+width.value+' nm. The clear opening and cyan ticks span ±3σ: '+span.toFixed(0)+' nm total. Direct PW is conditioned to cross within these displayed slit cores; the common wave model retains its Gaussian tails.';width.parentElement.querySelector('label').title=width.title;width.parentElement.querySelector('input[type=number]').title=width.title;}slitWidthHelp();
  length.title='Packet length is limited to at least 50 nm so kσₓ remains in the narrow-band working range for λ ≤ 50 nm.';length.parentElement.querySelector('input[type=number]').title=length.title;
  const tailRow=document.createElement('div');tailRow.innerHTML="<div class=\"input-group packet-inline\"><label for=\"packet-tail-length\">Tail length</label><input id=\"packet-tail-length\" aria-label=\"Trajectory tail length\" type=\"range\" min=\"0\" max=\"2000\" step=\"25\" value=\"250\"><input aria-label=\"Trajectory tail length value\" type=\"number\" min=\"0\" max=\"2000\" step=\"25\" value=\"250\"><output>nm</output></div>";panel.append(tailRow);const tailLength=tailRow.querySelector('input[type=range]');
  const intervalRow=document.createElement('div');intervalRow.innerHTML='<div class="input-group packet-inline"><label for="packet-interval">Packet interval</label><input id="packet-interval" aria-label="Packet interval" title="Time between source launches, in picoseconds of simulation time. Independent of packet speed and width." type="range" min="0" max="300" step="5" value="0"><input aria-label="Packet interval value" type="number" min="0" max="300" step="5" value="0"><output>ps</output></div>';panel.append(intervalRow);const interval=intervalRow.querySelector('input[type=range]');
- const directedRow=document.createElement('label');directedRow.className='bohmian-only packet-directed-inline';directedRow.title='PW postselection: shows only source configurations that transmit; it does not add a steering force.';directedRow.innerHTML='<input id="packet-directed-slits" type="checkbox"> Direct PW';const directed=directedRow.querySelector('input');directed.checked=localStorage.getItem('qontic-pw-directed-slits')==='true';
+ const directedRow=document.createElement('label');directedRow.className='bohmian-only packet-directed-inline';directedRow.title='PW postselection: shows only source configurations transmitted through the displayed ±3σ slit cores; it does not add a steering force.';directedRow.innerHTML='<input id="packet-directed-slits" type="checkbox"> Direct PW';const directed=directedRow.querySelector('input');directed.checked=localStorage.getItem('qontic-pw-directed-slits')==='true';
  const slitColorRow=document.createElement('label');slitColorRow.className='bohmian-only packet-slit-colors';slitColorRow.title='Color transmitted Pilot-Wave particles by the slit region containing their actual wall-crossing position. Upper is cyan; lower is orange. This changes only the display.';slitColorRow.innerHTML='<input id="packet-color-by-slit" type="checkbox"> Color by slit <span class="packet-slit-key" aria-hidden="true"><i></i><i></i></span>';const colorBySlit=slitColorRow.querySelector('input');colorBySlit.checked=localStorage.getItem('qontic-pw-color-by-slit')==='true';
  function syncPacketInput(control){const number=control.parentElement.querySelector('input[type=number]');number.value=control.value;number.max=control.max;number.min=control.min;control.parentElement.querySelector('output').textContent=control===interval?(+interval.value===0?'Auto':particleType==='neutron'?'ns':'ps'):'nm';if(control===interval)interval.title='0 = wait until the previous packet has completed all outcomes. Positive values set time between source launches in '+(particleType==='neutron'?'nanoseconds':'picoseconds')+' of simulation time; independent of packet speed and width.';}
  for(const number of panel.querySelectorAll('input[type=number]')){const commitNumber=()=>{const range=number.parentElement.querySelector('input[type=range]'),value=Number(number.value);if(Number.isFinite(value))range.value=Math.max(+range.min,Math.min(+range.max,value));range.dispatchEvent(new Event('input',{bubbles:true}));};number.addEventListener('change',commitNumber);number.addEventListener('blur',commitNumber);number.addEventListener('keydown',event=>{if(event.key==='Enter'){commitNumber();number.blur();}});}
@@ -39,7 +39,7 @@ export function mountPacketEngine({core,advanced}){
  function emissionPeriod(){return slowPacketMode||+interval.value===0?Infinity:(+interval.value)*(particleType==='neutron'?1:.001)/timeUnit;}
  function prepare(){
   pulse++;const cohort={born:t,count:p.particles,active:p.particles,pending:0,absorbed:0};pulses.push(cohort);
-  for(let i=0;i<p.particles;i++){const a=interpretation==='bohmian'&&directed.checked?sampleTransmittedSource(p):sampleSource(p);if(slowPacketMode)a.x0=a.x=p.initialCenter;a.cohort=cohort;a.schedule=interpretation==='bohmian'?quantumSchedule(a,p,law):{at:(p.screen-a.x0)/p.k,type:'hit',index:samplePixel(law.weights)};particles.push(a);}
+  for(let i=0;i<p.particles;i++){const a=interpretation==='bohmian'&&directed.checked?sampleTransmittedSource(p,Math.random,null,3):sampleSource(p);if(slowPacketMode)a.x0=a.x=p.initialCenter;a.cohort=cohort;a.schedule=interpretation==='bohmian'?quantumSchedule(a,p,law):{at:(p.screen-a.x0)/p.k,type:'hit',index:samplePixel(law.weights)};particles.push(a);}
   nParticles+=p.particles;nextEmission=t+emissionPeriod();
  }
  function resetEngine(){
@@ -91,7 +91,7 @@ export function mountPacketEngine({core,advanced}){
     const packetAge=t-a.cohort.born;
     const crossedWall=packetAge>=(p.wall-a.x0)/p.k;
     const b=crossedWall||directed.checked
-     ?sampleTransmittedSource(p,Math.random,a.x0)
+     ?sampleTransmittedSource(p,Math.random,a.x0,directed.checked?3:null)
      :sampleSource(p,Math.random,a.x0);
     let age=0;while(age<packetAge&&!b.done){const dt=Math.min(.002,packetAge-age);stepSource(b,dt,p,coeff);age+=dt;}
     if(b.done)throw new Error('Active-packet reconstruction reached a completed outcome.');
@@ -259,9 +259,9 @@ export function mountPacketEngine({core,advanced}){
  }
  function draw(){if(!enabled)return;ensure();syncMode();setupCtx.clearRect(0,0,canvas.width,canvas.height);
   setupCtx.save();if(shown('plot_screen')){setupCtx.globalAlpha=elementOpacity('plot_screen');setupCtx.strokeStyle=colorScreen;if(p.source){
-   // Draw clear openings at the displayed intensity FWHM. This is a
-   // geometric illustration of the Gaussian aperture, not a hard-wall solver.
-   const half=Math.sqrt(2*Math.log(2))*(slitPreviewWidth??p.sy*100)*toCanvasY;
+   // Draw the finite ±3σ slit cores used by Direct PW. The common analytical
+   // wave remains the untruncated Gaussian aperture documented in Physics.
+   const half=3*(slitPreviewWidth??p.sy*100)*toCanvasY;
    const openings=displayCenters().map(center=>[Math.max(0,Y(center)-half),Math.min(canvas.height,Y(center)+half)]).filter(([a,b])=>b>a).sort((a,b)=>a[0]-b[0]);
    setupCtx.strokeStyle='#d4e6ef';setupCtx.lineWidth=6;setupCtx.lineCap='butt';setupCtx.beginPath();let cursor=0;
    for(const [top,bottom] of openings){if(top>cursor){setupCtx.moveTo(wallX,cursor);setupCtx.lineTo(wallX,top);}cursor=Math.max(cursor,bottom);}

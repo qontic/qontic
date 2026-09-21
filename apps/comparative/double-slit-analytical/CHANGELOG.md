@@ -1,3 +1,11 @@
+## Version 2.90 — 2026-09-21
+
+- Redefined the visible slit cores and cyan edge ticks to span ±3σₐ from each Gaussian aperture center.
+- Conditioned Direct PW particles to cross within those displayed slit cores, eliminating trajectories through the visibly solid wall while leaving the common analytical Gaussian wave and guidance equation unchanged.
+- Kept the slit-core sampler rejection-free by sampling the analytically expanded Gaussian mixture from its truncated-normal components, including extremely low-transmission geometries.
+- Documented that Direct PW adds slit-core postselection and that its difference from the common Gaussian transmitted ensemble is about 0.28% at the defaults but can grow for extreme geometries.
+- Aligned the displayed release and active module cache versions.
+
 ## Version 2.89 — 2026-09-21
 
 - Added an optional Pilot-Wave “Color by slit” display: transmitted paths nearest the upper aperture are cyan and those nearest the lower aperture are orange. The slit-region label is visual metadata and does not alter guidance or outcomes.

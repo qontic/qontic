@@ -59,16 +59,16 @@ export function mountPacketGeometry({host,getGeometry,onCommit,onPreview=()=>{},
  return {update,cancel:()=>finish(false)};
 }
 export function slitWidthFromDrag(width,dy,pixelsPerNm){
- return Math.max(30,Math.min(200,Math.round((width+dy/(Math.sqrt(2*Math.log(2))*pixelsPerNm))/5)*5));
+ return Math.max(30,Math.min(200,Math.round((width+dy/(3*pixelsPerNm))/5)*5));
 }
 export function mountSlitWidth({host,getState,onPreview,onCommit,pause,resume}){
  const layer=document.createElement('div');layer.className='packet-geometry packet-slit-handles';
  host.append(layer);let drag=null,frame=null;
- const edgeSide=(state,index)=>state.centers[index]*host.clientHeight+Math.sqrt(2*Math.log(2))*state.width*state.scaleY>host.clientHeight-30?-1:1;
+ const edgeSide=(state,index)=>state.centers[index]*host.clientHeight+3*state.width*state.scaleY>host.clientHeight-30?-1:1;
  const buttons=[0,1].map(index=>{
   const button=document.createElement('button');button.type='button';button.className='packet-slit-width-drag';
   button.textContent='↕ Width';button.setAttribute('aria-label','Resize slit '+(index+1)+' width');
-  button.title='Drag vertically to resize the slit openings together. Arrow keys adjust width; Escape cancels. Changing width starts a new record.';
+  button.title='Drag vertically to resize the displayed ±3σ slit cores together. Arrow keys adjust σ; Escape cancels. Changing width starts a new record.';
   layer.append(button);
   const finish=commit=>{if(!drag||drag.index!==index)return;const d=drag;drag=null;if(frame!==null){cancelAnimationFrame(frame);frame=null;}try{onPreview(null);if(commit&&d.next!==d.start.width)onCommit(d.next);}finally{resume(d.running);update();}};
   button.addEventListener('pointerdown',e=>{if(e.button!==0||drag)return;e.preventDefault();e.stopPropagation();const state=getState();if(state.busy)return;drag={index,side:edgeSide(state,index),start:state,y:e.clientY,next:state.width,running:pause()};button.setPointerCapture(e.pointerId);});
@@ -79,7 +79,7 @@ export function mountSlitWidth({host,getState,onPreview,onCommit,pause,resume}){
  });
  function update(){
   const state=getState();if(!state)return;layer.hidden=!!state.busy||!state.visible;
-  buttons.forEach((button,index)=>{const center=state.centers[index];button.hidden=center===undefined;if(button.hidden)return;const sigma=drag?drag.next:state.width;button.style.left=Math.max(30,state.wallFraction*host.clientWidth-34)+'px';button.style.top=Math.max(14,Math.min(host.clientHeight-14,center*host.clientHeight+(drag&&drag.index===index?drag.side:edgeSide(state,index))*Math.sqrt(2*Math.log(2))*sigma*state.scaleY))+'px';button.setAttribute('aria-description','Slit width sigma '+sigma+' nm. Both openings change together.');});
+  buttons.forEach((button,index)=>{const center=state.centers[index];button.hidden=center===undefined;if(button.hidden)return;const sigma=drag?drag.next:state.width;button.style.left=Math.max(30,state.wallFraction*host.clientWidth-34)+'px';button.style.top=Math.max(14,Math.min(host.clientHeight-14,center*host.clientHeight+(drag&&drag.index===index?drag.side:edgeSide(state,index))*3*sigma*state.scaleY))+'px';button.setAttribute('aria-description','Slit width sigma '+sigma+' nm. Displayed slit cores extend three sigma from each center.');});
  }
  return {update,cancel:()=>buttons.forEach(button=>button.dispatchEvent(new Event('pointercancel')))};
 }

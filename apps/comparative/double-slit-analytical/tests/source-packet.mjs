@@ -30,10 +30,16 @@ for(let i=0;i<12000;i++){
  assert(a.done);if(!a.absorbed){assert(['upper','lower'].includes(a.slitSide),'transmitted particle keeps slit-region metadata');results.push(a.y);}else assert.equal(a.slitSide,undefined,'absorbed particle is not labeled as transmitted');
 }
 const directedResults=[];
+const slitCoreResults=[];
 for(let i=0;i<4000;i++){
  const a=sampleTransmittedSource(p,random);
  for(let n=0;n<3000&&!a.done;n++){const outcome=stepSource(a,.0008,p,coeff,random);assert.notEqual(outcome,'absorbed');}
  assert(a.done&&!a.absorbed,'conditioned source always transmits');assert(['upper','lower'].includes(a.slitSide),'conditioned particle keeps slit-region metadata');directedResults.push(a.y);
+ const core=sampleTransmittedSource(p,random,null,3);let wallY;
+ for(let n=0;n<3000&&!core.done;n++){const wasPassed=core.passed,outcome=stepSource(core,.0008,p,coeff,random);assert.notEqual(outcome,'absorbed');if(!wasPassed&&core.passed)wallY=core.y;}
+ assert(core.done&&!core.absorbed,'slit-core conditioned source always transmits');
+ assert(Math.min(...p.centers.map(center=>Math.abs(wallY-center)))<=3*p.sy+1e-10,'Direct PW crossing stays inside displayed slit core');
+ slitCoreResults.push(core.y);
 }
 // A fixed longitudinal coordinate is used when an unresolved Orthodox/MW
 // preparation is re-expressed as a Pilot-Wave ensemble.
@@ -49,9 +55,10 @@ for(const x of [-4,-1,1.5]){
 const stressed={...p,sourceSigma:.5,centers:[-10,10]};
 const stressedCoeff=sourceCoefficients(stressed);
 for(let i=0;i<200;i++){
- const a=sampleTransmittedSource(stressed,random,-3);
- for(let n=0;n<6000&&!a.done;n++)stepSource(a,.0008,stressed,stressedCoeff,random);
+ const a=sampleTransmittedSource(stressed,random,-3,3);let wallY;
+ for(let n=0;n<6000&&!a.done;n++){const wasPassed=a.passed;stepSource(a,.0008,stressed,stressedCoeff,random);if(!wasPassed&&a.passed)wallY=a.y;}
  assert(a.done&&!a.absorbed&&Number.isFinite(a.y),'low-transmission conditional sample');
+ assert(Math.min(...stressed.centers.map(center=>Math.abs(wallY-center)))<=3*stressed.sy+1e-10,'low-transmission slit-core sample stays bounded');
 }
 const profile=sourceProfile(p,-6,6),nInside=results.filter(y=>Math.abs(y)<6).length;
 assert(Math.abs(nInside/12000-profile.integral)<.012,'transmission probability');
@@ -61,6 +68,9 @@ assert(maxError<.045,'screen CDF agreement');
 const directedOrdered=directedResults.filter(y=>Math.abs(y)<6).sort((a,b)=>a-b);cdf=0;maxError=0;j=0;
 for(let i=1;i<profile.values.length;i++){cdf+=(profile.values[i-1]+profile.values[i])*.5*dy/profile.integral;const y=-6+i*dy;while(j<directedOrdered.length&&directedOrdered[j]<=y)j++;maxError=Math.max(maxError,Math.abs(j/directedOrdered.length-cdf));}
 assert(maxError<.065,'conditioned screen CDF agreement');
+const coreOrdered=slitCoreResults.filter(y=>Math.abs(y)<6).sort((a,b)=>a-b);cdf=0;maxError=0;j=0;
+for(let i=1;i<profile.values.length;i++){cdf+=(profile.values[i-1]+profile.values[i])*.5*dy/profile.integral;const y=-6+i*dy;while(j<coreOrdered.length&&coreOrdered[j]<=y)j++;maxError=Math.max(maxError,Math.abs(j/coreOrdered.length-cdf));}
+assert(maxError<.07,'three-sigma slit-core screen CDF remains close to the Gaussian prediction');
 const record=Array(100).fill(0);record[0]=1;const h=histogramLayout(record,profile,12,150);assert(h.scale*2<=142+1e-12);assert.equal(h.total,1);
 const t0=0,t1=.2;assert.equal(sourceEnvelope(0,t0,p).rho,sourceEnvelope(p.k*t1,t1,p).rho);
 console.log(JSON.stringify({passed:true,particles:12000,absorbed,screenHits:nInside,predictedFraction:profile.integral,CDFError:maxError}));
