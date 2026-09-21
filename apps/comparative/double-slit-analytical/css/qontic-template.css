@@ -45,6 +45,8 @@ body.analytical-template { padding: 0 18px 12px; }
 .analytical-template #canvas-wrapper { flex: 1 1 0; min-width: 0; }
 .analytical-template #canvas-container { width: 100%; height: auto; aspect-ratio: 4 / 3; min-width: 0; min-height: 0; max-width: none; max-height: none; margin: 8px auto; box-sizing: border-box; }
 .analytical-template #canvas-container > canvas:not([id^="palette"]) { left: 0; top: 0; }
+.analytical-template .qontic-range-panel { box-sizing: border-box; background: rgba(8, 20, 32, 0.18); border: 1px solid rgba(225, 242, 250, 0.14); border-radius: 6px; }
+.analytical-template.qontic-light .qontic-range-panel { background: rgba(226, 237, 243, 0.38); border-color: rgba(40, 72, 88, 0.18); }
 .analytical-template #Info { box-sizing: border-box; padding: 12px; }
 .analytical-template .info-layout { display: block; }
 .analytical-template .info-controls fieldset { margin-bottom: 0; }

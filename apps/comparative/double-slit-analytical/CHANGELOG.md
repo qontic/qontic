@@ -1,3 +1,8 @@
+## Version 2.91 — 2026-09-21
+
+- Extended Pilot-Wave slit coloring to the detector histogram: upper- and lower-slit hits now retain their cyan/orange identity in separate dots and Poisson-style error bars.
+- Added a subtle scale-style background behind the movable wave-range control in both dark and light themes.
+
 ## Version 2.90 — 2026-09-21
 
 - Redefined the visible slit cores and cyan edge ticks to span ±3σₐ from each Gaussian aperture center.
