@@ -15,3 +15,9 @@ for(const centers of [[-2.5,2.5],[2.5],[0]]){
  const base=Array(25).fill(0),branch=recordWithHit(base,0);assert.equal(branch.reduce((a,b)=>a+b),1);assert.equal(base[0],0);
  console.log({centers,transmission:law.transmission,visible:law.visible,counts,CDFError:D});
 }
+{
+ const p={sx:.5,sy:.3,k:2*Math.PI,wall:2.25,screen:6.25,sourceSigma:2,centers:[-2.5,2.5],bins:25,whichPath:true};
+ const profile=sourceProfile(p,-6,6),law=detectorLaw(p,profile,-6,6);
+ assert(Math.abs(law.weights.reduce((a,b)=>a+b,0)-1)<1e-12,'which-slit weights normalize');
+ assert(law.transmission>=law.visible&&law.transmission<=1,'which-slit transmission is physical');
+}

@@ -743,7 +743,7 @@ button:active {
   border-color: #991b1b;
 }
 
-#toggleSlits, #toggleWhichPath, #toggleView {
+#toggleSlits:not(.qontic-app-toggle), #toggleWhichPath:not(.qontic-app-toggle), #toggleView:not(.qontic-app-toggle) {
   background: var(--accent-color);
   color: white;
   border-color: var(--accent-color);
@@ -752,7 +752,7 @@ button:active {
   font-weight: 500;
 }
 
-#toggleSlits:hover, #toggleWhichPath:hover, #toggleView:hover {
+#toggleSlits:not(.qontic-app-toggle):hover, #toggleWhichPath:not(.qontic-app-toggle):hover, #toggleView:not(.qontic-app-toggle):hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
 }
@@ -960,7 +960,7 @@ fieldset table {
     font-size: 12px;
   }
 
-  #toggleSlits, #toggleWhichPath, #toggleView,
+  #toggleSlits:not(.qontic-app-toggle), #toggleWhichPath:not(.qontic-app-toggle), #toggleView:not(.qontic-app-toggle),
   #mathToggleSlits, #mathToggleWhichPath, #mathToggleView {
     min-width: 60px;
     padding: 4px 6px;

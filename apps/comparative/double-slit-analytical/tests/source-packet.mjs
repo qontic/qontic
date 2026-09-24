@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {gaussian,histogramLayout} from '../js/packet-model.js';
-import {aperture,sourceCoefficients,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile} from '../js/source-packet-model.js';
+import {aperture,sourceCoefficients,sourceComponents,sourceDensity,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile} from '../js/source-packet-model.js';
 const p={sx:.5,sy:.3,sourceSigma:2,wall:2.25,screen:6.25,k:2*Math.PI,centers:[-2.5,2.5]};
 function integral(f,lo=-30,hi=30,steps=24000){let v=0;const dx=(hi-lo)/steps;for(let i=0;i<steps;i++)v+=f(lo+(i+.5)*dx)*dx;return v;}
 for(const centers of [[-2.5,2.5],[-2.5],[2.5],[-.15,.15]]){
@@ -22,6 +22,17 @@ for(const centers of [[-2.5,2.5],[-2.5],[2.5],[-.15,.15]]){
   assert(Math.hypot(rr,ii)<2e-6,'paraxial PDE');
  }
 }
+// An ideal which-slit record makes the two transmitted detector states
+// orthogonal. The reduced screen density is therefore the incoherent sum of
+// the two analytically propagated aperture components, with no cross term.
+const which={...p,whichPath:true},whichCoeff=sourceCoefficients(which);
+for(const x of [which.wall,which.wall+.7,which.screen])for(let y=-8;y<=8;y+=.031){
+ const components=sourceComponents(y,x,which,whichCoeff);
+ const expected=components.reduce((sum,component)=>sum+component.rho,0);
+ assert(Math.abs(sourceDensity(y,x,which,whichCoeff)-expected)<1e-13,'which-slit density is an incoherent component sum');
+}
+const coherentProfile=sourceProfile(p,-6,6),whichProfile=sourceProfile(which,-6,6);
+assert(whichProfile.values.some((value,i)=>Math.abs(value-coherentProfile.values[i])>1e-5),'which-slit detector removes the interference pattern');
 let seed=1729;const random=()=>((seed=(1664525*seed+1013904223)>>>0)+.5)/4294967296;
 const coeff=sourceCoefficients(p),results=[];let absorbed=0;
 for(let i=0;i<12000;i++){
@@ -31,6 +42,7 @@ for(let i=0;i<12000;i++){
 }
 const directedResults=[];
 const slitCoreResults=[];
+const whichResults=[];
 for(let i=0;i<4000;i++){
  const a=sampleTransmittedSource(p,random);
  for(let n=0;n<3000&&!a.done;n++){const outcome=stepSource(a,.0008,p,coeff,random);assert.notEqual(outcome,'absorbed');}
@@ -40,6 +52,9 @@ for(let i=0;i<4000;i++){
  assert(core.done&&!core.absorbed,'slit-core conditioned source always transmits');
  assert(Math.min(...p.centers.map(center=>Math.abs(wallY-center)))<=3*p.sy+1e-10,'Direct PW crossing stays inside displayed slit core');
  slitCoreResults.push(core.y);
+ const tagged=sampleSource(which,random);
+ for(let n=0;n<3000&&!tagged.done;n++)stepSource(tagged,.0008,which,whichCoeff,random);
+ if(!tagged.absorbed){assert(['upper','lower'].includes(tagged.slitSide),'which-slit particle carries a detector record');whichResults.push(tagged.y);}
 }
 // A fixed longitudinal coordinate is used when an unresolved Orthodox/MW
 // preparation is re-expressed as a Pilot-Wave ensemble.
@@ -71,6 +86,9 @@ assert(maxError<.065,'conditioned screen CDF agreement');
 const coreOrdered=slitCoreResults.filter(y=>Math.abs(y)<6).sort((a,b)=>a-b);cdf=0;maxError=0;j=0;
 for(let i=1;i<profile.values.length;i++){cdf+=(profile.values[i-1]+profile.values[i])*.5*dy/profile.integral;const y=-6+i*dy;while(j<coreOrdered.length&&coreOrdered[j]<=y)j++;maxError=Math.max(maxError,Math.abs(j/coreOrdered.length-cdf));}
 assert(maxError<.07,'three-sigma slit-core screen CDF remains close to the Gaussian prediction');
+const whichOrdered=whichResults.filter(y=>Math.abs(y)<6).sort((a,b)=>a-b),whichDy=12/(whichProfile.values.length-1);cdf=0;maxError=0;j=0;
+for(let i=1;i<whichProfile.values.length;i++){cdf+=(whichProfile.values[i-1]+whichProfile.values[i])*.5*whichDy/whichProfile.integral;const y=-6+i*whichDy;while(j<whichOrdered.length&&whichOrdered[j]<=y)j++;maxError=Math.max(maxError,Math.abs(j/whichOrdered.length-cdf));}
+assert(maxError<.075,'which-slit PW trajectories reproduce the incoherent screen density');
 const record=Array(100).fill(0);record[0]=1;const h=histogramLayout(record,profile,12,150);assert(h.scale*2<=142+1e-12);assert.equal(h.total,1);
 const t0=0,t1=.2;assert.equal(sourceEnvelope(0,t0,p).rho,sourceEnvelope(p.k*t1,t1,p).rho);
 console.log(JSON.stringify({passed:true,particles:12000,absorbed,screenHits:nInside,predictedFraction:profile.integral,CDFError:maxError}));

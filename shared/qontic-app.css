@@ -1,0 +1,111 @@
+/* Shared, opt-in layout and host-app controls for Q-Ontic simulations.
+   Physics-specific presentation remains in each app's scoped stylesheet. */
+:root {
+  --qontic-sidebar-width: 341px;
+  --qontic-layout-gap: 18px;
+  --qontic-panel-radius: 9px;
+  --qontic-panel-border: var(--border-color, #294b60);
+  --qontic-panel-background: var(--bg-panel, #0b1926);
+  --qontic-text: var(--text-primary, #d9edf7);
+  --qontic-muted: var(--text-secondary, #829aa8);
+  --qontic-accent: #55d8e6;
+}
+
+.qontic-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, var(--qontic-sidebar-width)) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--qontic-layout-gap);
+  width: 100%;
+  max-width: calc(var(--qontic-sidebar-width) + var(--qontic-layout-gap) + max(320px, (100dvh - 270px) * 4 / 3));
+  margin-inline: auto;
+}
+
+.qontic-sidebar,
+.qontic-stage { min-width: 0; }
+
+.qontic-sidebar { width: 100%; }
+
+.qontic-panel {
+  box-sizing: border-box;
+  border: 1px solid var(--qontic-panel-border);
+  border-radius: var(--qontic-panel-radius);
+  background: var(--qontic-panel-background);
+  color: var(--qontic-text);
+}
+
+.qontic-control-panel {
+  padding: 12px;
+  border-top: 3px solid #2f7187;
+  font: 400 13px Inter, Arial, sans-serif;
+}
+
+.qontic-control-body {
+  padding: 12px 8px 8px;
+  border: 1px solid #3a6578;
+  border-radius: 0 0 7px 7px;
+  background: #0f2230;
+}
+
+.qontic-light .qontic-control-body {
+  border-color: #9bb5c1;
+  background: #fff;
+}
+
+.qontic-app-toggle {
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid #294b60;
+  border-radius: 6px;
+  background: #0d202e;
+  color: #b9cfdb;
+  font: 400 13px/1.2 Inter, Arial, sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+
+.qontic-app-toggle:hover { border-color: var(--qontic-accent); color: #d9edf7; }
+.qontic-app-toggle:focus-visible { outline: 2px solid var(--qontic-accent); outline-offset: 2px; }
+.qontic-app-toggle.active,
+.qontic-app-toggle[aria-pressed="true"] { border-color: var(--qontic-accent); background: #12394b; color: #7cecff; }
+.qontic-app-toggle--wide { width: 100%; }
+.qontic-app-toggle-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.qontic-app-toggle-group > .qontic-app-toggle { flex: 1 1 auto; }
+
+.qontic-light .qontic-app-toggle { border-color: #aec2cb; background: #eef4f6; color: #526a77; }
+.qontic-light .qontic-app-toggle:hover { border-color: #1594a8; color: #075c69; }
+.qontic-light .qontic-app-toggle.active,
+.qontic-light .qontic-app-toggle[aria-pressed="true"] { border-color: #1594a8; background: #dff4f7; color: #075c69; }
+
+.qontic-stage-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.qontic-stage-toolbar > .qontic-stage-label {
+  margin-right: auto;
+  min-width: 0;
+}
+
+.qontic-reading-panel {
+  width: min(1080px, 100%);
+  margin-inline: auto;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1000px) {
+  .qontic-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  :root { --qontic-layout-gap: 8px; }
+  .qontic-control-panel { padding: 10px; }
+  .qontic-reading-panel { padding: 12px; }
+}

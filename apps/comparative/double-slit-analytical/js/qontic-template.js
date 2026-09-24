@@ -1,12 +1,13 @@
-import { mountExpandedResize } from './expanded-resize.js?v=72';
-import { mountPacketEngine } from './packet-engine.js?v=2.91-truth';
+import { mountExpandedResize } from '../../../../shared/qontic-expanded-resize.js?v=1';
+import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
+import { mountPacketEngine } from './packet-engine.js?v=2.93';
 import { mountMWBranching } from './mw-branching.js?v=2.91-marker-continuity';
-import { APP_RELEASE } from './release.js?v=2.91';
+import { APP_RELEASE } from './release.js?v=2.93';
 import { mountDistanceScale, mountValueRange } from '../../../../shared/qontic-overlays.js?v=4';
-import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=range-25';
+import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=3.0';
 import { enableResizableSidebar } from '../../../../shared/qontic-resize.js?v=1';
 import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=resources-20260916';
-import '../../../../shared/qontic-controls.js?v=2.91-controls';
+import '../../../../shared/qontic-controls.js?v=3.0';
 
 // Adapt the existing controls in place so their listeners and physics stay intact.
 $(function () {
@@ -243,6 +244,18 @@ $(function () {
     homeHref: '../../../index.html',
   });
   document.body.classList.add('analytical-template');
+  const layout = document.querySelector('.main-container');
+  const sidebar = document.getElementById('leftPanel');
+  const controlPanel = document.getElementById('psiTabs');
+  const stage = document.getElementById('canvas-wrapper');
+  layout.classList.add('qontic-workspace');
+  sidebar.classList.add('qontic-sidebar');
+  controlPanel.classList.add('qontic-panel', 'qontic-control-panel');
+  stage.classList.add('qontic-stage');
+  document.getElementById('experiment-bar').classList.add('qontic-app-toggle-group');
+  for (const id of ['toggleSlits', 'toggleWhichPath', 'resetDefaultsButton', 'resampleHitsButton', 'resetBranches']) {
+    document.getElementById(id)?.classList.add('qontic-app-toggle');
+  }
   syncPage();
   enableResizableSidebar({
     panel: document.getElementById('leftPanel'),
@@ -253,8 +266,6 @@ $(function () {
 
   // Use the same preferred sidebar width when bounding the whole desktop
   // arrangement, so spare space stays outside the controls-and-canvas group.
-  const sidebar = document.getElementById('leftPanel');
-  const layout = document.querySelector('.main-container');
   const syncLayoutWidth = () => layout.style.setProperty('--qontic-sidebar-width',
     sidebar.style.getPropertyValue('--qontic-sidebar-width') || '340px');
   new MutationObserver(syncLayoutWidth).observe(sidebar, {attributes: true, attributeFilter: ['style']});
@@ -332,7 +343,7 @@ $(function () {
   let media;
   media=mountQonticMedia({
     stage: document.getElementById('canvas-wrapper'), controls,
-    filename: 'double-slit', headerTools: false, rangeControl:window.qonticWaveRangeControl,
+    filename: 'double-slit', headerTools: false, labelNode:document.getElementById('view-label'), rangeControl:window.qonticWaveRangeControl,
     scaleControl:{getVisible:()=>elementOpacity('plot_scales')>0,setVisible:shown=>{if(!shown)lastScaleOpacity=elementOpacity('plot_scales')||1;const slider=document.getElementById('plot_scales-opacity');slider.value=shown?lastScaleOpacity*100:0;slider.dispatchEvent(new Event('input',{bubbles:true}));slider.dispatchEvent(new Event('change',{bubbles:true}));}},
     getShareUrl: () => location.href.split('#')[0] + buildUrlHash(),
     getCanvases: () => [...container.querySelectorAll('canvas')].sort((a,b) =>
@@ -365,21 +376,16 @@ $(function () {
   worldCountObserver.observe(document.getElementById('view-label'), {childList:true,subtree:true,characterData:true});
   worldCountObserver.observe(controls, {attributes:true,attributeFilter:['interpretation']});
   syncWorldCount();
-  mountExpandedResize(container);
+  mountExpandedResize({container,storageKey:'qontic-double-slit-expanded-size'});
   renderSetupFlag=1;window.qonticScaleOverlay.update();if(!isAnimating)drawSystem(currentCycleIndex);
-  document.querySelector('#canvas-wrapper .qontic-media-toolbar').prepend(document.getElementById('view-label'));
   window.qonticPacketEngine=mountPacketEngine({core,advanced});
-  // Capture shortcuts before the shadow controls stop propagation. Respect
-  // editable fields; Space always controls playback, even with toolbar focus.
-  document.addEventListener('keydown', event => {
-    if(event.defaultPrevented||event.ctrlKey||event.metaKey||event.altKey||event.isComposing)return;
-    const target=event.composedPath()[0];
-    if(target?.matches?.('input,select,textarea')||target?.isContentEditable)return;
-    const actions={Space:()=>document.getElementById('startButton').click(),
-      KeyR:()=>document.getElementById('resetButton').click(),
-      KeyS:()=>document.querySelector('#canvas-wrapper .qontic-media-toolbar button[aria-label="Screenshot"]')?.click(),
+  mountQonticShortcuts({
+    togglePlayback:()=>document.getElementById('startButton').click(),
+    reset:()=>document.getElementById('resetButton').click(),
+    screenshot:()=>document.querySelector('#canvas-wrapper .qontic-media-toolbar button[aria-label="Screenshot"]')?.click(),
+    additional:{
       KeyV:()=>{if(!viewLocked)document.getElementById('toggleView').click();},
-      KeyW:()=>{const select=document.getElementById('waveFunctionOption');select.selectedIndex=(select.selectedIndex+1)%select.options.length;$(select).trigger('change');}};
-    if(!actions[event.code])return;event.preventDefault();event.stopImmediatePropagation();if(!event.repeat)actions[event.code]();
-  },true);
+      KeyW:()=>{const select=document.getElementById('waveFunctionOption');select.selectedIndex=(select.selectedIndex+1)%select.options.length;$(select).trigger('change');},
+    },
+  });
 });

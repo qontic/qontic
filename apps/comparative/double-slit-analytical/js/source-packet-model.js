@@ -24,10 +24,8 @@ export function sourceCoefficients(p){
   return {ar,ai,center:c,br:-2*incidentReal*c,bi:-2*ai*c,cr:g.re*r-g.im*i,ci:g.re*i+g.im*r};
  });
 }
-export function sourceTransverse(y,x,p,coeff=sourceCoefficients(p)){
- if(x<p.wall){const g=gaussian(y,x/p.k,p.sourceSigma);return {...g,v:(g.re*g.di-g.im*g.dr)/Math.max(1e-300,g.rho)};}
- const u=(x-p.wall)/p.k;let re=0,im=0,dr=0,di=0;
- for(const a of coeff){
+function propagatedComponent(y,x,p,a){
+ const u=(x-p.wall)/p.k;
   const rr=1-2*a.ai*u,ii=2*a.ar*u,dd=rr*rr+ii*ii;
   const q=y-a.center,nr=-a.ar*q*q+a.br*q-u*a.br*a.bi,ni=-a.ai*q*q+a.bi*q+u*(a.br*a.br-a.bi*a.bi)/2;
   const er=(nr*rr+ni*ii)/dd,ei=(ni*rr-nr*ii)/dd;
@@ -36,10 +34,25 @@ export function sourceTransverse(y,x,p,coeff=sourceCoefficients(p)){
   const r=a.cr*fr-a.ci*fi,i=a.cr*fi+a.ci*fr;
   const lr=((-2*a.ar*q+a.br)*rr+(-2*a.ai*q+a.bi)*ii)/dd;
   const li=((-2*a.ai*q+a.bi)*rr-(-2*a.ar*q+a.br)*ii)/dd;
-  re+=r;im+=i;dr+=lr*r-li*i;di+=lr*i+li*r;
+ const dr=lr*r-li*i,di=lr*i+li*r,rho=r*r+i*i;
+ return {re:r,im:i,dr,di,rho,v:rho>1e-26?(r*di-i*dr)/rho:0};
+}
+export function sourceComponents(y,x,p,coeff=sourceCoefficients(p)){
+ if(x<p.wall){const g=gaussian(y,x/p.k,p.sourceSigma);return [{...g,v:(g.re*g.di-g.im*g.dr)/Math.max(1e-300,g.rho)}];}
+ return coeff.map(a=>propagatedComponent(y,x,p,a));
+}
+export function sourceTransverse(y,x,p,coeff=sourceCoefficients(p)){
+ if(x<p.wall)return sourceComponents(y,x,p,coeff)[0];
+ let re=0,im=0,dr=0,di=0;
+ for(const component of sourceComponents(y,x,p,coeff)){
+  re+=component.re;im+=component.im;dr+=component.dr;di+=component.di;
  }
  const rho=re*re+im*im;
  return {re,im,dr,di,rho,v:rho>1e-26?(re*di-im*dr)/rho:0};
+}
+export function sourceDensity(y,x,p,coeff=sourceCoefficients(p)){
+ if(!p.whichPath||x<p.wall)return sourceTransverse(y,x,p,coeff).rho;
+ return sourceComponents(y,x,p,coeff).reduce((sum,component)=>sum+component.rho,0);
 }
 export function sourceEnvelope(x,t,p){
  const u=x-(p.initialCenter??0)-p.k*t,rho=Math.exp(-u*u/(2*p.sx*p.sx))/(Math.sqrt(2*Math.PI)*p.sx);
@@ -100,11 +113,13 @@ export function sampleTransmittedSource(p,random=Math.random,fixedX=null,slitExt
  const variance=incidentVariance*apertureVariance/denominator;
  const components=[];
  let maxLogWeight=-Infinity;
- for(const left of p.centers)for(const right of p.centers){
+ for(let leftIndex=0;leftIndex<p.centers.length;leftIndex++)for(let rightIndex=0;rightIndex<p.centers.length;rightIndex++){
+  if(p.whichPath&&leftIndex!==rightIndex)continue;
+  const left=p.centers[leftIndex],right=p.centers[rightIndex];
   const sum=left+right;
   const logWeight=-(left*left+right*right)/(4*apertureVariance)
    +incidentVariance*sum*sum/(8*apertureVariance*denominator);
-  const component={mean:incidentVariance*sum/(2*denominator),logWeight};
+  const component={mean:incidentVariance*sum/(2*denominator),logWeight,slitIndex:p.whichPath?leftIndex:null};
   components.push(component);maxLogWeight=Math.max(maxLogWeight,logWeight);
  }
  let totalWeight=0;
@@ -135,7 +150,9 @@ export function sampleTransmittedSource(p,random=Math.random,fixedX=null,slitExt
  // Incident Gaussian Bohmian trajectories scale with the packet width.
  // Map the wall sample back analytically to the requested preparation plane.
  const y=yWall*sourceWidth(x,p)/Math.sqrt(incidentVariance);
- return {x0:x,x,y,done:false,passed:false,absorbed:false,path:[],conditionedTransmission:true};
+ const slitIndex=selected.component?.slitIndex??selected.slitIndex;
+ const slitSide=slitIndex===null||slitIndex===undefined?undefined:p.centers[slitIndex]<0?'upper':'lower';
+ return {x0:x,x,y,done:false,passed:false,absorbed:false,path:[],conditionedTransmission:true,slitIndex,slitSide};
 }
 export function advanceSourceY(y,x,dx,p,coeff){
  // Incident Gaussian trajectories have a closed expression; transmitted
@@ -154,24 +171,34 @@ export function stepSource(a,dt,p,coeff,random=Math.random){
  const end=a.x+p.k*dt;
  if(!a.passed&&end>=p.wall){
   a.y=advanceSourceY(a.y,a.x,p.wall-a.x,p,coeff);a.x=p.wall;a.passed=true;
-  if(!a.conditionedTransmission&&random()>aperture(a.y,p)**2){a.done=a.absorbed=true;return 'absorbed';}
+  if(p.whichPath){
+   const components=sourceComponents(a.y,p.wall,p,coeff),incident=gaussian(a.y,p.wall/p.k,p.sourceSigma).rho;
+   const transmitted=components.reduce((sum,component)=>sum+component.rho,0);
+   if(!a.conditionedTransmission&&random()>transmitted/Math.max(1e-300,incident)){a.done=a.absorbed=true;return 'absorbed';}
+   if(a.slitIndex===undefined||a.slitIndex===null){
+    let pick=random()*transmitted;a.slitIndex=components.length-1;
+    for(let i=0;i<components.length;i++){pick-=components[i].rho;if(pick<=0){a.slitIndex=i;break;}}
+   }
+   a.slitSide=p.centers[a.slitIndex]<0?'upper':'lower';
+  }else if(!a.conditionedTransmission&&random()>aperture(a.y,p)**2){a.done=a.absorbed=true;return 'absorbed';}
   // Display metadata only: associate a transmitted particle's actual
   // wall-crossing position with the nearest open aperture. This never enters
   // the guidance dynamics or the transmission decision above.
-  if(p.centers.length){
+  if(!p.whichPath&&p.centers.length){
    let nearest=0;
    for(let i=1;i<p.centers.length;i++)if(Math.abs(a.y-p.centers[i])<Math.abs(a.y-p.centers[nearest]))nearest=i;
    a.slitSide=p.centers[nearest]<0?'upper':p.centers[nearest]>0?'lower':(a.y<=0?'upper':'lower');
   }
  }
  const target=Math.min(end,p.screen);
- a.y=advanceSourceY(a.y,a.x,target-a.x,p,coeff);a.x=target;
+ const guidanceCoefficients=p.whichPath&&a.slitIndex!==undefined?[coeff[a.slitIndex]]:coeff;
+ a.y=advanceSourceY(a.y,a.x,target-a.x,p,guidanceCoefficients);a.x=target;
  if(a.x>=p.screen){a.done=true;return 'hit';}
  return null;
 }
 export function sourceProfile(p,ymin,ymax,samples=2049){
  const coeff=sourceCoefficients(p),dy=(ymax-ymin)/(samples-1);
- const values=Array.from({length:samples},(_,i)=>sourceTransverse(ymin+i*dy,p.screen,p,coeff).rho);
+ const values=Array.from({length:samples},(_,i)=>sourceDensity(ymin+i*dy,p.screen,p,coeff));
  const integral=values.reduce((s,v,i)=>s+v*((i===0||i===samples-1)?.5:1),0)*dy;
  return {values,integral};
 }

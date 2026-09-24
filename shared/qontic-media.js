@@ -1,12 +1,16 @@
 // Optional shared presentation tools. Models supply canvas layers and playback hooks.
-export function mountQonticMedia({stage, controls, getCanvases, beginRecording = () => {}, endRecording = () => {}, filename = 'qontic-simulation', getShareUrl = () => location.href, onRecord = null, headerTools = false, scaleControl = null, rangeControl = null}) {
+export function mountQonticMedia({stage, controls, getCanvases, beginRecording = () => {}, endRecording = () => {}, filename = 'qontic-simulation', getShareUrl = () => location.href, onRecord = null, headerTools = false, labelNode = null, scaleControl = null, rangeControl = null}) {
   if (!document.querySelector('link[data-qontic-media]')) {
     const link = document.createElement('link');
-    link.rel = 'stylesheet'; link.href = new URL('./qontic-media.css?v=header-20260916', import.meta.url);
+    link.rel = 'stylesheet'; link.href = new URL('./qontic-media.css?v=3.0', import.meta.url);
     link.dataset.qonticMedia = ''; document.head.append(link);
   }
   const toolbar = document.createElement('div'); toolbar.className = 'qontic-media-toolbar';
   toolbar.setAttribute('role','group'); toolbar.setAttribute('aria-label','Simulation tools');
+  if (labelNode) {
+    labelNode.classList.add('qontic-stage-label');
+    toolbar.append(labelNode);
+  }
   const icons = {
     range:'<path d="M7 3v18M17 3v18M3 8h8m2 8h8"/><circle cx="7" cy="8" r="2"/><circle cx="17" cy="16" r="2"/>',
     ruler:'<path d="M3 7h18v10H3zM7 7v5m4-5v3m4-3v5m4-5v3"/>',

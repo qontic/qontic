@@ -9,6 +9,7 @@ const context = vm.createContext({
   length: {value: 50}, width: {value: 30}, sourceWidth: {value: 200}, interval: {},
   sourcePos: 200, detectorDistance: 400, wavelength: 10, nDetectorPixels: 64,
   screenHeight: 600, slitSeparation: 150, slit1Open: true, slit2Open: true,
+  whichPathDetector: 'none',
   worldCanvasDx: 905, particleType: 'electron',
   sourceXWorld: 90.5, slit1YWorld: 225, slit2YWorld: 375,
   document: {getElementById: () => ({value: 100})}, syncPacketInput() {}, syncSlowPacketMode() {},
@@ -36,5 +37,9 @@ for (const mode of ['electron', 'neutron', 'photon']) {
 context.slitSeparation += 10;
 vm.runInContext('ensure()', context);
 assert.equal(context.resets, 1, 'a physical geometry change must still reset');
+assert.equal(context.nHits, 0);
+context.hits=[3,2,1];context.nHits=6;context.whichPathDetector='slit1';
+vm.runInContext('ensure()', context);
+assert.equal(context.resets, 2, 'adding a which-slit detector must start a new record');
 assert.equal(context.nHits, 0);
 console.log('PASS: repeated expand/restore preserves histogram and time; geometry changes still reset.');

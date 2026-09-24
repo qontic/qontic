@@ -1240,13 +1240,13 @@ function updateWhichPathButton() {
       label = 'No Detector';
       $('#detectorWaveControls').hide();
    } else if (whichPathDetector === 'slit1') {
-      label = 'Detector @ Slit 1';
-      $('#detectorWaveControls').show();
+      label = 'Detector @ Upper';
+      $('#detectorWaveControls').hide();
    } else {
-      label = 'Detector @ Slit 2';
-      $('#detectorWaveControls').show();
+      label = 'Detector @ Lower';
+      $('#detectorWaveControls').hide();
    }
-   $('#toggleWhichPath').text(label);
+   $('#toggleWhichPath').text(label).attr('aria-pressed', whichPathDetector !== 'none');
 }
 //==================================================================================================================
 //
@@ -2267,6 +2267,11 @@ $(document).ready(function() {
          }
          updateWhichPathButton();
          updateMathFormulas();
+         if (window.qonticPacketEngine?.enabled) {
+            window.qonticPacketEngine.setWhichPath(whichPathDetector);
+            syncMathButtons();
+            return;
+         }
          invalidateAllCaches();
          lightweightReset();
          setupGeo(false);  // recalc canvas coords without precompute
@@ -2438,5 +2443,3 @@ $(document).ready(function() {
       //nHits=1000;
       //resampleHitsFromPsi();
 });
-
-

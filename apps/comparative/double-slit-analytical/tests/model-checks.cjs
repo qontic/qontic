@@ -34,6 +34,8 @@ for (const equation of ['schrodinger', 'exactEnvelope', 'approxEnvelope', 'packe
 for (const statement of ['forward, paraxial approximation', 'Direct PW', 'Part./packet', 'Phase colors show cos θ']) {
   assert(content.includes(statement), `missing current Views/Physics statement: ${statement}`);
 }
+assert(content.includes('orthogonal which-slit detector records'));
+assert(content.includes('incoherent sum'));
 
 // New packets and in-flight interpretation changes use analytical conditional
 // transmission sampling; no bounded rejection loop remains.
@@ -54,5 +56,10 @@ assert(engine.includes('clearHitsForPreview()'));
 assert(engine.includes("sampleTransmittedSource(p,Math.random,null,3)"));
 assert(engine.includes('const half=3*(slitPreviewWidth??p.sy*100)*toCanvasY'));
 assert(content.includes('finite slit core extending ±3σₐ'));
+assert(model.includes('sourceComponents'));
+assert(model.includes('if(p.whichPath)'));
+assert(engine.includes("whichPathDetector!=='none'&&next.centers.length===2"));
+assert(engine.includes('setWhichPath(){resetEngine();draw();}'));
+assert(engine.includes("colors=[[34,211,238],[255,159,67]]"));
 
 console.log('PASS: packet engine is authoritative; Physics and Views match the active model.');
