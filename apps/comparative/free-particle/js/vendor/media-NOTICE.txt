@@ -1,0 +1,5 @@
+Mediabunny 1.56.0 by Vanilagy and contributors.
+License: Mozilla Public License 2.0 (media-LICENSE.txt).
+Unmodified upstream source: https://github.com/Vanilagy/mediabunny/tree/v1.56.0
+Package source: https://www.npmjs.com/package/mediabunny/v/1.56.0
+This browser bundle is generated with scripts/vendor-media.mjs.

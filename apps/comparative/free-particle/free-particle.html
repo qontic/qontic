@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -339,16 +339,24 @@
       font-weight: 500;
     }
 
-    /* ── Speed selector ───────────────────────────────────────────── */
-    select.fp-select {
-      padding: 4px 8px;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      background: var(--bg-secondary);
+    /* ── Continuous playback speed ─────────────────────────────────── */
+    .fp-speed-control { margin-bottom: 10px; min-width: 0; }
+    .fp-speed-control label { width: auto; }
+    .fp-speed-control input[type=range] { min-width: 48px; width: 100%; }
+    .fp-speed-control output {
+      min-width: 4.5ch;
+      text-align: right;
+      font-size: 0.8rem;
+      font-variant-numeric: tabular-nums;
       color: var(--text-primary);
-      font-size: 0.82rem;
-      cursor: pointer;
     }
+    #fp-expanded-speed:not([hidden]) { flex: 1 1 210px; max-width: 320px; }
+    #fp-expanded-speed .fp-speed-control { margin: 0; }
+    #fp-expanded-bins:not([hidden]) { flex: 1 1 190px; max-width: 250px; }
+    #fp-expanded-bins #fp-bin-control { margin: 0; }
+    #fp-bin-control { min-width: 0; }
+    #fp-bin-control label { width: auto; }
+    #fp-bin-control input[type=range] { min-width: 48px; width: 100%; }
 
     /* ================================================================
        Centre: canvas stack
@@ -360,6 +368,86 @@
       gap: 10px;
       min-width: 0;
     }
+
+    .sim-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 860px;
+      margin-bottom: 8px;
+    }
+    #fp-expanded-playback { margin-right: auto; }
+    .sim-toolbar .fp-btn { padding: 6px 12px; }
+    .sim-toolbar .fp-btn[aria-pressed="true"] {
+      background: var(--accent-light);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+    .fp-btn:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 3px; }
+
+    #fp-btn-record.recording { color: var(--danger-color); border-color: var(--danger-color); }
+    .fp-record-dialog {
+      width: 390px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100dvh - 32px);
+      margin: auto;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      box-shadow: 0 16px 64px rgba(0,0,0,0.3);
+      overflow: auto;
+      font: inherit;
+    }
+    .fp-record-dialog::backdrop { background: rgba(0,0,0,0.45); }
+    .fp-record-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .fp-record-heading h2 { margin: 0; font-size: 1.1rem; }
+    .fp-record-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; font-size: 0.82rem; }
+    .fp-record-row select, .fp-record-row input {
+      width: 180px;
+      max-width: 56%;
+      padding: 7px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font: inherit;
+    }
+    .fp-record-hint { color: var(--text-muted); font-size: 0.78rem; line-height: 1.5; margin: 12px 0; }
+    #fp-record-render { width: 100%; }
+    #fp-record-progress { width: 100%; height: 6px; margin-top: 14px; accent-color: var(--accent-color); }
+    #fp-record-download { color: var(--accent-color); font-size: 0.82rem; }
+    .fp-record-preview-canvas { display: block; width: 100%; height: auto; max-height: 180px; object-fit: contain; background: #000; border-radius: 6px; margin-top: 12px; }
+
+    body.fp-sim-expanded { overflow: hidden; }
+    #viewpanel-sim.sim-expanded {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      background: var(--bg-primary);
+      overflow: auto;
+    }
+    .sim-expanded .sim-toolbar { max-width: none; margin-bottom: 0; flex-shrink: 0; }
+    .sim-expanded .sim-main-row {
+      flex: 1 1 0;
+      min-height: 120px;
+      max-width: none;
+      flex-direction: row;
+    }
+    .sim-expanded .canvas-wrap { max-width: none; min-width: 0; }
+    .sim-expanded .canvas-spacer { display: none; }
+    .sim-expanded .yproj-wrap { width: 112px; min-width: 72px; height: auto; }
+    .sim-expanded .prob-wrap { flex-shrink: 0; height: clamp(56px, 12vh, 90px); }
+    .sim-expanded .info-compact { display: none; }
+    .sim-expanded .mw-grid { flex: 1 1 0; min-height: 120px; max-width: none; aspect-ratio: auto; }
+    .sim-expanded #fp-mw-status { max-width: none; flex-shrink: 0; }
 
     .sim-main-row {
       width: 100%;
@@ -569,6 +657,7 @@
 
     /* ── MW branch grid ───────────────────────────────────────────── */
     .mw-grid {
+      position: relative;
       display: grid;
       gap: 8px;
       width: 100%;
@@ -589,6 +678,15 @@
       overflow: hidden;
     }
     .mw-mini-wrap canvas { display: block; }
+    .mw-zoom-canvas {
+      position: absolute;
+      inset: 6px;
+      z-index: 4;
+      width: calc(100% - 12px);
+      height: calc(100% - 12px);
+      pointer-events: none;
+    }
+    .mw-zoom-canvas[hidden] { display: none; }
     .mw-grid.mw-choosing .mw-mini-wrap { transition: transform 0.12s; cursor: pointer; }
     .mw-grid.mw-choosing .mw-mini-wrap:hover { transform: scale(1.03); box-shadow: 0 0 0 2px #38bdf8; }
     #fp-mw-status {
@@ -616,6 +714,9 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="../../../shared/qontic-shell.css">
+  <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.0">
+  <link rel="stylesheet" href="template-adapter.css?v=7">
 </head>
 <body>
 
@@ -709,31 +810,43 @@
     <!-- ── Detector ───────────────────────────────────────────────── -->
     <div class="panel-card">
       <h3>Detector</h3>
-      <div class="slider-row">
-        <label title="Number of vertical bands">Sections:</label>
-        <input type="range" id="fp-nsect-slider" min="2" max="12" step="1" value="6" />
-        <input type="number" id="fp-nsect-input" min="2" max="12" step="1" value="6" />
+      <div class="slider-row" id="fp-bin-control">
+        <label for="fp-nsect-slider" title="Number of vertical detector pixels (coarse-grained outcome regions)">Pixels:</label>
+        <input type="range" id="fp-nsect-slider" min="2" max="12" step="1" value="6" aria-label="Detector pixel count" />
+        <input type="number" id="fp-nsect-input" min="2" max="12" step="1" value="6" aria-label="Detector pixel count" />
       </div>
       <p style="font-size:0.72rem; color:var(--text-muted); margin:6px 0 0">
         Fixed at x&nbsp;=&nbsp;30&nbsp;nm &middot; half-width 4&nbsp;nm
       </p>
     </div>
 
+    <section id="fp-mw-controls" class="fp-mw-controls" aria-label="Many-Worlds branching" hidden>
+      <h3>Branching</h3>
+      <label class="fp-mw-control-row" for="fp-mw-choice-mode">
+        <span>Follow branch</span>
+        <select id="fp-mw-choice-mode" aria-label="Many-Worlds branch selection">
+          <option value="auto" selected>Random (Born)</option>
+          <option value="manual">Manual</option>
+        </select>
+      </label>
+      <label class="fp-mw-control-row" for="fp-mw-choice-delay">
+        <span>Time in grid</span>
+        <input id="fp-mw-choice-delay" type="range" min="0.5" max="5" step="0.1" value="1.5" />
+        <output id="fp-mw-choice-delay-value" for="fp-mw-choice-delay">1.5 s</output>
+      </label>
+      <small>Random follows detector-pixel Born weights. Manual waits for a panel click.</small>
+    </section>
+
     <!-- ── Simulation controls ───────────────────────────────────── -->
     <div class="panel-card">
       <h3>Simulation</h3>
-      <div class="slider-row" style="margin-bottom:10px">
-        <label>Speed:</label>
-        <select id="fp-speed" class="fp-select">
-          <option value="auto" selected>Auto</option>
-          <option value="1">1×</option>
-          <option value="2">2×</option>
-          <option value="4">4×</option>
-          <option value="8">8×</option>
-          <option value="16">16×</option>
-        </select>
+      <div class="slider-row fp-speed-control" id="fp-speed-control">
+        <label for="fp-speed">Speed:</label>
+        <input type="range" id="fp-speed" min="0.1" max="16" step="0.01" value="1"
+               aria-describedby="fp-speed-value" title="Playback speed · 1× follows the packet's natural preview pace" />
+        <output id="fp-speed-value" for="fp-speed">1×</output>
       </div>
-      <div class="btn-row">
+      <div class="btn-row" id="fp-playback-controls">
         <button class="fp-btn primary" id="fp-btn-start">▶ Start</button>
         <button class="fp-btn" id="fp-btn-stop" disabled>⏸ Stop</button>
         <button class="fp-btn danger" id="fp-btn-reset">↺ Reset</button>
@@ -765,6 +878,44 @@
 
     <!-- ── SIMULATION panel ─────────────────────────────────────────── -->
     <div class="view-panel view-panel-active" id="viewpanel-sim">
+
+      <div class="sim-toolbar" role="group" aria-label="Simulation view controls">
+        <div id="fp-expanded-playback" hidden></div>
+        <div id="fp-expanded-speed" hidden></div>
+        <div id="fp-expanded-bins" hidden></div>
+        <button type="button" class="fp-btn" id="fp-btn-record" aria-haspopup="dialog"
+                aria-controls="fp-record-dialog">● Record video</button>
+        <button type="button" class="fp-btn" id="fp-btn-wave" aria-pressed="false"
+                aria-controls="fpWaveCanvas fpYProjCanvas fpProbCanvas"
+                title="Hide or show the wave in the main view and both probability panels">Hide waves</button>
+        <button type="button" class="fp-btn" id="fp-btn-expand" aria-expanded="false"
+                aria-controls="viewpanel-sim" title="Expand the simulation to fill the window">⛶ Expand simulation</button>
+      </div>
+
+      <dialog id="fp-record-dialog" class="fp-record-dialog" aria-labelledby="fp-record-title">
+        <div class="fp-record-heading">
+          <h2 id="fp-record-title">Record video</h2>
+          <button type="button" class="fp-btn" id="fp-record-close" aria-label="Close recording settings">✕</button>
+        </div>
+        <div class="fp-record-row">
+          <label for="fp-record-size">Resolution</label>
+          <select id="fp-record-size"><option value="1920">1920 px wide</option><option value="2560" selected>2K · 2560 px wide</option></select>
+        </div>
+        <div class="fp-record-row">
+          <label for="fp-record-duration">Length (seconds)</label>
+          <input type="number" id="fp-record-duration" min="1" max="120" step="1" value="10" />
+        </div>
+        <div class="fp-record-row">
+          <label for="fp-record-start">Start from</label>
+          <select id="fp-record-start"><option value="beginning">Beginning</option><option value="current">Current time</option></select>
+        </div>
+        <p class="fp-record-hint">Records the wave, particle, detector histogram, and both density profiles using the current framing. Controls stay out of the video. Rendering may take longer than playback.</p>
+        <button type="button" class="fp-btn primary" id="fp-record-render">Render video · 30 fps</button>
+        <progress id="fp-record-progress" value="0" max="300" aria-label="Video rendering progress" hidden></progress>
+        <div id="fp-record-preview"></div>
+        <p id="fp-record-status" class="fp-record-hint" role="status" aria-live="polite"></p>
+        <a id="fp-record-download" hidden>Save video</a>
+      </dialog>
 
       <!-- Main visualisation (wave + particle + detector) -->
       <div class="sim-main-row" id="fp-main-vis-wrap">
@@ -859,8 +1010,12 @@
           description is updated after detection, while the ontology remains
           unambiguous (a definite trajectory throughout).</li>
         <li><strong>Many-worlds view (Everett):</strong> the wavefunction never
-          collapses.  Instead the universe &ldquo;branches&rdquo;: one branch
-          contains a detector that fired, another does not.  Both are equally real.</li>
+          collapses. At detection, the display separates the possible detector-pixel
+          records into subcanvases. One record is followed either randomly according
+          to its Born weight or by manual choice, and is enlarged back to the full
+          view before the next packet begins. Following one record does not remove
+          the other branches; the grid is a coarse-grained visualization of the
+          detector outcomes rather than a microscopic model of decoherence.</li>
       </ul>
     </div><!-- /viewpanel-rationale -->
 
@@ -1008,7 +1163,8 @@
      also updated by JS.
 ================================================================ -->
 
-<script src="js/free-particle.js"></script>
+<script src="js/free-particle.js?v=20260924-mw-zoom4"></script>
+<script src="js/recorder-ui.js?v=20260914-1"></script>
 <script>
 // ================================================================
 //  Page-level glue: resize canvases, init, tab wiring, dark mode
@@ -1022,10 +1178,10 @@
     let W = wrap ? wrap.clientWidth : 0;
     if (!W) {
       const area = document.querySelector('.canvas-area');
-      W = area ? Math.min(860, area.clientWidth) : 0;
+      W = area ? area.clientWidth : 0;
     }
     if (!W) return;
-    const H = Math.round(W * 0.45); // taller aspect
+    const H = wrap?.clientHeight || Math.round(W * 0.45);
 
     ['fpWaveCanvas','fpPartCanvas','fpDetCanvas'].forEach(id => {
       const c = document.getElementById(id);
@@ -1044,14 +1200,84 @@
     const probWrap = document.querySelector('.prob-wrap');
     if (probWrap) {
       const pc = document.getElementById('fpProbCanvas');
-      // Align the prob strip to the wave canvas: offset by the y-projection column width + gap
-      const yProjWrap = document.getElementById('fp-yproj-wrap');
-      const leftOffset = yProjWrap ? (yProjWrap.offsetWidth + 8) : 0; // 8 = sim-main-row gap
+      // Measure the actual offset: the y-projection stacks above the canvas on narrow screens.
+      const mainRow = document.getElementById('fp-main-vis-wrap');
+      const leftOffset = wrap && mainRow && wrap.clientWidth
+        ? wrap.getBoundingClientRect().left - mainRow.getBoundingClientRect().left : 0;
       probWrap.style.marginLeft = leftOffset + 'px';
-      probWrap.style.width = W + 'px';
-      if (pc) { pc.width = W; pc.height = probWrap.clientHeight; }
+      probWrap.style.width = (wrap?.offsetWidth || W) + 'px';
+      if (pc) { pc.width = probWrap.clientWidth || W; pc.height = probWrap.clientHeight; }
     }
 
+  }
+
+  function refreshSimulationSize() {
+    resizeCanvases();
+    if (fp.interpMode === 'manyworlds') fpResizeMWCanvases();
+    fpRender();
+  }
+
+  // Fill the browser window while preserving the current run and playback controls.
+  function initExpandedView() {
+    const panel = document.getElementById('viewpanel-sim');
+    const button = document.getElementById('fp-btn-expand');
+    const playback = document.getElementById('fp-playback-controls');
+    const playbackSlot = document.getElementById('fp-expanded-playback');
+    const playbackHome = document.createComment('Playback controls');
+    const speed = document.getElementById('fp-speed-control');
+    const speedSlot = document.getElementById('fp-expanded-speed');
+    const speedHome = document.createComment('Speed control');
+    const bins = document.getElementById('fp-bin-control');
+    const binsSlot = document.getElementById('fp-expanded-bins');
+    const binsHome = document.createComment('Bin count control');
+    const background = [
+      ...Array.from(document.body.children).filter(el => !el.contains(panel)),
+      document.querySelector('.left-panel'),
+      document.querySelector('.view-tab-bar'),
+    ].filter(Boolean);
+    let previousInert = [];
+
+    function setExpanded(expanded) {
+      panel.classList.toggle('sim-expanded', expanded);
+      document.body.classList.toggle('fp-sim-expanded', expanded);
+      button.setAttribute('aria-expanded', String(expanded));
+      button.textContent = expanded ? '↙ Restore view' : '⛶ Expand simulation';
+      button.title = expanded ? 'Restore the normal view (Esc)' : 'Expand the simulation to fill the window';
+      playbackSlot.hidden = !expanded;
+      speedSlot.hidden = !expanded;
+      binsSlot.hidden = !expanded;
+      if (expanded) {
+        playback.replaceWith(playbackHome);
+        playbackSlot.appendChild(playback);
+        speed.replaceWith(speedHome);
+        speedSlot.appendChild(speed);
+        bins.replaceWith(binsHome);
+        binsSlot.appendChild(bins);
+        previousInert = background.map(el => el.inert);
+        background.forEach(el => { el.inert = true; });
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'true');
+        panel.setAttribute('aria-label', 'Free particle simulation');
+      } else {
+        playbackHome.replaceWith(playback);
+        speedHome.replaceWith(speed);
+        binsHome.replaceWith(bins);
+        background.forEach((el, i) => { el.inert = previousInert[i]; });
+        panel.removeAttribute('role');
+        panel.removeAttribute('aria-modal');
+        panel.removeAttribute('aria-label');
+      }
+      button.focus({ preventScroll: true });
+      refreshSimulationSize();
+    }
+
+    button.addEventListener('click', () => setExpanded(!panel.classList.contains('sim-expanded')));
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && panel.classList.contains('sim-expanded')) {
+        e.preventDefault();
+        setExpanded(false);
+      }
+    });
   }
 
   // ── View tab wiring (Simulation / Rationale / Physics / Compare) ─
@@ -1065,8 +1291,11 @@
         tab.classList.add('view-tab-active');
         const panel = document.getElementById('viewpanel-' + tab.dataset.viewtab);
         if (panel) panel.classList.add('view-panel-active');
-        // resize canvases when returning to simulation tab
-        if (tab.dataset.viewtab === 'sim') { resizeCanvases(); fpRender(); }
+        // Resize after the restored panel has completed layout. Measuring it
+        // in the click handler can preserve the hidden panel's zero width.
+        if (tab.dataset.viewtab === 'sim') {
+          requestAnimationFrame(() => requestAnimationFrame(refreshSimulationSize));
+        }
       });
     });
   }
@@ -1091,7 +1320,7 @@
     const html = document.documentElement;
     // respect system preference
     const prefers = window.matchMedia('(prefers-color-scheme: dark)');
-    if (prefers.matches) { html.dataset.theme = 'dark'; btn.textContent = '☀ Light'; }
+    html.dataset.theme = 'dark'; btn.textContent = '☀ Light';
     btn.addEventListener('click', () => {
       if (html.dataset.theme === 'dark') {
         delete html.dataset.theme;
@@ -1117,6 +1346,14 @@
 
     // Initialise the simulation  (defined in free-particle.js)
     fpInit();
+    initExpandedView();
+    fpInitRecorder();
+
+    // Redraw at the actual size when the main canvas returns from a branch grid.
+    const mainCanvasWrap = document.getElementById('fp-canvas-wrap');
+    new ResizeObserver(() => {
+      if (mainCanvasWrap.clientWidth) refreshSimulationSize();
+    }).observe(mainCanvasWrap);
 
     // Track visit to GA4
     gtag('event', 'app_view', {
@@ -1127,19 +1364,13 @@
     let resizeTimer;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        resizeCanvases();
-        if (window.fp && fp.interpMode === 'manyworlds' && typeof fpResizeMWCanvases === 'function') {
-          fpResizeMWCanvases();
-        }
-        fpRender();
-      }, 120);
+      resizeTimer = setTimeout(refreshSimulationSize, 120);
     });
   });
 
 })();
 </script>
 
+<script type="module" src="js/template-adapter.js?v=9"></script>
 </body>
 </html>
-

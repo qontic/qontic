@@ -10,7 +10,7 @@ const boolAttr = (element, name, fallback = false) => {
 };
 
 class QonticControls extends HTMLElement {
-  static observedAttributes = ["interpretation", "running", "auto-run", "speed", "active-tab", "accent", "theme", "show-interpretation", "show-autorun", "show-reset", "show-speed", "speed-min", "speed-max", "speed-step", "disabled", "show-tabs"];
+  static observedAttributes = ["interpretation", "running", "auto-run", "speed", "active-tab", "accent", "theme", "show-interpretation", "show-autorun", "show-reset", "show-speed", "speed-min", "speed-max", "speed-step", "disabled", "show-tabs", "show-appearance"];
 
   constructor() {
     super();
@@ -133,8 +133,9 @@ class QonticControls extends HTMLElement {
 
     const tab = this.getAttribute("active-tab") || "core";
     const showTabs = this.getAttribute("show-tabs") !== "false";
+    const showAppearance = this.getAttribute("show-appearance") === "true" || (showTabs && tab === "display");
     root.querySelector(".qontic-control-tabs").hidden = !showTabs;
-    root.querySelector(".qontic-common-display").hidden = !showTabs || tab !== "display";
+    root.querySelector(".qontic-common-display").hidden = !showAppearance;
     const disabled = boolAttr(this, "disabled");
     root.querySelectorAll("button, input").forEach(control => { control.disabled = disabled; });
     root.querySelectorAll("[data-tab]").forEach(button => {
