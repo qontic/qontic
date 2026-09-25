@@ -20,3 +20,10 @@
 .qontic-range-draggable canvas,.qontic-range-draggable output {cursor:move;}
 
 .qontic-range-draggable:focus-visible {outline:2px solid #55d8e6;outline-offset:2px;}
+
+.qontic-coordinate-overlay {position:absolute!important;inset:0!important;display:block;width:100%!important;height:100%!important;z-index:28;pointer-events:none;background:transparent!important;}
+.qontic-coordinate-overlay[hidden] {display:none!important;}
+.qontic-coordinate-readout {position:absolute;right:10px;bottom:10px;z-index:33;max-width:calc(100% - 20px);padding:5px 8px;border:1px solid rgba(126,233,251,.72);border-radius:5px;background:rgba(8,24,36,.9);color:#eefaff;font:500 12px/1.35 Inter,Arial,sans-serif;font-variant-numeric:tabular-nums;pointer-events:none;white-space:nowrap;}
+.qontic-coordinate-readout[hidden] {display:none!important;}
+.qontic-measuring {cursor:crosshair;}
+.qontic-light .qontic-coordinate-readout {background:rgba(241,249,252,.94);color:#183343;border-color:#4a91a3;}

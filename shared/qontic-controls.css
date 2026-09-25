@@ -31,6 +31,8 @@ button { font:inherit; }
 .qontic-speed input { width:100%; min-width:0; accent-color:#55d8e6; }
 .qontic-speed output { min-width:35px; color:#7cecff; text-align:right; font-variant-numeric:tabular-nums; }
 .qontic-control-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; margin-bottom:-8px; position:relative; z-index:2; }
+:host([show-expert="true"]) .qontic-control-tabs { grid-template-columns:repeat(4,minmax(0,1fr)); }
+:host([show-advanced="false"]:not([show-expert="true"])) .qontic-control-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .qontic-control-tabs button { min-width:0; padding:7px 3px 6px; border:1px solid #294b60; border-bottom-color:#3a596c; border-radius:7px 7px 0 0; background:#0b1924; color:#829aa8; cursor:pointer; white-space:nowrap; }
 .qontic-control-tabs button + button { border-left-width:0; }
 .qontic-control-tabs button.active { position:relative; z-index:2; border-color:#3a6578; border-bottom-color:#0f2230; background:#0f2230; color:#7cecff; }

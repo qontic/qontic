@@ -10,13 +10,13 @@ const boolAttr = (element, name, fallback = false) => {
 };
 
 class QonticControls extends HTMLElement {
-  static observedAttributes = ["interpretation", "running", "auto-run", "speed", "active-tab", "accent", "theme", "show-interpretation", "show-autorun", "show-reset", "show-speed", "speed-min", "speed-max", "speed-step", "disabled", "show-tabs", "show-appearance"];
+  static observedAttributes = ["interpretation", "running", "auto-run", "speed", "active-tab", "accent", "theme", "show-interpretation", "show-autorun", "show-reset", "show-speed", "speed-min", "speed-max", "speed-step", "disabled", "show-tabs", "show-appearance", "show-advanced", "show-expert"];
 
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this.shadowRoot.innerHTML = `
-      <link rel="stylesheet" href="${new URL("./qontic-controls.css?v=3.0", import.meta.url).href}">
+      <link rel="stylesheet" href="${new URL("./qontic-controls.css?v=3.2", import.meta.url).href}">
       <section class="qontic-common-controls" aria-label="Simulation controls">
         <button class="qontic-interpretation" type="button"></button>
         <div class="qontic-run-row" role="group" aria-label="Run controls">
@@ -28,6 +28,7 @@ class QonticControls extends HTMLElement {
         <nav class="qontic-control-tabs" role="tablist" aria-label="Control sections">
           <button type="button" data-tab="core" role="tab">Core</button>
           <button type="button" data-tab="advanced" role="tab">Advanced</button>
+          <button type="button" data-tab="expert" role="tab">Expert</button>
           <button type="button" data-tab="display" role="tab">Display</button>
         </nav>
         <div class="qontic-common-display" hidden>
@@ -131,7 +132,17 @@ class QonticControls extends HTMLElement {
     speedInput.setAttribute("aria-label", "Simulation speed");
     root.querySelector(".qontic-speed output").value = `${speed.toFixed(1)}×`;
 
-    const tab = this.getAttribute("active-tab") || "core";
+    const showAdvanced = this.getAttribute("show-advanced") !== "false";
+    const advancedButton = root.querySelector('[data-tab="advanced"]');
+    advancedButton.hidden = !showAdvanced;
+    const showExpert = this.getAttribute("show-expert") === "true";
+    const expertButton = root.querySelector('[data-tab="expert"]');
+    expertButton.hidden = !showExpert;
+    let tab = this.getAttribute("active-tab") || "core";
+    if ((tab === "advanced" && !showAdvanced) || (tab === "expert" && !showExpert)) {
+      tab = "core";
+      this.setAttribute("active-tab", tab);
+    }
     const showTabs = this.getAttribute("show-tabs") !== "false";
     const showAppearance = this.getAttribute("show-appearance") === "true" || (showTabs && tab === "display");
     root.querySelector(".qontic-control-tabs").hidden = !showTabs;

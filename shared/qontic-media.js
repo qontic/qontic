@@ -1,8 +1,8 @@
 // Optional shared presentation tools. Models supply canvas layers and playback hooks.
-export function mountQonticMedia({stage, controls, getCanvases, beginRecording = () => {}, endRecording = () => {}, filename = 'qontic-simulation', getShareUrl = () => location.href, onRecord = null, headerTools = false, labelNode = null, scaleControl = null, rangeControl = null}) {
+export function mountQonticMedia({stage, controls, getCanvases, beginRecording = () => {}, endRecording = () => {}, filename = 'qontic-simulation', getShareUrl = () => location.href, onRecord = null, headerTools = false, labelNode = null, scaleControl = null, rangeControl = null, coordinateControl = null}) {
   if (!document.querySelector('link[data-qontic-media]')) {
     const link = document.createElement('link');
-    link.rel = 'stylesheet'; link.href = new URL('./qontic-media.css?v=3.0', import.meta.url);
+    link.rel = 'stylesheet'; link.href = new URL('./qontic-media.css?v=3.1', import.meta.url);
     link.dataset.qonticMedia = ''; document.head.append(link);
   }
   const toolbar = document.createElement('div'); toolbar.className = 'qontic-media-toolbar';
@@ -14,6 +14,8 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
   const icons = {
     range:'<path d="M7 3v18M17 3v18M3 8h8m2 8h8"/><circle cx="7" cy="8" r="2"/><circle cx="17" cy="16" r="2"/>',
     ruler:'<path d="M3 7h18v10H3zM7 7v5m4-5v3m4-3v5m4-5v3"/>',
+    grid:'<path d="M4 4h16v16H4zM9.33 4v16M14.67 4v16M4 9.33h16M4 14.67h16"/>',
+    measure:'<path d="M4 4v5M1.5 6.5h5M20 15v5m-2.5-2.5h5M5 18 18 5"/><circle cx="5" cy="18" r="2"/><circle cx="18" cy="5" r="2"/>',
     expand:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
     restore:'<path d="M3 8h5V3m8 0v5h5M8 21v-5H3m13 5v-5h5"/>',
     record:'<rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3"/>',
@@ -41,6 +43,16 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
   let rangeButton;
   const syncRange=()=>{if(rangeButton){const shown=rangeControl.getVisible();rangeButton.setAttribute('aria-pressed',String(shown));setAction(rangeButton,'range','Wave range',shown?'Hide wave range':'Show wave range');}};
   if(rangeControl){rangeButton=action('range','Wave range','Show or hide wave range');rangeButton.addEventListener('click',()=>{rangeControl.setVisible(!rangeControl.getVisible());syncRange();});syncRange();}
+  let gridButton,measureButton;
+  const syncCoordinates=()=>{
+    if(gridButton){const shown=coordinateControl.getGridVisible();gridButton.setAttribute('aria-pressed',String(shown));setAction(gridButton,'grid','Grid',shown?'Hide coordinate grid':'Show coordinate grid');}
+    if(measureButton){const active=coordinateControl.getMeasureActive();measureButton.setAttribute('aria-pressed',String(active));setAction(measureButton,'measure','Coordinates and measure',active?'Stop coordinate and distance measurement':'Show cursor coordinates; click two points to measure distance');}
+  };
+  if(coordinateControl){
+    gridButton=action('grid','Grid','Show coordinate grid');gridButton.addEventListener('click',()=>{coordinateControl.setGridVisible(!coordinateControl.getGridVisible());syncCoordinates();});
+    measureButton=action('measure','Coordinates and measure','Show cursor coordinates; click two points to measure distance');measureButton.addEventListener('click',()=>{coordinateControl.setMeasureActive(!coordinateControl.getMeasureActive());syncCoordinates();});
+    syncCoordinates();
+  }
   expand.setAttribute('aria-expanded','false');
   const notice=document.createElement('span');notice.className='qontic-media-status';
   notice.setAttribute('role','status');toolbar.append(notice);
@@ -184,5 +196,5 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
     } catch(error) { cleanup(); status.textContent = 'Recording failed: ' + error.message; }
   });
   window.addEventListener('pagehide',()=>{stop();if(url)URL.revokeObjectURL(url);});
-  return {setExpanded, stopRecording:stop, syncScale, syncRange};
+  return {setExpanded, stopRecording:stop, syncScale, syncRange, syncCoordinates};
 }

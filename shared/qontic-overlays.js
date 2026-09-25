@@ -2,7 +2,7 @@
 function styles() {
   if (document.querySelector('link[data-qontic-overlays]')) return;
   const link=document.createElement('link');link.rel='stylesheet';
-  link.href=new URL('./qontic-overlays.css?v=4',import.meta.url);
+  link.href=new URL('./qontic-overlays.css?v=5',import.meta.url);
   link.dataset.qonticOverlays='';document.head.append(link);
 }
 export function mountDistanceScale({host,getUnitsPerPixel,format=v=>String(v),storageKey,onVisibilityChange=()=>{}}) {
@@ -40,6 +40,62 @@ export function mountDistanceScale({host,getUnitsPerPixel,format=v=>String(v),st
   element.addEventListener('keydown',event=>{const delta={ArrowLeft:[-10,0],ArrowRight:[10,0],ArrowUp:[0,-10],ArrowDown:[0,10]}[event.key];if(!delta&&event.key!=='Home')return;event.preventDefault();event.stopPropagation();position=delta?{x:position.x+delta[0],y:position.y+delta[1]}:{x:8,y:8};place();save();});
   const observer=new ResizeObserver(update);observer.observe(host);update();
   return {canvas,update,getVisible:()=>visible&&opacity>0,setVisible(value){visible=!!value;update();onVisibilityChange(visible);},setOpacity(value){opacity=Math.max(0,Math.min(1,value));update();},destroy(){observer.disconnect();element.remove();}};
+}
+
+// Shared linear-coordinate overlay. Models provide only their current bounds
+// and formatting; the template owns grid drawing and pointer interactions.
+export function mountCoordinateTools({host,getBounds,formatValue=value=>Number(value.toPrecision(4)).toString(),storageKey}) {
+  styles();
+  const canvas=document.createElement('canvas');canvas.className='qontic-coordinate-overlay';canvas.hidden=true;host.append(canvas);
+  const readout=document.createElement('output');readout.className='qontic-coordinate-readout';readout.hidden=true;readout.setAttribute('aria-live','polite');host.append(readout);
+  let gridVisible=false,measureActive=false,cursor=null,points=[];
+  if(storageKey)try{gridVisible=localStorage.getItem(storageKey)==='true';}catch(_){}
+  const validBounds=()=>{const b=getBounds?.();return b&&[b.xMin,b.xMax,b.yMin,b.yMax].every(Number.isFinite)&&b.xMax>b.xMin&&b.yMax>b.yMin?b:null;};
+  const niceStep=(span,pixels)=>{const raw=Math.abs(span)*90/Math.max(1,pixels),power=10**Math.floor(Math.log10(Math.max(raw,1e-300)));return ([1,2,5,10].find(factor=>factor*power>=raw)||10)*power;};
+  const worldPoint=(clientX,clientY)=>{
+    const rect=host.getBoundingClientRect(),bounds=validBounds();if(!bounds||!(rect.width>0&&rect.height>0))return null;
+    const px=Math.max(0,Math.min(rect.width,clientX-rect.left)),py=Math.max(0,Math.min(rect.height,clientY-rect.top));
+    return {px,py,x:bounds.xMin+px/rect.width*(bounds.xMax-bounds.xMin),y:bounds.yMin+py/rect.height*(bounds.yMax-bounds.yMin)};
+  };
+  const label=(ctx,text,x,y)=>{
+    ctx.font='11px Inter,Arial,sans-serif';const padding=5,width=ctx.measureText(text).width+2*padding,height=20;
+    x=Math.max(4,Math.min(x-width/2,host.clientWidth-width-4));y=Math.max(4,Math.min(y-height-8,host.clientHeight-height-4));
+    ctx.fillStyle='rgba(8,24,36,.9)';ctx.strokeStyle='rgba(126,233,251,.75)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x,y,width,height,4);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#eefaff';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(text,x+padding,y+height/2);
+  };
+  const draw=()=>{
+    const width=host.clientWidth,height=host.clientHeight,bounds=validBounds(),dpr=devicePixelRatio||1;
+    canvas.hidden=!gridVisible&&!measureActive;if(canvas.hidden||!bounds||width<1||height<1)return;
+    if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);}
+    const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+    const toPixel=point=>({x:(point.x-bounds.xMin)/(bounds.xMax-bounds.xMin)*width,y:(point.y-bounds.yMin)/(bounds.yMax-bounds.yMin)*height});
+    if(gridVisible){
+      const xStep=niceStep(bounds.xMax-bounds.xMin,width),yStep=niceStep(bounds.yMax-bounds.yMin,height);
+      ctx.lineWidth=1;
+      for(let x=Math.ceil(bounds.xMin/xStep)*xStep;x<=bounds.xMax+xStep*1e-9;x+=xStep){const px=(x-bounds.xMin)/(bounds.xMax-bounds.xMin)*width;ctx.strokeStyle=Math.abs(x)<xStep*1e-8?'rgba(208,247,255,.52)':'rgba(190,234,244,.22)';ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,height);ctx.stroke();}
+      for(let y=Math.ceil(bounds.yMin/yStep)*yStep;y<=bounds.yMax+yStep*1e-9;y+=yStep){const py=(y-bounds.yMin)/(bounds.yMax-bounds.yMin)*height;ctx.strokeStyle=Math.abs(y)<yStep*1e-8?'rgba(208,247,255,.52)':'rgba(190,234,244,.22)';ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(width,py);ctx.stroke();}
+    }
+    if(measureActive&&cursor){ctx.strokeStyle='rgba(126,233,251,.72)';ctx.lineWidth=1;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(cursor.px,0);ctx.lineTo(cursor.px,height);ctx.moveTo(0,cursor.py);ctx.lineTo(width,cursor.py);ctx.stroke();ctx.setLineDash([]);}
+    const pixels=points.map(toPixel);
+    if(pixels.length){ctx.fillStyle='#ffd54a';ctx.strokeStyle='#3b2d00';ctx.lineWidth=1.5;for(let i=0;i<pixels.length;i++){ctx.beginPath();ctx.arc(pixels[i].x,pixels[i].y,5,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle='#fff4a3';ctx.font='600 12px Inter,Arial,sans-serif';ctx.textAlign='left';ctx.fillText(i?'B':'A',pixels[i].x+8,pixels[i].y-8);ctx.fillStyle='#ffd54a';}}
+    if(pixels.length===2){const [a,b]=points,[ap,bp]=pixels,dx=b.x-a.x,dy=b.y-a.y,distance=Math.hypot(dx,dy);ctx.strokeStyle='#ffd54a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ap.x,ap.y);ctx.lineTo(bp.x,bp.y);ctx.stroke();label(ctx,`\u0394x ${formatValue(dx)}  \u00b7  \u0394y ${formatValue(dy)}  \u00b7  d ${formatValue(distance)}`,(ap.x+bp.x)/2,(ap.y+bp.y)/2);}
+  };
+  const syncReadout=()=>{
+    readout.hidden=!measureActive||!cursor;if(readout.hidden)return;
+    if(points.length===2){const [a,b]=points;readout.textContent=`\u0394x ${formatValue(b.x-a.x)}  \u00b7  \u0394y ${formatValue(b.y-a.y)}  \u00b7  d ${formatValue(Math.hypot(b.x-a.x,b.y-a.y))}`;}
+    else readout.textContent=`x ${formatValue(cursor.x)}  \u00b7  y ${formatValue(cursor.y)}${points.length?'  \u00b7  A set; click B':''}`;
+  };
+  const ignored=target=>target instanceof Element&&!!target.closest('button,input,select,textarea,a,[contenteditable],.qontic-distance-scale,.qontic-range-panel,.qontic-expanded-resize');
+  host.addEventListener('pointermove',event=>{if(!measureActive||ignored(event.target))return;cursor=worldPoint(event.clientX,event.clientY);syncReadout();draw();},{capture:true});
+  host.addEventListener('pointerleave',()=>{if(!measureActive)return;cursor=null;syncReadout();draw();});
+  host.addEventListener('click',event=>{if(!measureActive||event.button!==0||ignored(event.target))return;const point=worldPoint(event.clientX,event.clientY);if(!point)return;event.preventDefault();event.stopPropagation();points=points.length>=2?[point]:[...points,point];cursor=point;syncReadout();draw();},{capture:true});
+  const escape=event=>{if(event.key!=='Escape'||!measureActive||!points.length)return;event.preventDefault();event.stopPropagation();points=[];syncReadout();draw();};
+  document.addEventListener('keydown',escape,true);
+  const observer=new ResizeObserver(draw);observer.observe(host);
+  const setGridVisible=value=>{gridVisible=!!value;if(storageKey)try{localStorage.setItem(storageKey,String(gridVisible));}catch(_){}draw();};
+  const setMeasureActive=value=>{measureActive=!!value;host.classList.toggle('qontic-measuring',measureActive);if(!measureActive){cursor=null;points=[];}syncReadout();draw();};
+  draw();
+  return {canvas,update:draw,getGridVisible:()=>gridVisible,setGridVisible,getMeasureActive:()=>measureActive,setMeasureActive,clearMeasurement(){points=[];syncReadout();draw();},destroy(){observer.disconnect();document.removeEventListener('keydown',escape,true);canvas.remove();readout.remove();host.classList.remove('qontic-measuring');}};
 }
 
 export function mountValueRange({host,label='Display range',onChange=()=>{},format=v=>Number(v).toPrecision(3),movableContainer=null,storageKey}) {
