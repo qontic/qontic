@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {gaussian,histogramLayout} from '../js/packet-model.js';
-import {aperture,sourceCoefficients,sourceComponents,sourceDensity,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile} from '../js/source-packet-model.js';
+import {aperture,sourceCoefficients,sourceComponents,sourceDensity,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile,transmittedCoreFraction,maximumCoreSafeSeparation} from '../js/source-packet-model.js';
+import {detectorLaw} from '../js/packet-outcomes.js';
 const p={sx:.5,sy:.3,sourceSigma:2,wall:2.25,screen:6.25,k:2*Math.PI,centers:[-2.5,2.5]};
 function integral(f,lo=-30,hi=30,steps=24000){let v=0;const dx=(hi-lo)/steps;for(let i=0;i<steps;i++)v+=f(lo+(i+.5)*dx)*dx;return v;}
 for(const centers of [[-2.5,2.5],[-2.5],[2.5],[-.15,.15]]){
@@ -33,6 +34,12 @@ for(const x of [which.wall,which.wall+.7,which.screen])for(let y=-8;y<=8;y+=.031
 }
 const coherentProfile=sourceProfile(p,-6,6),whichProfile=sourceProfile(which,-6,6);
 assert(whichProfile.values.some((value,i)=>Math.abs(value-coherentProfile.values[i])>1e-5),'which-slit detector removes the interference pattern');
+const upperFavored={...p,apertureWeights:[1,.35]},upperProfile=sourceProfile(upperFavored,-6,6);
+assert(upperProfile.values.some((value,i)=>Math.abs(value-coherentProfile.values[i])>1e-5),'unequal slit amplitudes change the interference pattern');
+for(let y=-10;y<=10;y+=.01)assert(aperture(y,upperFavored)<=1+1e-12,'weighted aperture remains absorptive');
+const upperOnly={...p,apertureWeights:[1,0]},upperSingle={...p,centers:[p.centers[0]]};
+const upperOnlyProfile=sourceProfile(upperOnly,-6,6),upperSingleProfile=sourceProfile(upperSingle,-6,6);
+assert(upperOnlyProfile.values.every((value,i)=>Math.abs(value-upperSingleProfile.values[i])<1e-12),'balance endpoint is the analytical one-slit field');
 let seed=1729;const random=()=>((seed=(1664525*seed+1013904223)>>>0)+.5)/4294967296;
 const coeff=sourceCoefficients(p),results=[];let absorbed=0;
 for(let i=0;i<12000;i++){
@@ -46,11 +53,11 @@ const whichResults=[];
 for(let i=0;i<4000;i++){
  const a=sampleTransmittedSource(p,random);
  for(let n=0;n<3000&&!a.done;n++){const outcome=stepSource(a,.0008,p,coeff,random);assert.notEqual(outcome,'absorbed');}
- assert(a.done&&!a.absorbed,'conditioned source always transmits');assert(['upper','lower'].includes(a.slitSide),'conditioned particle keeps slit-region metadata');directedResults.push(a.y);
- const core=sampleTransmittedSource(p,random,null,3);let wallY;
- for(let n=0;n<3000&&!core.done;n++){const wasPassed=core.passed,outcome=stepSource(core,.0008,p,coeff,random);assert.notEqual(outcome,'absorbed');if(!wasPassed&&core.passed)wallY=core.y;}
+ assert(a.done&&!a.absorbed,'conditioned source always transmits');assert(['upper','lower'].includes(a.slitSide),'conditioned particle keeps slit-region metadata');assert(Number.isFinite(a.wallY),'conditioned particle retains its exact wall-crossing coordinate');directedResults.push(a.y);
+ const core=sampleTransmittedSource(p,random,null,3),sampledWallY=core.wallY;
+ for(let n=0;n<3000&&!core.done;n++){const outcome=stepSource(core,.0008,p,coeff,random);assert.notEqual(outcome,'absorbed');}
  assert(core.done&&!core.absorbed,'slit-core conditioned source always transmits');
- assert(Math.min(...p.centers.map(center=>Math.abs(wallY-center)))<=3*p.sy+1e-10,'Direct PW crossing stays inside displayed slit core');
+ assert(Math.min(...p.centers.map(center=>Math.abs(core.wallY-center)))<=3*p.sy+1e-10,'Direct PW crossing stays inside displayed slit core');assert(Math.abs(core.wallY-sampledWallY)<1e-12,'wall-crossing color coordinate matches the analytical sample after propagation');
  slitCoreResults.push(core.y);
  const tagged=sampleSource(which,random);
  for(let n=0;n<3000&&!tagged.done;n++)stepSource(tagged,.0008,which,whichCoeff,random);
@@ -75,6 +82,13 @@ for(let i=0;i<200;i++){
  assert(a.done&&!a.absorbed&&Number.isFinite(a.y),'low-transmission conditional sample');
  assert(Math.min(...stressed.centers.map(center=>Math.abs(wallY-center)))<=3*stressed.sy+1e-10,'low-transmission slit-core sample stays bounded');
 }
+const defaultGeometry={...p,k:2*Math.PI*100/50,wall:2.25,sourceSigma:2,sy:.3,centers:[-1.5,1.5]};
+const tailGeometry={...defaultGeometry,sourceSigma:.5,centers:[-5,5]};
+assert(Math.abs(transmittedCoreFraction(defaultGeometry,3)-.997427)<2e-6,'default ±3σ cores contain the analytical transmitted density');
+assert(transmittedCoreFraction(tailGeometry,3)<.12,'remote slits expose the off-core Gaussian-tail regime');
+assert(transmittedCoreFraction(defaultGeometry,4)>transmittedCoreFraction(defaultGeometry,3),'expert slit extent changes the represented core analytically');
+assert.equal(Math.floor(100*maximumCoreSafeSeparation({...defaultGeometry,centers:undefined},3,10.2)+1e-9),1020,'default source is wall-limited rather than tail-limited');
+assert.equal(Math.floor(100*maximumCoreSafeSeparation({...tailGeometry,centers:undefined},3,10.2)+1e-9),255,'narrow-source separation stops before the off-core tail regime');
 const profile=sourceProfile(p,-6,6),nInside=results.filter(y=>Math.abs(y)<6).length;
 assert(Math.abs(nInside/12000-profile.integral)<.012,'transmission probability');
 const ordered=results.filter(y=>Math.abs(y)<6).sort((a,b)=>a-b),dy=12/(profile.values.length-1);let cdf=0,maxError=0,j=0;

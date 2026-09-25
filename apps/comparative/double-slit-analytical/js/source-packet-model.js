@@ -4,22 +4,32 @@
 // are outside this approximation. No numerical wave-equation solver is used.
 import {gaussian} from './packet-model.js?v=2.91';
 
+function apertureWeights(p){
+ return p.apertureWeights?.length===p.centers.length?p.apertureWeights:p.centers.map(()=>1);
+}
+function apertureBound(p){
+ const weights=apertureWeights(p);
+ if(weights.length<2)return weights[0]||1;
+ const high=Math.max(...weights),low=Math.min(...weights);
+ return high+low*Math.exp(-((p.centers[1]-p.centers[0])**2)/(16*p.sy*p.sy));
+}
+
 export function aperture(y,p){
- const sum=p.centers.reduce((n,c)=>n+Math.exp(-((y-c)**2)/(4*p.sy*p.sy)),0);
+ const weights=apertureWeights(p);
+ const sum=p.centers.reduce((n,c,index)=>n+weights[index]*Math.exp(-((y-c)**2)/(4*p.sy*p.sy)),0);
  // Conservative bound ensures an absorptive amplitude mask 0 <= T <= 1,
  // including nearly overlapping apertures.
- const bound=p.centers.length===2?1+Math.exp(-((p.centers[1]-p.centers[0])**2)/(16*p.sy*p.sy)):1;
- return sum/bound;
+ return sum/apertureBound(p);
 }
 export function sourceCoefficients(p){
  const s=p.sourceSigma,t=p.wall/p.k,b=t/(2*s*s),den=1+b*b;
  const incidentReal=1/(4*s*s*den),ar=incidentReal+1/(4*p.sy*p.sy),ai=-b/(4*s*s*den);
  const g=gaussian(0,t,s);
- const bound=p.centers.length===2?1+Math.exp(-((p.centers[1]-p.centers[0])**2)/(16*p.sy*p.sy)):1;
- return p.centers.map(c=>{
+ const bound=apertureBound(p),weights=apertureWeights(p);
+ return p.centers.map((c,index)=>{
   // Expand about each aperture center, avoiding exp(-c²/4sy²) times
   // exp(+c²/4sy²) overflow for narrow, widely separated apertures.
-  const amp=Math.exp(-incidentReal*c*c)/bound,phase=-ai*c*c;
+  const amp=weights[index]*Math.exp(-incidentReal*c*c)/bound,phase=-ai*c*c;
   const r=amp*Math.cos(phase),i=amp*Math.sin(phase);
   return {ar,ai,center:c,br:-2*incidentReal*c,bi:-2*ai*c,cr:g.re*r-g.im*i,ci:g.re*i+g.im*r};
  });
@@ -91,6 +101,50 @@ function mergedSlitIntervals(p,extentSigma){
  return merged;
 }
 function sourceWidth(x,p){return p.sourceSigma*Math.sqrt(1+(x/(2*p.k*p.sourceSigma**2))**2);}
+function transmittedMixture(p){
+ const incidentVariance=sourceWidth(p.wall,p)**2;
+ const apertureVariance=p.sy*p.sy;
+ const denominator=incidentVariance+apertureVariance;
+ const variance=incidentVariance*apertureVariance/denominator;
+ const components=[];
+ const weights=apertureWeights(p);
+ let maxLogWeight=-Infinity;
+ for(let leftIndex=0;leftIndex<p.centers.length;leftIndex++)for(let rightIndex=0;rightIndex<p.centers.length;rightIndex++){
+ if(p.whichPath&&leftIndex!==rightIndex)continue;
+  if(!(weights[leftIndex]>0&&weights[rightIndex]>0))continue;
+  const left=p.centers[leftIndex],right=p.centers[rightIndex];
+  const sum=left+right;
+  const logWeight=Math.log(weights[leftIndex])+Math.log(weights[rightIndex])-(left*left+right*right)/(4*apertureVariance)
+   +incidentVariance*sum*sum/(8*apertureVariance*denominator);
+  const component={mean:incidentVariance*sum/(2*denominator),logWeight,slitIndex:p.whichPath?leftIndex:null};
+  components.push(component);maxLogWeight=Math.max(maxLogWeight,logWeight);
+ }
+ let totalWeight=0;
+ for(const component of components){component.weight=Math.exp(component.logWeight-maxLogWeight);totalWeight+=component.weight;}
+ return {variance,components,totalWeight};
+}
+export function transmittedCoreFraction(p,extentSigma){
+ if(!(extentSigma>0)||!p.centers.length)return 0;
+ const {variance,components,totalWeight}=transmittedMixture({...p,whichPath:false});
+ const sigma=Math.sqrt(variance),intervals=mergedSlitIntervals(p,extentSigma);
+ let inside=0;
+ for(const component of components){
+  let mass=0;
+  for(const interval of intervals)mass+=normalIntervalMass((interval[0]-component.mean)/sigma,(interval[1]-component.mean)/sigma);
+  inside+=component.weight*Math.min(1,mass);
+ }
+ return Math.max(0,Math.min(1,inside/totalWeight));
+}
+export function normalCoreCoverage(extentSigma){return Math.max(0,Math.min(1,1-2*lowerNormalCdf(-extentSigma)));}
+export function maximumCoreSafeSeparation(p,extentSigma,limit,centerSigns=[-1,1],tolerance=.01){
+ if(!(limit>0)||!centerSigns.length)return 0;
+ const target=Math.max(0,normalCoreCoverage(extentSigma)-tolerance);
+ const acceptable=separation=>transmittedCoreFraction({...p,centers:centerSigns.map(sign=>sign*separation/2)},extentSigma)>=target;
+ if(acceptable(limit))return limit;
+ let lo=0,hi=limit;
+ for(let i=0;i<30;i++){const mid=(lo+hi)/2;if(acceptable(mid))lo=mid;else hi=mid;}
+ return lo;
+}
 function sampleLongitudinalX(p,random){
  // Optional upstream preparation keeps every sampled particle outside the canvas.
  // A boundary six sigma ahead of the center excludes less than 1e-9 probability.
@@ -99,7 +153,13 @@ function sampleLongitudinalX(p,random){
 }
 export function sampleSource(p,random=Math.random,fixedX=null){
  const x=fixedX===null?sampleLongitudinalX(p,random):fixedX;
- return {x0:x,x,y:sourceWidth(x,p)*normal(random),done:false,passed:false,absorbed:false,path:[]};
+ const y=sourceWidth(x,p)*normal(random);
+ // Before the wall, every incident Bohmian trajectory follows the exact
+ // Gaussian width scaling. Its future aperture-plane coordinate is therefore
+ // known analytically at injection; keeping it as display metadata avoids a
+ // color jump when the particle reaches the wall.
+ const wallY=y*sourceWidth(p.wall,p)/sourceWidth(x,p);
+ return {x0:x,x,y,done:false,passed:false,absorbed:false,path:[],wallY};
 }
 export function sampleTransmittedSource(p,random=Math.random,fixedX=null,slitExtentSigma=null){
  // At the wall, the conditional density is exactly
@@ -108,25 +168,7 @@ export function sampleTransmittedSource(p,random=Math.random,fixedX=null,slitExt
  // Sampling that mixture avoids rejection, so even vanishingly small total
  // transmission remains fast and cannot exhaust an attempt limit.
  const incidentVariance=sourceWidth(p.wall,p)**2;
- const apertureVariance=p.sy*p.sy;
- const denominator=incidentVariance+apertureVariance;
- const variance=incidentVariance*apertureVariance/denominator;
- const components=[];
- let maxLogWeight=-Infinity;
- for(let leftIndex=0;leftIndex<p.centers.length;leftIndex++)for(let rightIndex=0;rightIndex<p.centers.length;rightIndex++){
-  if(p.whichPath&&leftIndex!==rightIndex)continue;
-  const left=p.centers[leftIndex],right=p.centers[rightIndex];
-  const sum=left+right;
-  const logWeight=-(left*left+right*right)/(4*apertureVariance)
-   +incidentVariance*sum*sum/(8*apertureVariance*denominator);
-  const component={mean:incidentVariance*sum/(2*denominator),logWeight,slitIndex:p.whichPath?leftIndex:null};
-  components.push(component);maxLogWeight=Math.max(maxLogWeight,logWeight);
- }
- let totalWeight=0;
- for(const component of components){
-  component.weight=Math.exp(component.logWeight-maxLogWeight);
-  totalWeight+=component.weight;
- }
+ const {variance,components,totalWeight}=transmittedMixture(p);
  let selected,yWall;
  if(slitExtentSigma===null){
   let pick=random()*totalWeight;selected=components[components.length-1];
@@ -152,7 +194,7 @@ export function sampleTransmittedSource(p,random=Math.random,fixedX=null,slitExt
  const y=yWall*sourceWidth(x,p)/Math.sqrt(incidentVariance);
  const slitIndex=selected.component?.slitIndex??selected.slitIndex;
  const slitSide=slitIndex===null||slitIndex===undefined?undefined:p.centers[slitIndex]<0?'upper':'lower';
- return {x0:x,x,y,done:false,passed:false,absorbed:false,path:[],conditionedTransmission:true,slitIndex,slitSide};
+ return {x0:x,x,y,done:false,passed:false,absorbed:false,path:[],conditionedTransmission:true,slitIndex,slitSide,wallY:yWall};
 }
 export function advanceSourceY(y,x,dx,p,coeff){
  // Incident Gaussian trajectories have a closed expression; transmitted
@@ -181,6 +223,10 @@ export function stepSource(a,dt,p,coeff,random=Math.random){
    }
    a.slitSide=p.centers[a.slitIndex]<0?'upper':'lower';
   }else if(!a.conditionedTransmission&&random()>aperture(a.y,p)**2){a.done=a.absorbed=true;return 'absorbed';}
+  // Display metadata only. Retain the exact transverse coordinate where this
+  // transmitted trajectory crossed the aperture plane so color views can
+  // encode more than a binary upper/lower classification.
+  a.wallY=a.y;
   // Display metadata only: associate a transmitted particle's actual
   // wall-crossing position with the nearest open aperture. This never enters
   // the guidance dynamics or the transmission decision above.

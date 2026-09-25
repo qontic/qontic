@@ -6,6 +6,17 @@ export function dragGeometry(start,kind,dx,dy){
  const height=kind==='height'?Math.round((start.height+2*dy/start.scaleY)/10)*10:start.height;
  return {wall,distance:kind==='wall'?total-wall:Math.max(L.distanceMin,Math.min(L.distanceMax,distance)),height:Math.max(L.heightMin,Math.min(L.heightMax,height))};
 }
+export function dragSurfaceGeometry(start,kind,worldDelta){
+ const total=start.wall+start.distance,clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+ if(kind==='wall'){
+  const wall=clamp(Math.round(start.wall+worldDelta*total/4),Math.max(start.wallMin,total-start.distanceMax),Math.min(start.wallMax,total-start.distanceMin));
+  return {wall,distance:total-wall,height:start.height};
+ }
+ if(kind==='distance')return {wall:start.wall,distance:clamp(Math.round(start.distance+worldDelta*total/4),start.distanceMin,start.distanceMax),height:start.height};
+ if(kind==='height')return {wall:start.wall,distance:start.distance,height:clamp(Math.round((start.height+2*worldDelta*start.height/3)/10)*10,start.heightMin,start.heightMax)};
+ if(kind==='separation')return clamp(Math.round(start.separation+2*worldDelta*start.height/3),0,start.maxSeparation);
+ return clamp(Math.round((start.width+worldDelta*start.height/(3*start.extentSigma))/5)*5,start.minWidth,start.maxWidth);
+}
 export function trimTail(path,length){
  if(length<=0){path.length=0;return;}
  let travelled=0;
@@ -18,7 +29,7 @@ export function trimTail(path,length){
 export function tailOpacity(done,at,now){return done?Math.max(0,1-(now-at)/.8):1;}
 export function mountPacketGeometry({host,getGeometry,onCommit,onPreview=()=>{},pause,resume}){
  const layer=document.createElement('div');layer.className='packet-geometry';
- layer.innerHTML='<button type="button" class="packet-detector-drag" aria-label="Move detector screen" title="Drag left or right to move the detector from 50 to 3000 nm beyond the wall; arrow keys also work; changing geometry starts a new record">↔</button><button type="button" class="packet-height-drag" aria-label="Resize screen height" title="Drag up or down to change screen height; arrow keys also work">↕</button><button type="button" class="packet-wall-drag" aria-label="Move slit wall" title="Drag left or right to move the slit wall. The detector stays in place; changing geometry starts a new record. Arrow keys also work.">↔</button><div class="packet-geometry-guide" hidden></div><output class="packet-geometry-value" hidden></output>';
+ layer.innerHTML='<button type="button" class="packet-detector-drag" aria-label="Move detector screen" title="Drag left or right to move the detector from 50 to 3000 nm beyond the wall; arrow keys also work; changing geometry starts a new record">↔</button><button type="button" class="packet-height-drag" aria-label="Resize screen length" title="Drag up or down to change screen length; arrow keys also work">↕ Length</button><button type="button" class="packet-wall-drag" aria-label="Move slit wall" title="Drag left or right to move the slit wall. The detector stays in place; changing geometry starts a new record. Arrow keys also work.">↔</button><div class="packet-geometry-guide" hidden></div><output class="packet-geometry-value" hidden></output>';
  host.append(layer);const [detector,height,wall]=layer.querySelectorAll('button'),guide=layer.querySelector('div'),value=layer.querySelector('output');let drag=null,previewFrame=null;
  function preview(){if(previewFrame===null)previewFrame=requestAnimationFrame(()=>{previewFrame=null;if(drag)onPreview(drag.next);});}
  function update(){
@@ -26,7 +37,7 @@ export function mountPacketGeometry({host,getGeometry,onCommit,onPreview=()=>{},
   layer.hidden=!!g.busy;wall.style.left=(100*g.wallFraction)+'%';
   detector.style.left=(100*g.detectorFraction)+'%';height.style.left=(100*g.detectorFraction)+'%';
   detector.setAttribute('aria-description','Detector distance '+g.distance+' nm. Moving the detector starts a new record.');
-  height.setAttribute('aria-description','Screen height '+g.height+' nm. Resizing starts a new record.');
+  height.setAttribute('aria-description','Screen length '+g.height+' nm. Resizing starts a new record.');
  }
  function finish(commit){
   if(!drag)return;const d=drag;drag=null;guide.hidden=value.hidden=true;
@@ -43,7 +54,7 @@ export function mountPacketGeometry({host,getGeometry,onCommit,onPreview=()=>{},
   button.addEventListener('pointermove',e=>{
    if(!drag||drag.kind!==kind)return;
    const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.next=dragGeometry(drag.start,kind,dx,dy);preview();
-   value.textContent=(kind==='wall'?'Slit wall: '+drag.next.wall:kind==='distance'?'Detector distance: '+drag.next.distance:'Screen height: '+drag.next.height)+' nm';
+   value.textContent=(kind==='wall'?'Slit wall: '+drag.next.wall:kind==='distance'?'Detector distance: '+drag.next.distance:'Screen length: '+drag.next.height)+' nm';
    if(kind!=='height'){const deltaNm=kind==='wall'?drag.next.wall-drag.start.wall:drag.next.distance-drag.start.distance;guide.style.left=Math.max(0,Math.min(host.clientWidth,(kind==='wall'?drag.start.wallFraction:drag.start.detectorFraction)*host.clientWidth+deltaNm*drag.start.scaleX))+'px';}
   });
   button.addEventListener('pointerup',()=>finish(true));
@@ -58,35 +69,35 @@ export function mountPacketGeometry({host,getGeometry,onCommit,onPreview=()=>{},
  }
  return {update,cancel:()=>finish(false)};
 }
-export function slitWidthFromDrag(width,dy,pixelsPerNm){
- return Math.max(30,Math.min(200,Math.round((width+dy/(3*pixelsPerNm))/5)*5));
+export function slitWidthFromDrag(width,dy,pixelsPerNm,extentSigma=3,min=30,max=200){
+ return Math.max(min,Math.min(max,Math.round((width+dy/(extentSigma*pixelsPerNm))/5)*5));
 }
 export function mountSlitWidth({host,getState,onPreview,onCommit,pause,resume}){
  const layer=document.createElement('div');layer.className='packet-geometry packet-slit-handles';
  host.append(layer);let drag=null,frame=null;
- const edgeSide=(state,index)=>state.centers[index]*host.clientHeight+3*state.width*state.scaleY>host.clientHeight-30?-1:1;
+ const edgeSide=(state,index)=>state.centers[index]*host.clientHeight+state.extentSigma*state.width*state.scaleY>host.clientHeight-30?-1:1;
  const buttons=[0,1].map(index=>{
   const button=document.createElement('button');button.type='button';button.className='packet-slit-width-drag';
   button.textContent='↕ Width';button.setAttribute('aria-label','Resize slit '+(index+1)+' width');
-  button.title='Drag vertically to resize the displayed ±3σ slit cores together. Arrow keys adjust σ; Escape cancels. Changing width starts a new record.';
+  button.title='Drag vertically to resize the displayed slit cores together. Arrow keys adjust σ; Escape cancels. Changing width starts a new record.';
   layer.append(button);
   const finish=commit=>{if(!drag||drag.index!==index)return;const d=drag;drag=null;if(frame!==null){cancelAnimationFrame(frame);frame=null;}try{onPreview(null);if(commit&&d.next!==d.start.width)onCommit(d.next);}finally{resume(d.running);update();}};
   button.addEventListener('pointerdown',e=>{if(e.button!==0||drag)return;e.preventDefault();e.stopPropagation();const state=getState();if(state.busy)return;drag={index,side:edgeSide(state,index),start:state,y:e.clientY,next:state.width,running:pause()};button.setPointerCapture(e.pointerId);});
-  button.addEventListener('pointermove',e=>{if(!drag||drag.index!==index)return;drag.next=slitWidthFromDrag(drag.start.width,(e.clientY-drag.y)*drag.side,drag.start.scaleY);if(frame===null)frame=requestAnimationFrame(()=>{frame=null;if(drag){onPreview(drag.next);update();}});});
+  button.addEventListener('pointermove',e=>{if(!drag||drag.index!==index)return;drag.next=slitWidthFromDrag(drag.start.width,(e.clientY-drag.y)*drag.side,drag.start.scaleY,drag.start.extentSigma,drag.start.minWidth,drag.start.maxWidth);if(frame===null)frame=requestAnimationFrame(()=>{frame=null;if(drag){onPreview(drag.next);update();}});});
   button.addEventListener('pointerup',()=>finish(true));button.addEventListener('pointercancel',()=>finish(false));button.addEventListener('lostpointercapture',()=>finish(false));
-  button.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();finish(false);return;}if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const state=getState(),sign=['ArrowDown','ArrowRight'].includes(e.key)?1:-1;onCommit(Math.max(30,Math.min(200,state.width+sign*(e.shiftKey?25:5))));update();});
+  button.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();finish(false);return;}if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const state=getState(),sign=['ArrowDown','ArrowRight'].includes(e.key)?1:-1;onCommit(Math.max(state.minWidth,Math.min(state.maxWidth,state.width+sign*(e.shiftKey?25:5))));update();});
   return button;
  });
  function update(){
   const state=getState();if(!state)return;layer.hidden=!!state.busy||!state.visible;
-  buttons.forEach((button,index)=>{const center=state.centers[index];button.hidden=center===undefined;if(button.hidden)return;const sigma=drag?drag.next:state.width;button.style.left=Math.max(30,state.wallFraction*host.clientWidth-34)+'px';button.style.top=Math.max(14,Math.min(host.clientHeight-14,center*host.clientHeight+(drag&&drag.index===index?drag.side:edgeSide(state,index))*3*sigma*state.scaleY))+'px';button.setAttribute('aria-description','Slit width sigma '+sigma+' nm. Displayed slit cores extend three sigma from each center.');});
+  buttons.forEach((button,index)=>{const center=state.centers[index];button.hidden=center===undefined;if(button.hidden)return;const sigma=drag?drag.next:state.width;button.style.left=Math.max(30,state.wallFraction*host.clientWidth-34)+'px';button.style.top=Math.max(14,Math.min(host.clientHeight-14,center*host.clientHeight+(drag&&drag.index===index?drag.side:edgeSide(state,index))*state.extentSigma*sigma*state.scaleY))+'px';button.setAttribute('aria-description','Slit width sigma '+sigma+' nm. Displayed slit cores extend '+state.extentSigma+' sigma from each center.');});
  }
  return {update,cancel:()=>buttons.forEach(button=>button.dispatchEvent(new Event('pointercancel')))};
 }
 
 
-export function slitSeparationFromDrag(start,dy,pixelsPerNm,side){
- return Math.max(0,Math.min(2000,Math.round(start+2*side*dy/pixelsPerNm)));
+export function slitSeparationFromDrag(start,dy,pixelsPerNm,side,max=2000){
+ return Math.max(0,Math.min(max,Math.round(start+2*side*dy/pixelsPerNm)));
 }
 export function mountSlitSeparation({host,getState,onPreview,onCommit,pause,resume}){
  const layer=document.createElement('div');layer.className='packet-geometry';host.append(layer);
@@ -98,9 +109,9 @@ export function mountSlitSeparation({host,getState,onPreview,onCommit,pause,resu
   layer.append(button);
   function finish(commit){if(!drag||drag.side!==side)return;const d=drag;drag=null;if(frame!==null){cancelAnimationFrame(frame);frame=null;}try{onPreview(null);if(commit&&d.next!==d.start.separation)onCommit(d.next);}finally{resume(d.running);update();}}
   button.addEventListener('pointerdown',e=>{if(e.button!==0||drag)return;const state=getState();if(state.busy)return;e.preventDefault();e.stopPropagation();drag={side,start:state,y:e.clientY,next:state.separation,running:pause()};button.setPointerCapture(e.pointerId);});
-  button.addEventListener('pointermove',e=>{if(!drag||drag.side!==side)return;drag.next=slitSeparationFromDrag(drag.start.separation,e.clientY-drag.y,drag.start.scaleY,side);if(frame===null)frame=requestAnimationFrame(()=>{frame=null;if(drag){onPreview(drag.next);update();}});});
+  button.addEventListener('pointermove',e=>{if(!drag||drag.side!==side)return;drag.next=slitSeparationFromDrag(drag.start.separation,e.clientY-drag.y,drag.start.scaleY,side,drag.start.maxSeparation);if(frame===null)frame=requestAnimationFrame(()=>{frame=null;if(drag){onPreview(drag.next);update();}});});
   button.addEventListener('pointerup',()=>finish(true));button.addEventListener('pointercancel',()=>finish(false));button.addEventListener('lostpointercapture',()=>finish(false));
-  button.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();finish(false);return;}if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const state=getState(),sign=['ArrowDown','ArrowRight'].includes(e.key)?1:-1;onCommit(Math.max(0,Math.min(2000,state.separation+side*sign*(e.shiftKey?50:10))));update();});
+  button.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();finish(false);return;}if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const state=getState(),sign=['ArrowDown','ArrowRight'].includes(e.key)?1:-1;onCommit(Math.max(0,Math.min(state.maxSeparation,state.separation+side*sign*(e.shiftKey?50:10))));update();});
   return button;
  });
  function update(){const state=getState();layer.hidden=!!state.busy||!state.visible;const sep=drag?drag.next:state.separation;buttons.forEach((button,index)=>{button.hidden=!state.open[index];button.style.left=Math.min(host.clientWidth-30,Math.max(30,state.wallFraction*host.clientWidth+44))+'px';button.style.top=Math.max(14,Math.min(host.clientHeight-45,host.clientHeight/2+(index?1:-1)*Math.max(14,sep*state.scaleY/2)))+'px';button.setAttribute('aria-description','Slit separation '+sep+' nm; width unchanged.');});}

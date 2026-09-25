@@ -49,7 +49,7 @@ let basePsiPhase = null;  // Float32Array (phase at t=0)
 var idebug=0;
 var canvas;
 var colorDetector="blue"
-var colorHit="black"
+var colorHit="#ef4444"
 var colorPart="red"
 var colorProb="green"
 var colorPsi   ="white"
@@ -489,7 +489,7 @@ function createParameterInput(containerId, id, label, min, max, step, value, uni
       'slit-separation' : 'Slit Separation',
       'source-position' : 'Source Position',
       'detector-distance' : 'Wall-to-screen Distance',
-      'screen-height' : 'Screen Height',
+      'screen-height' : 'Screen Length',
       'det-pixels' : 'Detector Pixels',
       'wavelength' : 'Wavelength',
       'particleRate' : 'Number of particles injected per second in real time (your clock, not simulation time)',
@@ -893,6 +893,9 @@ function restoreSimulationState() {
   if (!saved) return;
 
   const state = JSON.parse(saved);
+  // Version 2.96 changes the former black default to a visible red. Preserve
+  // every explicitly selected non-black color while migrating the old default.
+  if(state.colors&&['black','#000','#000000','rgb(0, 0, 0)'].includes(String(state.colors.hit).toLowerCase()))state.colors.hit='#ef4444';
   restoreDisplayOpacities(state.displayOpacities);
 
   // Clear old state if version doesn't match (units changed from mm to nm)
@@ -905,9 +908,9 @@ function restoreSimulationState() {
   updateParameter('wavelength', 1, 500, 1, state.wavelength);
   updateParameter('slit-separation', 0, 2000, 1, state.slitSeparation);
   updateParameter('source-position', 0, 1000, 1, state.sourcePosition);
-  updateParameter('detector-distance', 0, 1000, 1, state.detectorDistance);
+  updateParameter('detector-distance', 50, 3000, 1, state.detectorDistance);
   updateParameter('det-pixels', 10, 500, 1, state.nDetectorPixels);
-  updateParameter('screen-height', 100, 5000, 10, state.screenHeight);
+  updateParameter('screen-height', 120, 5000, 10, state.screenHeight);
   if (state.particleRate) {
     updateParameter('particleRate', 1, 100, 1, state.particleRate);
   }
@@ -1576,7 +1579,7 @@ $(document).ready(function() {
          { value: 'nm', text: 'nm', scale:1.e-6 }
          ], true);
          */
-      createParameterInput('detector', 'screen-height', 'Screen Height', 100, 5000, 10, 1200, [
+      createParameterInput('detector', 'screen-height', 'Screen Length', 120, 5000, 10, 1200, [
             { value: 'nm', text: 'nm', scale:1 },
             { value: 'um', text: 'µm', scale:1.e3 },
             { value: 'mm', text: 'mm', scale:1.e6 }
@@ -1768,11 +1771,13 @@ $(document).ready(function() {
       $("#superContainer").tabs();
 
       // ========== BASICS TAB WIRING ==========
-      // Move wavelength, slit-separation, and speed sliders into the Basics tab
+      // Move wavelength and slit separation into Core. Simulation speed is
+      // already exposed by the template run controls, so keep the legacy input
+      // available to that control without rendering a duplicate row.
       // (they were created by createParameterInput above)
       $('#basics-params').append($('#wavelength-group'));
       $('#basics-params').append($('#slit-separation-group'));
-      $('#basics-params').append($('#animationStep-group'));
+      $('#animationStep-group').hide();
 
       // ========== MIRROR SLIDERS ==========
       // Physics tab: wavelength and sim speed mirrors

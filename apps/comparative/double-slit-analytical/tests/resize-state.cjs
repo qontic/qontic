@@ -6,13 +6,13 @@ const config = source.slice(source.indexOf(' function config(){'), source.indexO
 const fingerprint = source.match(/ function configFingerprint\(value\)\{[^\n]+/)[0];
 const ensure = source.match(/ function ensure\(\)\{[^\n]+/)[0];
 const context = vm.createContext({
-  length: {value: 50}, width: {value: 30}, sourceWidth: {value: 200}, interval: {},
+  length: {value: 50}, width: {value: 30}, extent: {value: 1.5}, balance: {value: 0}, balanceRow: {}, sourceWidth: {value: 200}, interval: {},
   sourcePos: 200, detectorDistance: 400, wavelength: 10, nDetectorPixels: 64,
   screenHeight: 600, slitSeparation: 150, slit1Open: true, slit2Open: true,
   whichPathDetector: 'none',
   worldCanvasDx: 905, particleType: 'electron',
   sourceXWorld: 90.5, slit1YWorld: 225, slit2YWorld: 375,
-  document: {getElementById: () => ({value: 100})}, syncPacketInput() {}, syncSlowPacketMode() {},
+  document: {getElementById: () => ({value: 100})}, applyPacketLimits() {}, syncPacketInput() {}, syncSlowPacketMode() {},
   resets: 0, hits: [2, 7, 4], nHits: 13, elapsed: 42,
 });
 vm.runInContext(config + fingerprint + ensure + `

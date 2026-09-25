@@ -1,3 +1,69 @@
+## Version 2.104 — 2026-09-25
+
+- Kept Pilot-Wave particles and trajectory tails at a fixed apparatus-plane z level whenever the 3D wave is hidden, instead of projecting them onto an invisible cached surface.
+- Preserved the optional wave-surface lift only while the wave is visibly rendered; physical x–y guidance remains unchanged in both cases.
+
+## Version 2.103 — 2026-09-25
+
+- Aligned the 3D reference grid, floor, slit wall, detector and histogram baseline with the midpoint zero plane for cos φ, Re Ψ and Im Ψ.
+- Kept the zero plane at the bottom for nonnegative |Ψ|² height, so signed waves now extend visibly above and below the apparatus plane without hiding the geometry.
+
+## Version 2.102 — 2026-09-25
+
+- Restored a monotonic display-only contrast boost for amplitude-based 3D heights so the transmitted wave remains visible relative to the stronger incident packet.
+- Applied the same enhanced envelope to |Ψ|², Re Ψ and Im Ψ heights while preserving nodes, ordering, particle guidance and all probability calculations.
+
+## Version 2.101 — 2026-09-25
+
+- Renamed the geometrical detector dimension from “Screen height” to “Screen length” throughout the controls, tooltips, accessibility text and drag readouts to avoid confusion with 3D wave height.
+- Labeled the corresponding 2D and 3D geometry handles “Length.”
+- Made the drawn slit openings follow Direct PW’s fixed ±3σ preparation window, eliminating the misleading appearance of trajectories crossing solid wall while preserving the selected expert extent in other views.
+
+## Version 2.100 — 2026-09-25
+
+- Capped the display-only carrier-phase motion in the 3D view at 2 rad/s, removing temporal aliasing and abrupt frame-to-frame surface changes.
+- Applied the same slowed display phase to the 3D height and its wave colors while leaving density, trajectories, guidance, probabilities and simulation time unchanged.
+
+## Version 2.99 — 2026-09-25
+
+- Replaced wrapped phase angle as a 3D height with smooth cos φ, eliminating the artificial moving cliff at the ±π boundary.
+- Added a remembered Pilot-Wave toolbar control to hide or show the wave without changing the guidance field, particles, statistics or playback.
+- Clarified that Re Ψ and Im Ψ retain genuine carrier oscillations, while cos φ is continuous but does not uniquely determine the phase angle.
+
+## Version 2.98 — 2026-09-25
+
+- Separated the overlapping 3D slit handles: Width is attached to the upper slit edge and Separation to the lower slit center.
+- Added a persistent 3D Height selector for normalized |Ψ|², wrapped phase θ, normalized Re Ψ and normalized Im Ψ; signed quantities use the middle height as zero and shared links retain the selection.
+- Kept height independent of the ordinary wave-color selection and documented the unavoidable ±π wrap discontinuity in phase height.
+- Increased 3D surface color strength with a brighter opacity response and an unlit vertex-color material, without changing the 2D palette or any dynamics.
+
+## Version 2.97 — 2026-09-25
+
+- Enabled geometry editing in the interactive 3D view through projected handles attached to the rotated scene.
+- Added direct 3D dragging for slit-wall position, wall-to-detector distance, screen height, slit width and slit separation, with physical limits and rounded increments matching the 2D controls.
+- Reused the existing analytical preview and commit paths so dragging updates the predicted histogram, clears incompatible retained hits, and starts a new record only when the change is committed.
+- Paused camera rotation while editing and retained right-click, the toolbar edit button and Escape as consistent entry/exit controls across 2D and 3D.
+
+## Version 2.96 — 2026-09-25
+
+- Changed the default detector-hit and error-bar color from black to red in the 2D and 3D views, including migration of the previous saved black default while preserving other custom colors.
+- Made Many-Worlds slow-motion branches capture the active 3D camera and scene instead of reverting to the legacy 2D canvas layers.
+- Projected each MW branch's retained hits and error bars onto its three-dimensional detector wall while keeping the branch probability curve and outcome marker visible.
+
+## Version 2.95 — 2026-09-25
+
+- Replaced the fixed oblique 3D illustration with a true WebGL scene using an orbit camera: drag to rotate, wheel or pinch to zoom, right-drag to pan, and double-click or use Reset view to restore the camera.
+- Rendered the existing analytical packet field as a genuine height mesh while retaining the selected phase or density display as its surface color; the height remains a graph coordinate and does not enter the dynamics.
+- Added the slit mask and detector as low three-dimensional walls, with the predicted probability curve, retained hit markers, and their square-root count error bars projected vertically above the detector.
+- Lifted Pilot-Wave particles and trajectory tails onto the displayed mesh without changing their two-dimensional guidance calculation, sampling, or accumulated statistics.
+
+## Version 2.94 — 2026-09-25
+
+- Added an optional 3D wave-surface view without introducing a second physics engine: it renders the same analytical packet field and preserves all particles, trajectories, hits, and statistics when toggled.
+- Used display-scaled wave magnitude for surface height and the existing selected quantity for surface color; labelled the extra height explicitly as a graph coordinate rather than a physical spatial direction.
+- Overlaid Pilot-Wave particles and trajectories on the surface for visibility while retaining their physical two-dimensional guidance calculation.
+- Kept the detector histogram flat and unchanged, disabled Cartesian grid/measurement tools in the projected view, and retained the 3D choice in shared links and local preferences.
+
 ## Version 2.93 — 2026-09-24
 
 - Restored the ideal which-slit detector for the Gaussian packet engine, selectable at the upper or lower slit.
@@ -5,6 +71,25 @@
 - In Pilot-Wave view, assigned each transmitted configuration to its detector branch and integrated guidance with the corresponding single-slit effective wave; the retired straight-line construction is not used.
 - Displayed the upper and lower noninterfering waves in cyan and orange, marked the instrumented slit on the wall, and documented the ideal-detector treatment across all three views.
 - Added regression checks for the incoherent density identity and agreement of Pilot-Wave screen crossings with the which-slit prediction.
+- Added an expert slit-core extent control (±1σₐ to ±5σₐ, default ±1.5σₐ) for the drawing, handles and shared URLs.
+- Decoupled Direct PW from the displayed slit extent: it always samples the fixed ±3σₐ transmitted window, while the green curve remains the common analytical probability distribution without a finite-core central cut.
+- Removed the duplicate simulation-speed row from Core; the template run controls remain the single speed control.
+- Added an `=` button beside Slit balance to restore equal transmission immediately.
+- Prevented mixed black/colored PW histogram markers after cycling interpretations: By-slit mode now draws one full-count marker per bin and colors retained non-PW hits by the corresponding PW screen side.
+- Dynamically limited slit separation from the exact analytical transmitted density so selectable settings cannot enter the regime where Gaussian-tail transmission lies mainly outside the drawn openings.
+- Limited each visible opening to at most half the wall height, kept both slit cores on the wall, and made the slider and canvas-drag limits move together instead of bouncing back after release.
+- Added an Expert tab and moved the slit-core extent control there, keeping the Advanced tab focused on ordinary packet and geometry settings.
+- Moved the particle selector, Direct PW and Color by slit into one compact Core row, without the redundant “Particle” label.
+- Added an analytical slit-balance control that attenuates either Gaussian aperture amplitude, including exact one-slit endpoints and a matching visual indication on the wall.
+- Made the wave display selector a compact standard control and kept the detector/histogram at a fixed canvas fraction as physical distances change, with distance scales recalculated to match.
+- Returned to three control tabs: moved screen distance and height into Core, and moved slit extent and slit balance into Advanced.
+- Fixed restored control limits so mouse and slider edits can retain wall-to-screen distances up to 3000 nm instead of snapping back to 1000 nm.
+- Tightened the Core spacing above the wave display selector and removed the redundant rule and padding above Many-Worlds slow-motion branching.
+- Added reusable template toolbar tools for a responsive physical-coordinate grid and a cursor/ruler mode that reports x, y, Δx, Δy and two-point distance; connected the double-slit canvas to live nanometre coordinates across normal and expanded views.
+- Aligned every Core parameter row to the same label, slider, numeric-value, and unit columns, with one consistent range-track style.
+- Replaced the binary Pilot-Wave color checkbox with Uniform, By slit, and Spectrum modes; Spectrum continuously maps each transmitted particle's exact wall-crossing coordinate without changing its dynamics.
+- Carry the active Pilot-Wave particle colors into the histogram markers and error bars: Uniform uses the particle color, By slit remains resolved, and Spectrum uses the mean incoming hue in each detector bin.
+- Put the compact Direct PW label before its checkbox for a more natural reading order in the Core row.
 
 ## Version 2.92 — 2026-09-22
 

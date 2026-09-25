@@ -7,6 +7,7 @@ const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
 const shell = read('js/double-slit.js');
 const engine = read('js/packet-engine.js');
 const model = read('js/source-packet-model.js');
+const surface = read('js/packet-surface-3d.js');
 const content = read('js/physics-content.js');
 const html = read('index.html');
 
@@ -46,20 +47,39 @@ assert(!engine.includes('const attempts=') && !engine.includes('attempt<20000'))
 // Slit coloring is display-only metadata assigned after successful wall
 // transmission, and live geometry previews discard the obsolete hit record.
 assert(model.indexOf("return 'absorbed'") < model.indexOf('a.slitSide='));
-assert(engine.includes('packet-color-by-slit'));
+assert(engine.includes('packet-particle-color'));
+assert(engine.includes('<option value="spectrum">Spectrum</option>'));
+assert(engine.includes('spectrumIndex(a.wallY)'));
+assert(model.includes('wallY:yWall'));
+assert(engine.includes('event.wallY'));
+assert(engine.includes("particleColorMode.value==='uniform')markerColor=colorPart"));
+assert(engine.includes('spectrumHitSums[i]/spectrumHitCounts[i]'));
+assert(engine.includes('packet-core-options'));
+assert(engine.includes('packet-slit-balance'));
+assert(engine.includes('apertureWeights'));
+assert(engine.includes('return (sourcePos+detectorDistance)/.7'));
+assert(shell.includes("updateParameter('detector-distance', 50, 3000"));
 assert(engine.includes("slitColors={upper:'#22d3ee',lower:'#ff9f43'}"));
-assert(engine.includes('pending.push({index,cohort:a.cohort,slitSide:a.slitSide})'));
-assert(engine.includes("for(const [side,offset] of [['upper',-2.5],['lower',2.5]])"));
-assert(engine.includes('slitError=Math.sqrt(count)*scale'));
-assert(engine.includes("drawMarker(n-(slitHits.upper?.[i]||0)-(slitHits.lower?.[i]||0),null,0)"));
+assert(engine.includes('pending.push({index,cohort:a.cohort,slitSide:a.slitSide,wallY:a.wallY})'));
+assert(engine.includes("directedRow.innerHTML='Direct PW <input"));
+assert(!engine.includes('coreConditionedProfile'));
+assert(!model.includes('coreConditionedProfile'));
+assert(engine.includes('const upperDisplay=upper+'));
+assert(engine.includes('const markerColor=upperDisplay>=lowerDisplay?slitColors.upper:slitColors.lower'));
+assert(engine.includes('packet-balance-equal'));
+assert(engine.includes("balance.value='0'"));
+assert(shell.includes("$('#animationStep-group').hide()"));
 assert(engine.includes('clearHitsForPreview()'));
-assert(engine.includes("sampleTransmittedSource(p,Math.random,null,3)"));
-assert(engine.includes('const half=3*(slitPreviewWidth??p.sy*100)*toCanvasY'));
-assert(content.includes('finite slit core extending ±3σₐ'));
+assert(engine.includes('sampleTransmittedSource(p,Math.random,null,3)'));
+assert(engine.includes("const displayExtentSigma=()=>interpretation==='bohmian'&&directed.checked?3:"));
+assert(engine.includes('const half=displayExtentSigma()*(slitPreviewWidth??p.sy*100)*toCanvasY'));
+assert(engine.includes('maximumCoreSafeSeparation'));
+assert(content.includes('finite slit core extending ±nσₐ'));
 assert(model.includes('sourceComponents'));
 assert(model.includes('if(p.whichPath)'));
 assert(engine.includes("whichPathDetector!=='none'&&next.centers.length===2"));
 assert(engine.includes('setWhichPath(){resetEngine();draw();}'));
+assert(surface.includes('state.showWave&&state.heights?sampleHeight'));
 assert(engine.includes("colors=[[34,211,238],[255,159,67]]"));
 
 console.log('PASS: packet engine is authoritative; Physics and Views match the active model.');
