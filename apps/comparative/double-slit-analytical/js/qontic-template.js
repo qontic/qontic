@@ -1,13 +1,13 @@
-import { mountExpandedResize } from '../../../../shared/qontic-expanded-resize.js?v=2.104';
-import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=2.104';
-import { mountPacketEngine } from './packet-engine.js?v=2.104';
-import { mountMWBranching } from './mw-branching.js?v=2.104';
-import { APP_RELEASE } from './release.js?v=2.104';
-import { mountCoordinateTools, mountDistanceScale, mountValueRange } from '../../../../shared/qontic-overlays.js?v=2.104';
-import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=2.104';
-import { enableResizableSidebar } from '../../../../shared/qontic-resize.js?v=2.104';
-import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=2.104';
-import '../../../../shared/qontic-controls.js?v=2.104';
+import { mountExpandedResize } from '../../../../shared/qontic-expanded-resize.js?v=1';
+import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
+import { mountPacketEngine } from './packet-engine.js?v=2.106';
+import { mountMWBranching } from './mw-branching.js?v=2.106';
+import { APP_RELEASE } from './release.js?v=2.106';
+import { mountCoordinateTools, mountDistanceScale, mountValueRange } from '../../../../shared/qontic-overlays.js?v=5';
+import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=3.1';
+import { enableResizableSidebar } from '../../../../shared/qontic-resize.js?v=1';
+import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=resources-20260916';
+import '../../../../shared/qontic-controls.js?v=3.1';
 
 // Adapt the existing controls in place so their listeners and physics stay intact.
 $(function () {
@@ -107,6 +107,30 @@ $(function () {
   const layers = document.createElement('div');
   layers.className = 'analytical-layers';
   layerTable.before(layers);
+  const updateWavePalettePreview = () => {
+    const canvas = document.getElementById('openPaletteBtn');
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    const colors = Array.isArray(window.graphPalette) && window.graphPalette.length
+      ? window.graphPalette
+      : window.paletteModule.prepareRgbPalette(window.paletteModule.palettes.Gray);
+    const context = canvas.getContext('2d');
+    const gradient = context.createLinearGradient(0, 0, canvas.width, 0);
+    colors.forEach((color, index) => {
+      const [red, green, blue] = color;
+      gradient.addColorStop(colors.length === 1 ? 0 : index / (colors.length - 1), `rgb(${red},${green},${blue})`);
+    });
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    const paletteName = window.paletteModule.getCurrentPaletteName();
+    const button = canvas.closest('.analytical-palette-button');
+    if (button) {
+      const description = paletteName ? `Choose wave palette. Current palette: ${paletteName}` : 'Choose wave palette';
+      button.title = description;
+      button.setAttribute('aria-label', description);
+    }
+  };
+  window.qonticUpdateWavePalettePreview = updateWavePalettePreview;
   for (const [id, name, colorId] of [
     ['plot_wave', 'Wave', 'openPaletteBtn'],
     ['plot_palette', 'Color scale', null],
@@ -176,6 +200,7 @@ $(function () {
         paletteButton.append(color);
         paletteButton.addEventListener('click', event => { if (event.target !== color) color.click(); });
         row.append(paletteButton);
+        updateWavePalettePreview();
       } else {
         color.type = 'button';
         row.append(color);

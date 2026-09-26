@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {dragSurfaceGeometry} from './packet-interaction.js?v=2.104';
-import {surfaceZeroLevel} from './packet-model.js?v=2.104';
+import {dragSurfaceGeometry} from './packet-interaction.js?v=2.106';
+import {surfaceZeroLevel} from './packet-model.js?v=2.106';
 
 const X_MIN=-2,X_MAX=2,Y_MIN=-1.5,Y_MAX=1.5,SURFACE_HEIGHT=.72;
 

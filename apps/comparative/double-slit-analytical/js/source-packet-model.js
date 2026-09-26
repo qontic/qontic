@@ -151,6 +151,13 @@ function sampleLongitudinalX(p,random){
  let x;do{x=(p.initialCenter??0)+p.sx*normal(random);}while(x>=Math.min(p.wall,p.initialRight??p.wall));
  return x;
 }
+function classifySlitSide(wallY,p){
+ if(!p.centers?.length)return undefined;
+ let nearest=0;
+ for(let i=1;i<p.centers.length;i++)if(Math.abs(wallY-p.centers[i])<Math.abs(wallY-p.centers[nearest]))nearest=i;
+ const center=p.centers[nearest];
+ return center<0?'upper':center>0?'lower':(wallY<=0?'upper':'lower');
+}
 export function sampleSource(p,random=Math.random,fixedX=null){
  const x=fixedX===null?sampleLongitudinalX(p,random):fixedX;
  const y=sourceWidth(x,p)*normal(random);
@@ -159,7 +166,8 @@ export function sampleSource(p,random=Math.random,fixedX=null){
  // known analytically at injection; keeping it as display metadata avoids a
  // color jump when the particle reaches the wall.
  const wallY=y*sourceWidth(p.wall,p)/sourceWidth(x,p);
- return {x0:x,x,y,done:false,passed:false,absorbed:false,path:[],wallY};
+ const slitSide=classifySlitSide(wallY,p);
+ return {x0:x,x,y,done:false,passed:false,absorbed:false,path:[],wallY,slitSide};
 }
 export function sampleTransmittedSource(p,random=Math.random,fixedX=null,slitExtentSigma=null){
  // At the wall, the conditional density is exactly
@@ -193,7 +201,7 @@ export function sampleTransmittedSource(p,random=Math.random,fixedX=null,slitExt
  // Map the wall sample back analytically to the requested preparation plane.
  const y=yWall*sourceWidth(x,p)/Math.sqrt(incidentVariance);
  const slitIndex=selected.component?.slitIndex??selected.slitIndex;
- const slitSide=slitIndex===null||slitIndex===undefined?undefined:p.centers[slitIndex]<0?'upper':'lower';
+ const slitSide=classifySlitSide(yWall,p);
  return {x0:x,x,y,done:false,passed:false,absorbed:false,path:[],conditionedTransmission:true,slitIndex,slitSide,wallY:yWall};
 }
 export function advanceSourceY(y,x,dx,p,coeff){
@@ -230,11 +238,7 @@ export function stepSource(a,dt,p,coeff,random=Math.random){
   // Display metadata only: associate a transmitted particle's actual
   // wall-crossing position with the nearest open aperture. This never enters
   // the guidance dynamics or the transmission decision above.
-  if(!p.whichPath&&p.centers.length){
-   let nearest=0;
-   for(let i=1;i<p.centers.length;i++)if(Math.abs(a.y-p.centers[i])<Math.abs(a.y-p.centers[nearest]))nearest=i;
-   a.slitSide=p.centers[nearest]<0?'upper':p.centers[nearest]>0?'lower':(a.y<=0?'upper':'lower');
-  }
+  if(!p.whichPath)a.slitSide=classifySlitSide(a.y,p);
  }
  const target=Math.min(end,p.screen);
  const guidanceCoefficients=p.whichPath&&a.slitIndex!==undefined?[coeff[a.slitIndex]]:coeff;

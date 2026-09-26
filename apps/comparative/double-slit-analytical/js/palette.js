@@ -58,6 +58,7 @@ window.paletteModule = (function () {
         const rgbPalette = prepareRgbPalette(colors);
         onSelect(name, rgbPalette);
         currentPaletteName = name; // Track selected name
+        window.qonticUpdateWavePalettePreview?.();
 
         // Visually mark the selected palette
         Object.values(wrappersByName).forEach(function ($w) {
@@ -89,6 +90,7 @@ window.paletteModule = (function () {
      }
      currentPaletteName = name; // Track selected name
      graphPalette = window.paletteModule.prepareRgbPalette(palette);
+     window.qonticUpdateWavePalettePreview?.();
      if (typeof drawPalette === 'function') {
         drawPalette(graphPalette);
      }

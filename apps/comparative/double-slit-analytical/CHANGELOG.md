@@ -1,3 +1,13 @@
+## Version 2.106 — 2026-09-26
+
+- Assigned Pilot-Wave particles their “By slit” display color at injection, using the analytically known future wall-crossing position.
+- Kept that display color unchanged when a particle reaches or is absorbed at the slit wall; the physics and transmission decisions are unchanged.
+
+## Version 2.105 — 2026-09-25
+
+- Changed the wave-palette button into a live horizontal preview of the selected palette.
+- Kept the preview and its accessible label synchronized when a palette is selected or restored.
+
 ## Version 2.104 — 2026-09-25
 
 - Kept Pilot-Wave particles and trajectory tails at a fixed apparatus-plane z level whenever the 3D wave is hidden, instead of projecting them onto an invisible cached surface.

@@ -8,6 +8,8 @@ const shell = read('js/double-slit.js');
 const engine = read('js/packet-engine.js');
 const model = read('js/source-packet-model.js');
 const surface = read('js/packet-surface-3d.js');
+const template = read('js/qontic-template.js');
+const palette = read('js/palette.js');
 const content = read('js/physics-content.js');
 const html = read('index.html');
 
@@ -44,9 +46,10 @@ assert(model.includes('finite Gaussian mixture'));
 assert(engine.includes('sampleTransmittedSource(p,Math.random,a.x0,directed.checked?3:null)'));
 assert(!engine.includes('const attempts=') && !engine.includes('attempt<20000'));
 
-// Slit coloring is display-only metadata assigned after successful wall
-// transmission, and live geometry previews discard the obsolete hit record.
-assert(model.indexOf("return 'absorbed'") < model.indexOf('a.slitSide='));
+// Slit coloring is display-only metadata assigned from the analytically known
+// aperture-plane crossing at injection, and remains stable across the wall.
+assert(model.includes('const slitSide=classifySlitSide(wallY,p)'));
+assert(model.includes('a.slitSide=classifySlitSide(a.y,p)'));
 assert(engine.includes('packet-particle-color'));
 assert(engine.includes('<option value="spectrum">Spectrum</option>'));
 assert(engine.includes('spectrumIndex(a.wallY)'));
@@ -81,5 +84,8 @@ assert(engine.includes("whichPathDetector!=='none'&&next.centers.length===2"));
 assert(engine.includes('setWhichPath(){resetEngine();draw();}'));
 assert(surface.includes('state.showWave&&state.heights?sampleHeight'));
 assert(engine.includes("colors=[[34,211,238],[255,159,67]]"));
+assert(template.includes('context.createLinearGradient(0, 0, canvas.width, 0)'));
+assert(template.includes('window.qonticUpdateWavePalettePreview = updateWavePalettePreview'));
+assert(palette.includes('window.qonticUpdateWavePalettePreview?.()'));
 
 console.log('PASS: packet engine is authoritative; Physics and Views match the active model.');

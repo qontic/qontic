@@ -44,8 +44,10 @@ let seed=1729;const random=()=>((seed=(1664525*seed+1013904223)>>>0)+.5)/4294967
 const coeff=sourceCoefficients(p),results=[];let absorbed=0;
 for(let i=0;i<12000;i++){
  const a=sampleSource(p,random);
+ const initialSlitSide=a.slitSide;
+ assert(['upper','lower'].includes(initialSlitSide),'incident particle is colored by its analytically predicted slit crossing from injection');
  for(let n=0;n<3000&&!a.done;n++){const outcome=stepSource(a,.0008,p,coeff,random);if(outcome==='absorbed')absorbed++;}
- assert(a.done);if(!a.absorbed){assert(['upper','lower'].includes(a.slitSide),'transmitted particle keeps slit-region metadata');results.push(a.y);}else assert.equal(a.slitSide,undefined,'absorbed particle is not labeled as transmitted');
+ assert(a.done);assert.equal(a.slitSide,initialSlitSide,'particle keeps the same slit color across the wall');if(!a.absorbed){assert(['upper','lower'].includes(a.slitSide),'transmitted particle keeps slit-region metadata');results.push(a.y);}
 }
 const directedResults=[];
 const slitCoreResults=[];
