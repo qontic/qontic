@@ -1,9 +1,9 @@
-import {physicsHTML,viewsHTML,physicsEquations,whichPathPhysicsHTML,whichPathViewsHTML,whichPathEquations} from './physics-content.js?v=2.106';
+import {physicsHTML,viewsHTML,physicsEquations,whichPathPhysicsHTML,whichPathViewsHTML,whichPathEquations} from './physics-content.js?v=2.108';
 import {drawBinPulse,DETECTOR_PULSE_SECONDS} from './detector-pulse.js?v=59';
-import {mountPacketGeometry,mountSlitWidth,mountSlitSeparation,trimTail,tailOpacity} from './packet-interaction.js?v=2.106';
-import {histogramLayout,surfaceHeightValue,surfaceDisplayDensity,surfacePhaseRate} from './packet-model.js?v=2.106';
-import {aperture,sourceCoefficients,sourceComponents,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile,maximumCoreSafeSeparation} from './source-packet-model.js?v=2.106';
-import {detectorLaw,quantumSchedule,recordWithHit,samplePixel} from './packet-outcomes.js?v=2.106';
+import {mountPacketGeometry,mountSlitWidth,mountSlitSeparation,trimTail,tailOpacity} from './packet-interaction.js?v=2.108';
+import {histogramLayout,surfaceHeightValue,surfaceDisplayDensity,surfacePhaseRate} from './packet-model.js?v=2.108';
+import {aperture,sourceCoefficients,sourceComponents,sourceTransverse,sourceEnvelope,sampleSource,sampleTransmittedSource,stepSource,sourceProfile,maximumCoreSafeSeparation} from './source-packet-model.js?v=2.108';
+import {detectorLaw,quantumSchedule,recordWithHit,samplePixel} from './packet-outcomes.js?v=2.108';
 export function mountPacketEngine({core,advanced}){
  physicsEquations.mask='\\phi(y,L^+)=T(y)\\phi(y,L^-),\\qquad T(y)=\\frac1C\\sum_{j\\,\\mathrm{open}}a_j e^{-(y-y_j)^2/(4\\sigma_a^2)},\\quad 0\\le a_j\\le1';
  const panel=document.createElement('div');panel.className='packet-settings';
@@ -186,10 +186,10 @@ export function mountPacketEngine({core,advanced}){
  function addHit(index,slitSide=null,wallY=null){hits[index]++;if(slitSide&&slitHits[slitSide])slitHits[slitSide][index]++;const spectrum=spectrumIndex(wallY);if(spectrum>=0){spectrumHitCounts[index]++;spectrumHitSums[index]+=spectrum;}nHits++;hitMax=Math.max(hitMax,hits[index]);logNBranches+=Math.log10(p.bins);}
  function createSurfaceRecord(record){
   const overlay=document.createElement('canvas');overlay.width=canvas.width;overlay.height=canvas.height;const context=overlay.getContext('2d');
-  const {curve}=histogramLayout(record,profile,screenHeight/100,1),maximum=Math.max(1e-30,...curve,...record.map(n=>n+Math.sqrt(n)));
-  if(shown('hit_prob')&&!p.focused){context.strokeStyle=colorProb;context.lineWidth=1.5;context.beginPath();const step=Math.max(1,Math.ceil(curve.length/300));for(let i=0;i<curve.length;i+=step){const point=surface3D.projectDetector(i/(curve.length-1),.08+.9*curve[i]/maximum,overlay.width,overlay.height);i?context.lineTo(point.x,point.y):context.moveTo(point.x,point.y);}context.stroke();}
+  const {curve}=histogramLayout(record,profile,screenHeight/100,1),predictionMaximum=Math.max(1e-30,...curve),hitMaximum=Math.max(1,...record.map(n=>n+Math.sqrt(n)));
+  if(shown('hit_prob')&&!p.focused){context.strokeStyle=colorProb;context.lineWidth=1.5;context.beginPath();const step=Math.max(1,Math.ceil(curve.length/300));for(let i=0;i<curve.length;i+=step){const point=surface3D.projectDetector(i/(curve.length-1),.08+.9*curve[i]/predictionMaximum,overlay.width,overlay.height);i?context.lineTo(point.x,point.y):context.moveTo(point.x,point.y);}context.stroke();}
   context.strokeStyle=context.fillStyle=colorHit;context.lineWidth=1.5;
-  record.forEach((n,i)=>{if(!n)return;const v=(i+.5)/record.length,z=.08+.9*n/maximum,error=.9*Math.sqrt(n)/maximum;
+  record.forEach((n,i)=>{if(!n)return;const v=(i+.5)/record.length,z=.08+.9*n/hitMaximum,error=.9*Math.sqrt(n)/hitMaximum;
    const point=surface3D.projectDetector(v,z,overlay.width,overlay.height),low=surface3D.projectDetector(v,Math.max(.08,z-error),overlay.width,overlay.height),high=surface3D.projectDetector(v,z+error,overlay.width,overlay.height);
    context.beginPath();context.moveTo(low.x,low.y);context.lineTo(high.x,high.y);context.stroke();context.beginPath();context.arc(point.x,point.y,3,0,2*Math.PI);context.fill();
   });return overlay;
@@ -262,7 +262,7 @@ export function mountPacketEngine({core,advanced}){
  function drawWave(){ensure();drawSourceWave();}
  async function ensureSurface3D(){
   if(surface3D)return surface3D;
-  if(!surface3DLoad)surface3DLoad=import('./packet-surface-3d.js?v=2.106').then(({mountPacketSurface3D})=>{
+  if(!surface3DLoad)surface3DLoad=import('./packet-surface-3d.js?v=2.108').then(({mountPacketSurface3D})=>{
    surface3D=mountPacketSurface3D({host:document.getElementById('canvas-container')});configureSurfaceEditor();surface3D.configureHeight(surfaceHeightMode,mode=>{surfaceHeightMode=mode;localStorage.setItem('qontic-double-slit-surface-height',mode);draw();});surface3D.setVisible(surfaceView);surface3D.setEditing(geometryEditing);draw();return surface3D;
   }).catch(error=>{surface3DLoad=null;surfaceView=false;syncSurfaceView();console.error('Unable to start the 3D renderer',error);});
   return surface3DLoad;
@@ -278,7 +278,7 @@ export function mountPacketEngine({core,advanced}){
   if(!surfaceView||!surface3D||!p)return;
   const half=displayExtentSigma()*(slitPreviewWidth??p.sy*100)*toCanvasY;
   const openings=displayCenters().map(center=>[Math.max(0,(Y(center)-half)/canvas.height),Math.min(1,(Y(center)+half)/canvas.height)]).filter(([a,b])=>b>a);
-  const {curve}=histogramLayout(hits,profile,screenHeight/100,1),maximum=Math.max(1e-30,...curve,...hits.map(n=>n+Math.sqrt(n)));
+  const {curve}=histogramLayout(hits,profile,screenHeight/100,1),predictionMaximum=Math.max(1e-30,...curve),hitMaximum=Math.max(1,...hits.map(n=>n+Math.sqrt(n)));
   const trails=[],points=[];
   if(interpretation==='bohmian')for(const a of particles){
    const group=particleColorGroup(a),opacity=tailOpacity(a.done,a.finishedAt??realElapsed,realElapsed);
@@ -288,7 +288,7 @@ export function mountPacketEngine({core,advanced}){
   surface3D.update({gridWidth:gridW,gridHeight:gridH,fieldFraction:detectorX/canvas.width,heightMode:surfaceHeightMode,heights:surfaceHeights,rgba:data.data,
    showWave:waveShown(),showScreen:shown('plot_screen')&&p.source,showDetector:shown('plot_detector'),showProbability:shown('hit_prob')&&!p.focused,showHits:shown('plot_hits'),showParticles:shown('plot_particles'),showTrajectories:shown('plot_trajectories'),
    wallFraction:wallX/detectorX,openings,apertureWeights:p.apertureWeights||[],whichPathFraction:p.whichPath?(Y(p.centers[whichPathDetector==='slit2'?1:0])/canvas.height):null,
-   detectorColor:colorDetector,probabilityColor:colorProb,probability:curve.map(value=>value/maximum),hits,hitHeights:hits.map(value=>value/maximum),hitErrors:hits.map(value=>Math.sqrt(value)/maximum),hitColors:hits.map((value,index)=>hitMarkerColor(index,value)),particles:points,trails});
+   detectorColor:colorDetector,probabilityColor:colorProb,probability:curve.map(value=>value/predictionMaximum),hits,hitHeights:hits.map(value=>value/hitMaximum),hitErrors:hits.map(value=>Math.sqrt(value)/hitMaximum),hitColors:hits.map((value,index)=>hitMarkerColor(index,value)),particles:points,trails});
  }
  function drawSourceWave(){
   waveCtx.clearRect(0,0,canvas.width,canvas.height);waveCtx.fillStyle='#344f63';waveCtx.fillRect(0,0,canvas.width,canvas.height);if(!waveShown())return;
@@ -392,11 +392,11 @@ export function mountPacketEngine({core,advanced}){
  function histogram(options={}){
   const context=options.context||setupCtx,record=options.hits||hits,maxRecord=Math.max(1,...record),histo=detectorX+sensorWidth,widthPx=canvas.width-histo;
   const prediction=options.profile||profile;
-  const {curve:predictionCounts,scale}=histogramLayout(record,prediction,options.screenHeight??screenHeight/100,widthPx);
+  const {curve:predictionDensity,predictionScale,hitScale}=histogramLayout(record,prediction,options.screenHeight??screenHeight/100,widthPx);
   context.save();context.globalAlpha=1;context.fillStyle='#fff';context.fillRect(histo,0,widthPx,canvas.height);context.fillStyle='#000';context.fillRect(detectorX,0,sensorWidth,canvas.height);
-  if((geometryEditing||shown('hit_prob'))&&!p.focused){context.globalAlpha=geometryEditing?1:elementOpacity('hit_prob');context.strokeStyle=colorProb;context.beginPath();predictionCounts.forEach((q,i)=>{const x=histo+q*scale,y=i*canvas.height/(predictionCounts.length-1);i?context.lineTo(x,y):context.moveTo(x,y);});context.stroke();}
+  if((geometryEditing||shown('hit_prob'))&&!p.focused){context.globalAlpha=geometryEditing?1:elementOpacity('hit_prob');context.strokeStyle=colorProb;context.beginPath();predictionDensity.forEach((q,i)=>{const x=histo+q*predictionScale,y=i*canvas.height/(predictionDensity.length-1);i?context.lineTo(x,y):context.moveTo(x,y);});context.stroke();}
   const rgb=getRGBComponents(colorSensor);
-  record.forEach((n,i)=>{if(!n)return;const y=(i+.5)*canvas.height/p.bins,x=histo+n*scale,error=Math.sqrt(n)*scale;
+  record.forEach((n,i)=>{if(!n)return;const y=(i+.5)*canvas.height/p.bins,x=histo+n*hitScale,error=Math.sqrt(n)*hitScale;
    if(shown('plot_sensor')){context.globalAlpha=elementOpacity('plot_sensor');const intensity=n/maxRecord;context.fillStyle=`rgb(${rgb.red*intensity},${rgb.green*intensity},${rgb.blue*intensity})`;context.fillRect(detectorX,i*canvas.height/p.bins,sensorWidth,canvas.height/p.bins);}
    if(shown('plot_hits')){
     context.globalAlpha=elementOpacity('plot_hits');

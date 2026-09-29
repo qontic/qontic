@@ -33,13 +33,16 @@ export function screenProfile(p,ymin,ymax,samples=1025,steps=1000){
  const integral=values.reduce((sum,v,i)=>sum+v*((i===0||i===samples-1)?.5:1),0)*dy;
  return {values,integral};
 }
-// Both the smooth curve and observed counts use the same count-to-pixel scale.
-// Packet number, launched particles and animation time intentionally play no role.
+// The smooth prediction is displayed as a probability-density shape, while the
+// observed counts use their own scale. This keeps the prediction readable before
+// enough hits have accumulated for the two normalized shapes to agree visually.
 export function histogramLayout(record,profile,screenHeight,width){
  const total=record.reduce((a,b)=>a+b,0),binHeight=screenHeight/record.length;
- const curve=profile.values.map(v=>v/Math.max(1e-30,profile.integral)*binHeight*(total||1));
- const max=Math.max(1e-30,...curve,...record.map(n=>n+Math.sqrt(n)));
- return {curve,scale:Math.max(0,width-8)/max,total};
+ const curve=profile.values.map(v=>v/Math.max(1e-30,profile.integral));
+ const available=Math.max(0,width-8);
+ const predictionMaximum=Math.max(1e-30,...curve);
+ const hitMaximum=Math.max(1,...record.map(n=>n+Math.sqrt(n)));
+ return {curve,predictionScale:available/predictionMaximum,hitScale:available/hitMaximum,total,binHeight};
 }
 // Display mapping for the optional height graph. Signed quantities use 1/2 as
 // zero so the WebGL surface remains above its plotting plane.
