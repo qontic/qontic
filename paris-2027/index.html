@@ -17,55 +17,66 @@
     :root { --ink:#172c42; --navy:#092d52; --blue:#176ca6; --paper:#f5f7f8; --line:#d6e1e8; --muted:#4d6171; --gold:#e8bd67; }
     * { box-sizing:border-box; }
     html { scroll-behavior:smooth; }
-    body { margin:0; background:var(--paper); color:var(--ink); font:17px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:15.5px/1.48 system-ui,-apple-system,"Segoe UI",sans-serif; }
     a { color:#075f98; }
     a:focus-visible { outline:3px solid var(--gold); outline-offset:4px; }
-    .shell { width:min(1100px,calc(100% - 2.5rem)); margin:auto; }
+    .shell { width:min(1160px,calc(100% - 2.5rem)); margin:auto; }
     .site-nav { background:#082641; color:#fff; }
-    .site-nav .shell { display:flex; justify-content:space-between; align-items:center; gap:1rem; min-height:64px; }
+    .site-nav .shell { display:flex; justify-content:space-between; align-items:center; gap:1rem; min-height:48px; }
     .brand { color:#fff; font-weight:750; letter-spacing:.03em; text-decoration:none; }
     .site-nav nav { display:flex; flex-wrap:wrap; gap:1.2rem; font-size:.9rem; }
     .site-nav nav a { color:#e4eef6; text-decoration:none; }
     .site-nav nav a:hover { text-decoration:underline; }
-    .hero { color:#fff; background:radial-gradient(circle at 75% 12%,#28678b 0,transparent 38%),linear-gradient(125deg,#082641,#10446e 72%,#0a3658); padding:5.5rem 0 5rem; }
-    .eyebrow { margin:0 0 1.1rem; color:#f4d696; font-size:.78rem; font-weight:750; letter-spacing:.15em; text-transform:uppercase; }
+    .hero { color:#fff; background:radial-gradient(circle at 75% 12%,#28678b 0,transparent 38%),linear-gradient(125deg,#082641,#10446e 72%,#0a3658); padding:1.55rem 0 1.45rem; }
+    .hero-layout { display:grid; grid-template-columns:minmax(0,1fr) 130px; gap:1.5rem; align-items:center; }
+    .event-logo { display:block; width:130px; height:130px; }
+    .eyebrow { margin:0 0 .4rem; color:#f4d696; font-size:.73rem; font-weight:750; letter-spacing:.13em; text-transform:uppercase; }
     h1,h2,h3,p { margin-top:0; }
-    h1 { max-width:850px; margin-bottom:1rem; font:normal clamp(2.5rem,6vw,5rem)/1.08 Georgia,serif; letter-spacing:-.035em; }
-    .question { max-width:750px; color:#d8e8f4; font:italic clamp(1.25rem,2.5vw,1.7rem)/1.35 Georgia,serif; }
-    .hero-details { display:flex; flex-wrap:wrap; gap:.7rem 1.5rem; margin:2rem 0 2.3rem; color:#eef5fa; font-weight:600; }
-    .hero-details span + span::before { content:"•"; margin-right:1.5rem; color:var(--gold); }
-    .button { display:inline-block; padding:.7rem 1.25rem; border-radius:4px; background:var(--gold); color:#132c43; font-weight:750; text-decoration:none; }
+    h1 { margin-bottom:.35rem; font:normal clamp(2rem,3.7vw,3rem)/1.1 Georgia,serif; letter-spacing:-.025em; }
+    .question { max-width:1000px; margin-bottom:.25rem; color:#e6f0f7; font:italic clamp(1rem,1.6vw,1.24rem)/1.35 Georgia,serif; }
+    .hero-context { margin:0; color:#d3e4ef; font-size:.9rem; }
+    .hero-bottom { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.7rem 1.5rem; margin-top:.85rem; }
+    .hero-details { display:flex; flex-wrap:wrap; gap:.3rem 1rem; color:#eef5fa; font-size:.88rem; font-weight:600; }
+    .hero-details span + span::before { content:"•"; margin-right:1rem; color:var(--gold); }
+    .button { display:inline-block; padding:.48rem .85rem; border-radius:4px; background:var(--gold); color:#132c43; font-size:.88rem; font-weight:750; text-decoration:none; }
     .button:hover { background:#f3d493; }
-    main { padding:3.2rem 0 4rem; }
-    .lead { max-width:790px; font:normal clamp(1.18rem,2vw,1.45rem)/1.55 Georgia,serif; }
-    .content-grid { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr); gap:3rem; align-items:start; }
-    h2 { margin:2.7rem 0 .9rem; color:var(--navy); font:normal 2rem/1.2 Georgia,serif; }
-    h3 { margin:0 0 .35rem; color:var(--navy); font-size:1.08rem; }
-    p { margin-bottom:1.05rem; }
-    .side-card { margin-top:2.7rem; padding:1.4rem 1.5rem; background:#fff; border:1px solid var(--line); border-top:4px solid var(--blue); box-shadow:0 8px 25px rgba(8,38,65,.05); }
-    .side-card h2 { margin:0 0 1rem; font:normal 1.4rem Georgia,serif; }
+    main { padding:1rem 0 1.1rem; }
+    .content-grid { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(285px,1fr); gap:1.4rem; align-items:start; }
+    h2 { margin:0 0 .45rem; color:var(--navy); font:normal 1.45rem/1.2 Georgia,serif; }
+    h3 { margin:0 0 .15rem; color:var(--navy); font-size:.98rem; }
+    p { margin-bottom:.55rem; }
+    .side-card { padding:.8rem 1rem; background:#fff; border:1px solid var(--line); border-top:3px solid var(--blue); box-shadow:0 8px 25px rgba(8,38,65,.05); }
+    .side-card h2 { margin:.65rem 0 .45rem; font:normal 1.3rem Georgia,serif; }
+    .venue-photo { margin:-.8rem -1rem 0; }
+    .venue-photo img { display:block; width:100%; height:112px; object-fit:cover; object-position:center 34%; }
+    .venue-photo figcaption { padding:.25rem 1rem 0; color:var(--muted); font-size:.68rem; }
     .side-card dl { margin:0; }
-    .side-card dt { margin-top:1rem; color:var(--muted); font-size:.75rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
-    .side-card dd { margin:.15rem 0 0; }
-    .themes { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin:1.4rem 0; }
-    .theme { padding:1.15rem; background:#fff; border:1px solid var(--line); }
-    .theme p { margin:0; color:var(--muted); font-size:.94rem; }
-    .program { display:grid; grid-template-columns:110px 1fr; gap:0 1.2rem; max-width:800px; }
-    .program dt,.program dd { padding:1rem 0; border-top:1px solid var(--line); }
+    .side-card dt { margin-top:.35rem; color:var(--muted); font-size:.65rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .side-card dd { margin:0; font-size:.88rem; }
+    .lower-grid { display:grid; grid-template-columns:1fr 1.16fr; gap:1.4rem; margin-top:.75rem; }
+    .themes { display:grid; gap:.3rem; margin:.4rem 0 0; }
+    .theme { padding:.5rem .65rem; background:#fff; border:1px solid var(--line); }
+    .theme p { margin:0; color:var(--muted); font-size:.86rem; }
+    .program { display:grid; grid-template-columns:82px 1fr; gap:0 .65rem; margin:.4rem 0 0; }
+    .program dt,.program dd { padding:.48rem 0; border-top:1px solid var(--line); }
     .program dt { color:var(--blue); font-weight:800; }
-    .program dd { margin:0; }
+    .program dd { margin:0; font-size:.88rem; }
     .program strong { display:block; color:var(--navy); }
-    .invitation { margin-top:3rem; padding:2rem 2.2rem; background:#e5eff5; border-left:5px solid var(--blue); }
-    .invitation h2 { margin:0 0 .8rem; }
-    .small { color:var(--muted); font-size:.9rem; }
-    footer { padding:2rem 0; background:#082641; color:#d8e6ef; font-size:.9rem; }
+    .invitation { display:flex; align-items:baseline; gap:.8rem; margin-top:.8rem; padding:.6rem .85rem; background:#e5eff5; border-left:4px solid var(--blue); }
+    .invitation h2,.invitation p { margin:0; }
+    .invitation p { font-size:.88rem; }
+    .small { color:var(--muted); }
+    footer { padding:.65rem 0; background:#082641; color:#d8e6ef; font-size:.8rem; }
     footer a { color:#fff; }
-    @media(max-width:760px) {
-      .content-grid,.themes { grid-template-columns:1fr; }
-      .content-grid { gap:0; }
-      .hero { padding:4rem 0; }
-      .hero-details span { flex-basis:100%; }
-      .hero-details span + span::before { display:none; }
+    @media(max-width:800px) {
+      .content-grid,.lower-grid { grid-template-columns:1fr; }
+      .content-grid { gap:.7rem; }
+      .hero { padding:1.3rem 0; }
+      .hero-layout { grid-template-columns:minmax(0,1fr) 76px; gap:.7rem; }
+      .event-logo { width:76px; height:76px; align-self:start; }
+      .hero-details span + span::before { margin-right:.6rem; }
+      .invitation { display:block; }
+      .invitation h2 { margin-bottom:.2rem; }
       .site-nav .shell { align-items:flex-start; flex-direction:column; padding:.8rem 0; }
     }
   </style>
@@ -83,55 +94,57 @@
       <a class="brand" href="https://qonticlab.rice.edu/">Q-Ontic Lab</a>
       <nav aria-label="Page navigation"><a href="#about">About</a><a href="#themes">Questions</a><a href="#program">Program</a><a href="#contact">Contact</a><!-- <a href="#committee">Organizing committee</a> --></nav>
     </div></div>
-    <div class="hero"><div class="shell">
+    <div class="hero"><div class="shell hero-layout"><div>
       <p class="eyebrow">Rice Global Paris Center · July 21–23, 2027</p>
       <h1>Different Views in Quantum Education</h1>
       <p class="question">Students learn to calculate quantum outcomes. How can we help them understand what those calculations mean?</p>
-      <p>A small working meeting in the centenary year of the 1927 Solvay Conference.</p>
-      <div class="hero-details"><span>Paris, France</span><span>Three-day working meeting</span><span>About 35 participants</span></div>
-      <a class="button" href="mailto:yepes@rice.edu">Contact the organizers</a>
-    </div></div>
+      <p class="hero-context">A small working meeting in the centenary year of the 1927 Solvay Conference.</p>
+      <div class="hero-bottom"><div class="hero-details"><span>Paris, France</span><span>Three-day working meeting</span><span>About 35 participants</span></div>
+      <a class="button" href="mailto:yepes@rice.edu">Contact the organizers</a></div>
+    </div><img class="event-logo" src="paris2027-logo.png" alt="Paris 2027 conference logo" width="130" height="130" /></div></div>
   </header>
   <main class="shell">
     <div class="content-grid">
       <div>
         <section id="about" aria-labelledby="about-title">
           <h2 id="about-title">The meeting</h2>
-          <p>A century after the 1927 Solvay Conference, quantum mechanics is taught almost entirely as a calculational method, while the question of what the theory says about the world remains open. Students notice the gap, and most courses leave it unaddressed.</p>
-          <p>This meeting brings together leading proponents of the main views of quantum mechanics with physics educators, education researchers, historians, and philosophers. Invited speakers will present the current state of their view and what it makes clear about a shared experiment — a double-slit with a which-way detector. Educators and researchers will then ask what students can gain from each account, and working groups will draft guidance for instructors and questions for further study.</p>
+          <p>Quantum mechanics is usually taught as a calculational method. Students also ask what the theory says about the world, a question many courses leave open.</p>
+          <p>Leading proponents of the main views will address one shared classroom experiment: a double slit with a which-way detector. Physics educators, education researchers, historians, and philosophers will examine what students can gain from each account. Round tables will develop guidance for instructors and questions for further study.</p>
         </section>
       </div>
       <aside class="side-card" aria-label="Conference details">
+        <figure class="venue-photo"><img src="https://global.rice.edu/_astro/image002-1.By1NjzXl_cQ5rf.jpg" alt="Courtyard at the Rice Global Paris Center" width="2048" height="1152" loading="lazy" /><figcaption>Rice Global Paris Center courtyard · Photo: Rice Global</figcaption></figure>
         <h2>At a glance</h2>
         <dl>
           <dt>When</dt><dd>Wednesday, July 21 (morning) to Friday, July 23, 2027</dd>
           <dt>Where</dt><dd>Rice Global Paris Center, in the Marais, Paris</dd>
-          <dt>Format</dt><dd>Invited talks, discussion, and working groups</dd>
+          <dt>Format</dt><dd>Invited talks, round tables, and working groups</dd>
           <dt>Convened by</dt><dd>Rice University's <a href="https://qonticlab.rice.edu/">Q-Ontic Lab</a></dd>
         </dl>
       </aside>
     </div>
+    <div class="lower-grid">
     <section id="themes" aria-labelledby="themes-title">
       <h2 id="themes-title">Questions for quantum education</h2>
       <div class="themes">
-        <div class="theme"><h3>What does each view explain?</h3><p>What do orthodox, pilot-wave, many-worlds, and spontaneous-collapse accounts, among others, say about the same experiment and its measurement outcomes?</p></div>
+        <div class="theme"><h3>What does each view explain?</h3><p>How do the main views account for the shared experiment and its measurement outcomes?</p></div>
         <div class="theme"><h3>What can students gain?</h3><p>At what stage of a course should students meet different views, and what does each offer them?</p></div>
-        <div class="theme"><h3>What improves learning?</h3><p>What does education research show, and how can historical cases, simulations, and course materials support students?</p></div>
+        <div class="theme"><h3>What improves learning?</h3><p>What can education research, history, and simulations contribute to instruction?</p></div>
       </div>
     </section>
     <section id="program" aria-labelledby="program-title">
       <h2 id="program-title">Provisional program</h2>
       <p>The detailed program and speakers are being developed.</p>
       <dl class="program">
-        <dt>Wednesday</dt><dd><strong>The main views today</strong>Invited speakers present the current state of the main views of quantum mechanics, each addressing the same classroom experiment. Discussion follows each talk.</dd>
-        <dt>Thursday</dt><dd><strong>Evidence and resources for teaching</strong>Historical cases and education research inform classroom approaches. Participants examine simulations and course materials, then begin working groups.</dd>
-        <dt>Friday</dt><dd><strong>Guidance for instructors</strong>Working groups draft a shared roadmap and outline a white paper with practical teaching options and open education research questions.</dd>
+        <dt>Wednesday</dt><dd><strong>Main views and what they offer quantum education</strong>Invited speakers address the same classroom experiment and discuss what each view may help students understand.</dd>
+        <dt>Thursday</dt><dd><strong>Evidence and resources for teaching</strong>Education research, historical cases, simulations, and course materials inform round tables on classroom approaches.</dd>
+        <dt>Friday</dt><dd><strong>Guidance for instructors</strong>Round tables and working groups draft practical teaching options and open research questions.</dd>
       </dl>
     </section>
+    </div>
     <section id="contact" class="invitation" aria-labelledby="contact-title">
       <h2 id="contact-title">Contact</h2>
-      <p>Invitations to speakers are now being issued. For questions about the meeting, contact the organizers at <a href="mailto:yepes@rice.edu">yepes@rice.edu</a>.</p>
-      <p class="small">Further details will be posted as planning proceeds.</p>
+      <p>Invitations to speakers are now being issued. For questions, contact <a href="mailto:yepes@rice.edu">yepes@rice.edu</a>. Further details will follow.</p>
     </section>
     <!--
     <section id="committee" aria-labelledby="committee-title">
