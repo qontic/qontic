@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interpretive Diversity in Quantum Pedagogy | Paris 2027</title>
+  <meta name="description" content="A small working conference at the Rice Global Paris Center, July 21–23, 2027, on how interpretations of quantum mechanics can inform teaching." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Interpretive Diversity in Quantum Pedagogy · Paris 2027" />
+  <meta property="og:description" content="Are we being fair to students? Join a working conversation on interpretations, history, and quantum education at the Rice Global Paris Center, July 21–23, 2027." />
+  <meta property="og:url" content="https://qonticlab.rice.edu/paris-2027/" />
+  <style>
+    :root { --ink:#172c42; --navy:#092d52; --blue:#176ca6; --paper:#f5f7f8; --line:#d6e1e8; --muted:#4d6171; --gold:#e8bd67; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:17px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    a { color:#075f98; }
+    a:focus-visible { outline:3px solid var(--gold); outline-offset:4px; }
+    .shell { width:min(1100px,calc(100% - 2.5rem)); margin:auto; }
+    .site-nav { background:#082641; color:#fff; }
+    .site-nav .shell { display:flex; justify-content:space-between; align-items:center; gap:1rem; min-height:64px; }
+    .brand { color:#fff; font-weight:750; letter-spacing:.03em; text-decoration:none; }
+    .site-nav nav { display:flex; flex-wrap:wrap; gap:1.2rem; font-size:.9rem; }
+    .site-nav nav a { color:#e4eef6; text-decoration:none; }
+    .site-nav nav a:hover { text-decoration:underline; }
+    .hero { color:#fff; background:radial-gradient(circle at 75% 12%,#28678b 0,transparent 38%),linear-gradient(125deg,#082641,#10446e 72%,#0a3658); padding:5.5rem 0 5rem; }
+    .eyebrow { margin:0 0 1.1rem; color:#f4d696; font-size:.78rem; font-weight:750; letter-spacing:.15em; text-transform:uppercase; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { max-width:850px; margin-bottom:1rem; font:normal clamp(2.5rem,6vw,5rem)/1.08 Georgia,serif; letter-spacing:-.035em; }
+    .question { max-width:750px; color:#d8e8f4; font:italic clamp(1.25rem,2.5vw,1.7rem)/1.35 Georgia,serif; }
+    .hero-details { display:flex; flex-wrap:wrap; gap:.7rem 1.5rem; margin:2rem 0 2.3rem; color:#eef5fa; font-weight:600; }
+    .hero-details span + span::before { content:"•"; margin-right:1.5rem; color:var(--gold); }
+    .button { display:inline-block; padding:.7rem 1.25rem; border-radius:4px; background:var(--gold); color:#132c43; font-weight:750; text-decoration:none; }
+    .button:hover { background:#f3d493; }
+    main { padding:3.2rem 0 4rem; }
+    .lead { max-width:790px; font:normal clamp(1.18rem,2vw,1.45rem)/1.55 Georgia,serif; }
+    .content-grid { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr); gap:3rem; align-items:start; }
+    h2 { margin:2.7rem 0 .9rem; color:var(--navy); font:normal 2rem/1.2 Georgia,serif; }
+    h3 { margin:0 0 .35rem; color:var(--navy); font-size:1.08rem; }
+    p { margin-bottom:1.05rem; }
+    .side-card { margin-top:2.7rem; padding:1.4rem 1.5rem; background:#fff; border:1px solid var(--line); border-top:4px solid var(--blue); box-shadow:0 8px 25px rgba(8,38,65,.05); }
+    .side-card h2 { margin:0 0 1rem; font:normal 1.4rem Georgia,serif; }
+    .side-card dl { margin:0; }
+    .side-card dt { margin-top:1rem; color:var(--muted); font-size:.75rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+    .side-card dd { margin:.15rem 0 0; }
+    .themes { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin:1.4rem 0; }
+    .theme { padding:1.15rem; background:#fff; border:1px solid var(--line); }
+    .theme p { margin:0; color:var(--muted); font-size:.94rem; }
+    .program { display:grid; grid-template-columns:110px 1fr; gap:0 1.2rem; max-width:800px; }
+    .program dt,.program dd { padding:1rem 0; border-top:1px solid var(--line); }
+    .program dt { color:var(--blue); font-weight:800; }
+    .program dd { margin:0; }
+    .program strong { display:block; color:var(--navy); }
+    .invitation { margin-top:3rem; padding:2rem 2.2rem; background:#e5eff5; border-left:5px solid var(--blue); }
+    .invitation h2 { margin:0 0 .8rem; }
+    .small { color:var(--muted); font-size:.9rem; }
+    footer { padding:2rem 0; background:#082641; color:#d8e6ef; font-size:.9rem; }
+    footer a { color:#fff; }
+    @media(max-width:760px) {
+      .content-grid,.themes { grid-template-columns:1fr; }
+      .content-grid { gap:0; }
+      .hero { padding:4rem 0; }
+      .hero-details span { flex-basis:100%; }
+      .hero-details span + span::before { display:none; }
+      .site-nav .shell { align-items:flex-start; flex-direction:column; padding:.8rem 0; }
+    }
+  </style>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZWF6YQM0YV"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ZWF6YQM0YV');
+  </script>
+</head>
+<body>
+  <header>
+    <div class="site-nav"><div class="shell">
+      <a class="brand" href="../">Q-Ontic Lab</a>
+      <nav aria-label="Page navigation"><a href="#about">About</a><a href="#themes">Questions</a><a href="#program">Program</a><a href="#contact">Contact</a></nav>
+    </div></div>
+    <div class="hero"><div class="shell">
+      <p class="eyebrow">Rice Global Paris Center · July 21–23, 2027</p>
+      <h1>Interpretive Diversity in Quantum Pedagogy</h1>
+      <p class="question">Are we being fair to students?</p>
+      <div class="hero-details"><span>Paris, France</span><span>Three-day working conference</span><span>Approximately 35 participants</span></div>
+      <a class="button" href="mailto:yepes@rice.edu?subject=Paris%202027%20conference%20inquiry">Discuss participation</a>
+    </div></div>
+  </header>
+  <main class="shell">
+    <div class="content-grid">
+      <div>
+        <section id="about" aria-labelledby="about-title">
+          <h2 id="about-title">The meeting</h2>
+          <p class="lead">Students learn to calculate quantum outcomes. How should we help them understand what those calculations say about the physical world?</p>
+          <p>In the centenary year of the 1927 Solvay Conference, this meeting will bring physicists, philosophers, historians, and education researchers together to examine how interpretations of quantum mechanics enter the classroom. We will ask what students should encounter, when they should encounter it, and what evidence can tell us about the effects on learning.</p>
+          <p>Advocates of different views will discuss common experiments on equal terms. The conversation will connect foundational questions with the history of the subject, research on student understanding, and practical teaching materials. The format is a small working meeting, with time for discussion and collaborative writing.</p>
+        </section>
+      </div>
+      <aside class="side-card" aria-label="Conference details">
+        <h2>At a glance</h2>
+        <dl>
+          <dt>When</dt><dd>Wednesday, July 21 to Friday, July 23, 2027</dd>
+          <dt>Where</dt><dd>Rice Global Paris Center, in the Marais, Paris</dd>
+          <dt>Format</dt><dd>Invited talks, discussion, and working groups</dd>
+          <dt>Convened by</dt><dd>Rice University’s <a href="../">Q-Ontic Lab</a></dd>
+        </dl>
+      </aside>
+    </div>
+    <section id="themes" aria-labelledby="themes-title">
+      <h2 id="themes-title">Questions for the conference</h2>
+      <div class="themes">
+        <div class="theme"><h3>What do the views say?</h3><p>How do orthodox, pilot-wave, and many-worlds accounts describe the same experiment and its measurement outcomes?</p></div>
+        <div class="theme"><h3>What should students meet?</h3><p>At what level should interpretations appear, and how can instructors present disagreements fairly?</p></div>
+        <div class="theme"><h3>What helps learning?</h3><p>What can education research, historical cases, simulations, and classroom materials tell us?</p></div>
+      </div>
+    </section>
+    <section id="program" aria-labelledby="program-title">
+      <h2 id="program-title">Provisional program</h2>
+      <p>The detailed program and speakers are being developed. The working structure is:</p>
+      <dl class="program">
+        <dt>Wednesday</dt><dd><strong>Interpretations in conversation</strong>Foundational talks compare accounts of a shared quantum experiment, followed by discussion.</dd>
+        <dt>Thursday</dt><dd><strong>History, education research, and teaching tools</strong>Sessions connect historical debates with current classrooms and examine simulations and course materials. Working groups begin drafting.</dd>
+        <dt>Friday</dt><dd><strong>Working groups and closing discussion</strong>Participants develop a shared roadmap and outline a white paper on questions and practical options for quantum education.</dd>
+      </dl>
+    </section>
+    <section id="contact" class="invitation" aria-labelledby="contact-title">
+      <h2 id="contact-title">Join the conversation</h2>
+      <p>We are beginning invitations to speakers and participants across physics, philosophy, history, and education research. If you would like to discuss contributing to the meeting, contact <a href="mailto:yepes@rice.edu?subject=Paris%202027%20conference%20inquiry">Pablo Yepes</a> at <a href="mailto:yepes@rice.edu">yepes@rice.edu</a>.</p>
+      <p class="small">Participation details and the final program will be shared as planning proceeds.</p>
+    </section>
+  </main>
+  <footer><div class="shell">Organized by <a href="../">Q-Ontic Lab</a> at Rice University, with support from Rice Global Paris.</div></footer>
+</body>
+</html>
