@@ -14,13 +14,9 @@
     header p { max-width:780px; margin:.5rem auto 0; opacity:.93; }
     main { max-width:960px; margin:1.6rem auto 2.5rem; padding:0 1rem; }
     .intro { max-width:820px; margin:0 auto 1.5rem; text-align:center; color:var(--muted); }
-    .conference-link { display:flex; align-items:center; justify-content:space-between; gap:1rem; max-width:820px; margin:0 auto 1.5rem; padding:1rem 1.2rem; border:1px solid #bad0e8; border-left:5px solid var(--blue2); border-radius:8px; background:#fff; color:inherit; text-decoration:none; }
-    .conference-link:hover { background:#f1f6fb; }
-    .conference-link strong { display:block; color:var(--blue); font-size:1.05rem; }
-    .conference-link span { display:block; color:var(--muted); font-size:.9rem; margin-top:.15rem; }
-    .conference-link .module-arrow { font-size:1.3rem; }
-    .tabs { display:flex; justify-content:center; gap:.35rem; margin:0 auto 1rem; border-bottom:1px solid var(--border); }
-    .tab-button { border:0; border-bottom:3px solid transparent; background:transparent; color:var(--muted); padding:.65rem 1.25rem; font:inherit; font-weight:700; cursor:pointer; }
+    .intro a { color:var(--blue2); text-decoration:none; font-weight:600; }
+    .tabs { display:flex; flex-wrap:wrap; justify-content:center; gap:.35rem; margin:0 auto 1rem; border-bottom:1px solid var(--border); }
+    .tab-button { border:0; border-bottom:3px solid transparent; background:transparent; color:var(--muted); padding:.65rem 1.25rem; font:inherit; font-weight:700; cursor:pointer; text-decoration:none; }
     .tab-button:hover { color:var(--blue2); }
     .tab-button[aria-selected="true"] { color:var(--blue); border-bottom-color:var(--blue); }
     .search-wrap { position:absolute; top:1rem; right:1rem; width:220px; }
@@ -30,6 +26,7 @@
     .section-header { border-bottom:2px solid var(--blue); margin-bottom:.35rem; padding-bottom:.35rem; }
     .section-header h2 { margin:0; color:var(--blue); font-size:1.35rem; }
     .section-header p { margin:.2rem 0 0; color:var(--muted); font-size:.92rem; }
+    .section-header a { color:var(--blue2); text-decoration:none; font-weight:600; }
     .module-list { background:white; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
     .module-row { display:grid; grid-template-columns:minmax(170px, 1fr) minmax(260px, 2fr) auto; gap:1rem; align-items:center; padding:.9rem 1rem; border-bottom:1px solid var(--border); text-decoration:none; color:inherit; }
     .module-row:last-child { border-bottom:0; }
@@ -52,6 +49,114 @@
       .module-count { grid-column:1; }
       .module-arrow { grid-column:2; grid-row:1; }
     }
+
+    .info-panel section { margin-bottom:2.4rem; }
+    .info-panel h2 { margin:0 0 .8rem; padding-bottom:.35rem; border-bottom:2px solid var(--blue); color:var(--blue); font-size:1.35rem; }
+    .info-panel h3 { color:var(--blue); }
+    .info-panel a { color:var(--blue2); }
+    #panel-mission { max-width:760px; margin:0 auto; line-height:1.6; overflow-wrap:anywhere; }
+    #panel-mission h3 { margin:1.5rem 0 .3rem; font-size:1.05rem; }
+    #panel-mission p { margin:.6rem 0; }
+    #panel-mission .mission { background:white; border:1px solid var(--border); border-left:4px solid var(--blue); border-radius:8px; padding:1.1rem 1.3rem; font-size:1.05rem; }
+    #panel-mission .mission p:first-child { margin-top:0; }
+    #panel-mission .mission p:last-child { margin-bottom:0; }
+    #panel-mission .bell { color:#44515f; }
+    #panel-mission .resources { display:flex; flex-wrap:wrap; gap:.6rem; margin:.9rem 0 0; padding:0; list-style:none; }
+    #panel-mission .resources a { display:inline-block; padding:.45rem .95rem; background:white; border:1px solid var(--border); border-radius:6px; font-weight:600; text-decoration:none; }
+    #panel-mission .references { padding-left:1.3rem; color:#44515f; font-size:.92rem; }
+    #panel-mission .references li { margin:.35rem 0; }
+    #panel-team .intro { max-width:none; text-align:left; }
+    @media(max-width:700px) { .tab-button { padding:.6rem .75rem; } }
+    #panel-team .collab-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+      gap: 2rem;
+      margin: 1.5rem 0;
+    }
+    #panel-team .collab-card {
+      background: #fff;
+      border: 1px solid #dde3ee;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,51,0.09);
+      transition: box-shadow 0.25s, transform 0.25s;
+      display: flex;
+      flex-direction: column;
+    }
+    #panel-team .collab-card:hover {
+      box-shadow: 0 8px 20px rgba(0,0,51,0.14);
+      transform: translateY(-3px);
+    }
+    #panel-team .photo-container {
+      width: 100%;
+      height: 260px;
+      background: linear-gradient(135deg, #e8ecf7 0%, #dde3ee 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #panel-team .photo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center top;
+    }
+    #panel-team .collab-content { padding: 1.4rem 1.6rem; flex: 1; display: flex; flex-direction: column; }
+    #panel-team .collab-card h3 { margin: 0 0 0.2rem; color: #003366; font-size: 1.1rem; font-weight: 700; }
+    #panel-team .title { color: #0066cc; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; }
+    #panel-team .affiliation { font-size: 0.88rem; margin-bottom: 0.8rem; line-height: 1.4; }
+    #panel-team .affiliation-main { font-weight: 600; color: #003366; }
+    #panel-team .affiliation-location { color: #777; font-size: 0.82rem; margin-top: 0.15rem; }
+    #panel-team .affiliation a { color: #0066cc; }
+    #panel-team .bio {
+      color: #555;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      margin: 0.6rem 0;
+      border-left: 3px solid #0066cc;
+      padding-left: 0.75rem;
+      flex: 1;
+    }
+    #panel-team .research-focus { color: #555; font-size: 0.84rem; margin: 0.6rem 0; }
+    #panel-team .research-focus strong { color: #003366; display: block; margin-bottom: 0.2rem; }
+    #panel-team .links { margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid #e8ecf7; overflow-wrap: anywhere; }
+    #panel-team .link-item { display: inline-block; margin: 0 0.5rem 0.5rem 0; }
+    #panel-team .link-item a {
+      display: inline-block;
+      padding: 0.35rem 0.8rem;
+      background: #f0f4fa;
+      color: #0066cc;
+      text-decoration: none;
+      border-radius: 5px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    #panel-team .link-item a:hover { background: #dce8f5; }
+    #panel-team .back-link {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      color: #0066cc;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    #panel-team .back-link:hover { text-decoration: underline; }
+    #panel-team .focus-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    #panel-team .focus-item {
+      background: #fff;
+      border: 1px solid #dde3ee;
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+    }
+    #panel-team .focus-item strong { color: #003366; display: block; margin-bottom: 0.3rem; font-size: 0.95rem; }
+    #panel-team .focus-item span { font-size: 0.87rem; color: #555; line-height: 1.5; }
+
   </style>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZWF6YQM0YV"></script>
   <script>
@@ -71,22 +176,24 @@
   <section class="intro">
     <p>Browse by physics module, or view the complete lists of simulations and notebooks.</p>
   </section>
-  <a class="conference-link" href="paris-2027/">
-    <span><strong>Paris 2027: Plurality in Quantum Education</strong><span>July 21–23 · Rice Global Paris Center · A working meeting on teaching and learning quantum mechanics</span></span>
-    <span class="module-arrow" aria-hidden="true">→</span>
-  </a>
-  <nav class="tabs" role="tablist" aria-label="Browse Q-Ontic resources">
+  <nav class="tabs" role="tablist" aria-label="Q-Ontic sections">
     <button class="tab-button" id="tab-modules" role="tab" aria-selected="true" aria-controls="panel-modules" data-tab="modules">Modules</button>
     <button class="tab-button" id="tab-apps" role="tab" aria-selected="false" aria-controls="panel-apps" data-tab="apps">Apps</button>
     <button class="tab-button" id="tab-notebooks" role="tab" aria-selected="false" aria-controls="panel-notebooks" data-tab="notebooks">Notebooks</button>
+    <button class="tab-button" id="tab-videos" role="tab" aria-selected="false" aria-controls="panel-videos" data-tab="videos">Videos</button>
+    <button class="tab-button" id="tab-mission" role="tab" aria-selected="false" aria-controls="panel-mission" data-tab="mission">Mission</button>
+    <button class="tab-button" id="tab-team" role="tab" aria-selected="false" aria-controls="panel-team" data-tab="team">Team</button>
   </nav>
   <div id="panel-modules" class="tab-panel" role="tabpanel" aria-labelledby="tab-modules"><div id="homepage"></div></div>
   <div id="panel-apps" class="tab-panel" role="tabpanel" aria-labelledby="tab-apps" hidden></div>
   <div id="panel-notebooks" class="tab-panel" role="tabpanel" aria-labelledby="tab-notebooks" hidden></div>
+  <div id="panel-videos" class="tab-panel" role="tabpanel" aria-labelledby="tab-videos" hidden></div>
+  <div id="panel-mission" class="tab-panel info-panel" role="tabpanel" aria-labelledby="tab-mission" hidden></div>
+  <div id="panel-team" class="tab-panel info-panel" role="tabpanel" aria-labelledby="tab-team" hidden></div>
 </main>
 <footer>
   <p>Q-Ontic Lab is a research and education project at Rice University.</p>
-  <p><a href="collaborators.html">Team</a> &nbsp;|&nbsp; Source code: <a href="https://github.com/qontic/qontic">GitHub</a> &nbsp;|&nbsp; Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a></p>
+  <p><a href="?tab=mission">Mission</a> &nbsp;|&nbsp; <a href="?tab=team">Team</a> &nbsp;|&nbsp; <a href="https://www.youtube.com/@QonticLab">Videos</a> &nbsp;|&nbsp; Source code: <a href="https://github.com/qontic/qontic">GitHub</a> &nbsp;|&nbsp; Contact: <a href="mailto:yepes@rice.edu">yepes@rice.edu</a></p>
 </footer>
 <script>
   function esc(value) {
@@ -116,6 +223,24 @@
     document.getElementById(rootId).innerHTML = `<section class="collection-section">
       <div class="section-header"><h2>${esc(title)}</h2><p>${items.length} available</p></div>
       <div class="module-list">${rows || '<p class="empty">No resources yet.</p>'}</div>
+    </section>`;
+  }
+
+  function renderVideoPanel(modules) {
+    const videos = modules.flatMap(module => (module.externalResources || [])
+      .filter(resource => resource.type === "video")
+      .map(resource => ({ ...resource, moduleTitle: module.title })));
+    const rows = videos.map(video => {
+      const search = [video.title, video.description, video.moduleTitle].join(" ").toLowerCase();
+      return `<a class="module-row catalog-row" href="${esc(video.url)}" target="_blank" rel="noopener" data-search="${esc(search)}">
+        <span class="module-title">${esc(video.title)}</span>
+        <span class="module-summary">${esc(video.description || "")} · ${esc(video.moduleTitle)}</span>
+        <span class="module-count">Watch <span class="module-arrow">→</span></span>
+      </a>`;
+    }).join("");
+    document.getElementById("panel-videos").innerHTML = `<section class="collection-section">
+      <div class="section-header"><h2>Videos</h2><p>Animated explanations of quantum phenomena. <a href="https://www.youtube.com/@QonticLab" target="_blank" rel="noopener">View the full YouTube channel ↗</a></p></div>
+      <div class="module-list">${rows || '<p class="empty">No videos available yet.</p>'}</div>
     </section>`;
   }
 
@@ -165,16 +290,78 @@
     });
   }
 
-  function selectTab(name) {
+  const catalogTabs = new Set(["modules", "apps", "notebooks", "videos", "mission", "team"]);
+  const infoPages = { mission: "about.html", team: "collaborators.html" };
+  const infoLoads = new Map();
+
+  function loadInfoPanel(name) {
+    if (!infoPages[name] || infoLoads.has(name)) return;
+    const panel = document.getElementById(`panel-${name}`);
+    panel.setAttribute("aria-busy", "true");
+    panel.innerHTML = '<p class="empty">Loading…</p>';
+    const request = fetch(infoPages[name])
+      .then(response => { if (!response.ok) throw new Error(response.statusText); return response.text(); })
+      .then(html => {
+        const page = new DOMParser().parseFromString(html, "text/html");
+        const content = page.querySelector("main");
+        if (!content) throw new Error("Missing page content");
+        content.querySelectorAll(".back-link, script").forEach(element => element.remove());
+        panel.replaceChildren(...content.childNodes);
+      })
+      .catch(error => {
+        console.error(error);
+        panel.innerHTML = `<p class="empty">Could not load this section. <a href="${infoPages[name]}">Open the page directly</a>.</p>`;
+        infoLoads.delete(name);
+      })
+      .finally(() => panel.removeAttribute("aria-busy"));
+    infoLoads.set(name, request);
+  }
+
+  function saveCatalogLocation() {
+    const url = new URL(window.location.href);
+    const tab = document.querySelector('.tab-button[aria-selected="true"]').dataset.tab;
+    const query = document.getElementById("search").value;
+    if (tab === "modules") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", tab);
+    if (query) url.searchParams.set("q", query);
+    else url.searchParams.delete("q");
+    if (["#notebook", "#notebooks", "#modules", "#apps", "#videos"].includes(url.hash)) url.hash = "";
+    window.history.replaceState(window.history.state, "", url);
+
+    // Carry the catalog view explicitly, including when opening a new tab.
+    const returnTo = url.pathname + url.search + url.hash;
+    const resourceRoots = ["apps/", "notebooks/"].map(path => new URL(path, url).pathname);
+    document.querySelectorAll("a.catalog-row").forEach(link => {
+      const destination = new URL(link.href);
+      if (destination.origin !== url.origin || !resourceRoots.some(root => destination.pathname.startsWith(root))) return;
+      destination.searchParams.set("returnTo", returnTo);
+      link.href = destination.href;
+    });
+  }
+
+  function restoreCatalogLocation() {
+    const url = new URL(window.location.href);
+    const legacyTab = url.hash === "#notebook" ? "notebooks" : url.hash.slice(1);
+    const tab = url.searchParams.get("tab") || legacyTab;
+    document.getElementById("search").value = url.searchParams.get("q") || "";
+    selectTab(catalogTabs.has(tab) ? tab : "modules", { track: false });
+  }
+
+  function selectTab(name, { track = true } = {}) {
     document.querySelectorAll(".tab-button").forEach(button => {
       button.setAttribute("aria-selected", String(button.dataset.tab === name));
+      button.tabIndex = button.dataset.tab === name ? 0 : -1;
     });
     document.querySelectorAll(".tab-panel").forEach(panel => {
       panel.hidden = panel.id !== `panel-${name}`;
     });
+    document.querySelector(".search-wrap").hidden = !!infoPages[name];
+    document.querySelector("main > .intro").hidden = !!infoPages[name];
     document.getElementById("search").placeholder = `Search ${name}…`;
+    loadInfoPanel(name);
     applySearch();
-    if (typeof window.gtag === "function") {
+    saveCatalogLocation();
+    if (track && typeof window.gtag === "function") {
       window.gtag("event", "catalog_tab_selected", {
         catalog_tab: name,
         page_path: window.location.pathname,
@@ -183,15 +370,32 @@
     }
   }
 
+  document.querySelectorAll(".tab-button").forEach(button => {
+    button.addEventListener("click", () => selectTab(button.dataset.tab));
+    button.addEventListener("keydown", event => {
+      const tabs = Array.from(document.querySelectorAll(".tab-button"));
+      const index = tabs.indexOf(button);
+      const target = { ArrowRight: (index + 1) % tabs.length, ArrowLeft: (index + tabs.length - 1) % tabs.length, Home: 0, End: tabs.length - 1 }[event.key];
+      if (target === undefined) return;
+      event.preventDefault();
+      tabs[target].focus();
+      selectTab(tabs[target].dataset.tab);
+    });
+  });
+  window.addEventListener("popstate", restoreCatalogLocation);
+  window.addEventListener("hashchange", restoreCatalogLocation);
+  restoreCatalogLocation();
+
   fetch("site-data.json")
     .then(response => { if (!response.ok) throw new Error(response.statusText); return response.json(); })
     .then(data => {
       render(data);
       renderResourcePanel(data.resources || [], "app", "Apps", "panel-apps");
       renderResourcePanel(data.resources || [], "notebook", "Notebooks", "panel-notebooks");
-      document.getElementById("search").addEventListener("input", applySearch);
-      document.querySelectorAll(".tab-button").forEach(button => {
-        button.addEventListener("click", () => selectTab(button.dataset.tab));
+      renderVideoPanel(data.modules || []);
+      document.getElementById("search").addEventListener("input", () => {
+        applySearch();
+        saveCatalogLocation();
       });
       document.querySelector("main").addEventListener("click", event => {
         const link = event.target.closest("a.catalog-row");
@@ -204,7 +408,7 @@
           send_to: "G-ZWF6YQM0YV"
         });
       });
-      applySearch();
+      restoreCatalogLocation();
     })
     .catch(error => {
       console.error(error);

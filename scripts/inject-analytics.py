@@ -71,7 +71,7 @@ def validate(target, site_root):
 def deployment_targets(source_root, site_root):
     targets = []
 
-    for name in ("index.html", "collaborators.html", "multi.html"):
+    for name in ("index.html", "about.html", "collaborators.html", "multi.html"):
         target = site_root / name
         if target.is_file():
             targets.append(target)
