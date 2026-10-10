@@ -58,6 +58,11 @@
     .program dt { color:var(--blue); font-weight:800; }
     .program dd { margin:0; font-size:.88rem; }
     .program strong { display:block; color:var(--navy); }
+    .committee { list-style:none; margin:.4rem 0 0; padding:0; }
+    .committee li { display:flex; flex-wrap:wrap; justify-content:space-between; gap:0 1rem; padding:.42rem 0; border-top:1px solid var(--line); font-size:.88rem; }
+    .committee strong { color:var(--navy); }
+    .committee .role { color:var(--muted); font-weight:400; }
+    .committee .affiliation { color:var(--muted); }
     .invitation { display:flex; align-items:baseline; gap:.8rem; margin-top:.8rem; padding:.6rem .85rem; background:#e5eff5; border-left:4px solid var(--blue); }
     .invitation h2,.invitation p { margin:0; }
     .invitation p { font-size:.88rem; }
@@ -110,6 +115,16 @@
             <div class="theme"><h3>What improves learning?</h3><p>What can education research, history, and simulations contribute to instruction?</p></div>
           </div>
         </section>
+        <section id="committee" aria-labelledby="committee-title">
+          <h2 id="committee-title">Organizing committee</h2>
+          <ul class="committee">
+            <li><span><strong>Pablo Yepes</strong> <span class="role">(chair)</span></span><span class="affiliation">Rice University</span></li>
+            <li><strong>Anssi Kuha</strong><span class="affiliation">Metropolia University of Applied Sciences</span></li>
+            <li><strong>Travis Norsen</strong><span class="affiliation">Smith College</span></li>
+            <li><strong>Xavier Oriols</strong><span class="affiliation">Universitat Autònoma de Barcelona</span></li>
+            <li><strong>Jared Stenson</strong><span class="affiliation">Rice University</span></li>
+          </ul>
+        </section>
       </div>
       <div class="content-column"><aside class="side-card" aria-label="Conference details">
         <figure class="venue-photo"><img src="https://global.rice.edu/_astro/image002-1.By1NjzXl_cQ5rf.jpg" alt="Courtyard at the Rice Global Paris Center" width="2048" height="1152" loading="lazy" /><figcaption>Rice Global Paris Center courtyard · Photo: Rice Global</figcaption></figure>
@@ -136,16 +151,6 @@
       <h2 id="contact-title">Contact</h2>
       <p>Invitations to speakers are now being issued. For questions, contact <a href="mailto:yepes@rice.edu">yepes@rice.edu</a>. Further details will follow.</p>
     </section>
-    <!--
-    <section id="committee" aria-labelledby="committee-title">
-      <h2 id="committee-title">Organizing committee</h2>
-      <ul>
-        <li>[NAME, AFFILIATION]</li>
-        <li>[NAME, AFFILIATION]</li>
-        <li>[NAME, AFFILIATION]</li>
-      </ul>
-    </section>
-    -->
   </main>
   <footer><div class="shell">Organized by <a href="https://qonticlab.rice.edu/">Q-Ontic Lab</a> at Rice University, with support from Rice Global Paris.</div></footer>
 </body>
