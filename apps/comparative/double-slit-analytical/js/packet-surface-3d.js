@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {dragSurfaceGeometry} from './packet-interaction.js?v=2.108';
-import {surfaceZeroLevel} from './packet-model.js?v=2.108';
+import {dragSurfaceGeometry} from './packet-interaction.js?v=2.128';
+import {surfaceZeroLevel} from './packet-model.js?v=2.128';
 
 const X_MIN=-2,X_MAX=2,Y_MIN=-1.5,Y_MAX=1.5,SURFACE_HEIGHT=.72;
 
@@ -58,8 +58,30 @@ export function mountPacketSurface3D({host}){
  const grid=new THREE.GridHelper(4.4,16,0x4a7c90,0x294e60);grid.rotation.x=Math.PI/2;grid.position.set(.1,0,-.018);grid.material.transparent=true;grid.material.opacity=.46;scene.add(grid);
 
  const dynamic=new THREE.Group();scene.add(dynamic);
- const overlay=document.createElement('div');overlay.className='packet-surface-help';overlay.innerHTML='<span>Drag: rotate · Wheel/pinch: zoom · Right-drag: pan</span><label>Height <select aria-label="3D surface height" title="Choose the wave quantity graphed as height. Amplitude-based heights use a monotonic contrast boost so the transmitted wave remains visible; zeros and ordering are preserved. cos φ avoids the artificial ±π wrap cliff. Carrier motion is slowed for a smooth 3D display only."><option value="psi2">|Ψ|²</option><option value="phase">cos φ</option><option value="real">Re Ψ</option><option value="imag">Im Ψ</option></select></label><button type="button" title="Reset 3D camera">Reset view</button>';
+ const overlay=document.createElement('div');overlay.className='packet-surface-help';overlay.innerHTML='<span>Drag: rotate · Wheel/pinch: zoom · Right-drag: pan</span><label>Height <select aria-label="3D surface height" title="Choose the wave quantity graphed as height. Amplitude-based heights use a monotonic contrast boost so the transmitted wave remains visible; zeros and ordering are preserved. cos θ avoids the artificial ±π wrap cliff. Carrier motion is slowed for a smooth 3D display only."><option value="psi2">|Ψ|²</option><option value="phase">cos θ</option><option value="real">Re Ψ</option><option value="imag">Im Ψ</option></select></label><button type="button" title="Reset 3D camera">Reset view</button>';
  overlay.querySelector('button').addEventListener('click',resetCamera);host.append(overlay);
+ // Pilot-Wave 3D sliders (2.126): wave surface opacity and the height of the particle plane.
+ const readSetting=(key,fallback)=>{try{const v=Number(localStorage.getItem(key));return localStorage.getItem(key)!==null&&Number.isFinite(v)?v:fallback;}catch(_){return fallback;}};
+ const saveSetting=(key,value)=>{try{localStorage.setItem(key,String(value));}catch(_){}};
+ const pwStyle={wave:readSetting('qontic-double-slit-3d-wave-opacity',55),height:readSetting('qontic-double-slit-3d-particle-height',0)};
+ const pwControls=document.createElement('span');pwControls.className='packet-surface-pw';
+ pwControls.innerHTML='<label title="Opacity of the 3D wave surface in Pilot-Wave. Lower values show the particles through the wave.">Wave <input type="range" min="0" max="100" step="1" data-key="wave" aria-label="3D wave opacity"></label><label title="Height of the plane on which Pilot-Wave particles and trajectories are drawn, as a fraction of the maximum surface height. It is a display choice; the dynamics stay in the physical x–y plane.">Particle height <input type="range" min="0" max="110" step="1" data-key="height" aria-label="3D particle plane height"></label>';
+ overlay.append(pwControls);
+ for(const input of pwControls.querySelectorAll('input')){
+  input.value=pwStyle[input.dataset.key];
+  input.addEventListener('keydown',event=>event.stopPropagation());
+  input.addEventListener('input',()=>{pwStyle[input.dataset.key]=+input.value;saveSetting(input.dataset.key==='wave'?'qontic-double-slit-3d-wave-opacity':'qontic-double-slit-3d-particle-height',input.value);if(lastState)update(lastState);});
+ }
+ // Phase legend (2.127): when the surface color shows the phase (Show = Phase), a wheel
+ // gives the palette color for each phase angle θ. cos θ cannot tell +θ from −θ.
+ const legend=document.createElement('canvas');legend.className='packet-surface-legend';legend.width=232;legend.height=232;legend.hidden=true;legend.title='Surface color for each wave phase θ (the display shows cos θ, so +θ and −θ share a color).';host.append(legend);
+ let legendKey='';
+ function drawLegend(colors){
+  const ctx=legend.getContext('2d'),c=116,r1=70,r0=40;ctx.clearRect(0,0,232,232);
+  for(let a=0;a<360;a++){const th=a*Math.PI/180;ctx.strokeStyle=colors[Math.round(a/360*colors.length)%colors.length];ctx.lineWidth=r1-r0;ctx.beginPath();ctx.arc(c,c,(r0+r1)/2,-th-.012,-th+.03,false);ctx.stroke();}
+  ctx.fillStyle='#dff7ff';ctx.font='600 26px Inter,Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('θ',c,c);
+  ctx.font='22px Inter,Arial,sans-serif';ctx.fillText('0',c+96,c);ctx.fillText('±π',c-98,c);ctx.fillText('+π/2',c,c-94);ctx.fillText('−π/2',c,c+96);
+ }
  const heightSelect=overlay.querySelector('select');let heightChange=null;heightSelect.addEventListener('change',()=>heightChange?.(heightSelect.value));
  const editor=document.createElement('div');editor.className='packet-surface-editor';editor.hidden=true;
  editor.innerHTML='<button type="button" data-kind="wall" title="Move slit wall">↔ Wall</button><button type="button" data-kind="distance" title="Change wall-to-detector distance">↔ Distance</button><button type="button" data-kind="height" title="Change screen length">↕ Length</button><button type="button" data-kind="width" title="Change both slit widths">↕ Width</button><button type="button" data-kind="separation" title="Change slit separation">↕ Sep</button><output hidden></output>';
@@ -88,6 +110,9 @@ export function mountPacketSurface3D({host}){
  }
  const world=(u,v,z=0)=>new THREE.Vector3(X_MIN+u*(X_MAX-X_MIN),Y_MAX-v*(Y_MAX-Y_MIN),z);
 
+ // Display-tab opacity sliders (2.124): the same layer opacities as the 2D view.
+ const layerOpacity=(state,key)=>{const value=state.opacity?.[key];return Number.isFinite(value)?Math.max(0,Math.min(1,value)):1;};
+ const fade=(material,opacity)=>{material.transparent=material.transparent||opacity<1;material.opacity*=opacity;if(opacity<1)material.depthWrite=false;return material;};
  function addWave(state){
   if(!state.showWave||!state.heights)return;
   const cols=96,rows=64,geometry=new THREE.PlaneGeometry(X_MAX-X_MIN,Y_MAX-Y_MIN,cols,rows);
@@ -100,36 +125,41 @@ export function mountPacketSurface3D({host}){
    colors[3*n]=base[0]+visibility*((rgba[4*source]||75)/255-base[0]);colors[3*n+1]=base[1]+visibility*((rgba[4*source+1]||150)/255-base[1]);colors[3*n+2]=base[2]+visibility*((rgba[4*source+2]||190)/255-base[2]);
   }
   geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));geometry.computeVertexNormals();
-  const mesh=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.98,side:THREE.DoubleSide}));
+  // Pilot-Wave particles stay on the fixed apparatus plane (2.125), so the wave is
+  // drawn semi-transparent there and rendered after them, letting them show through.
+  const waveOpacity=layerOpacity(state,'wave'),seeThrough=!!state.pilotWave;
+  const mesh=new THREE.Mesh(geometry,fade(new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:seeThrough?Math.max(.001,pwStyle.wave/100):.98,side:THREE.DoubleSide}),waveOpacity));
+  if(seeThrough){mesh.material.depthWrite=false;mesh.renderOrder=2;}
   mesh.userData.wave=true;
   dynamic.add(mesh);
-  const wire=new THREE.Mesh(geometry.clone(),new THREE.MeshBasicMaterial({color:0xd8f5ff,wireframe:true,transparent:true,opacity:.075}));wire.userData.wave=true;dynamic.add(wire);
+  const wire=new THREE.Mesh(geometry.clone(),fade(new THREE.MeshBasicMaterial({color:0xd8f5ff,wireframe:true,transparent:true,opacity:.075}),waveOpacity));wire.userData.wave=true;if(seeThrough){wire.material.depthWrite=false;wire.renderOrder=2;}dynamic.add(wire);
  }
 
  function addWall(state){
   if(!state.showScreen)return;
+  const screenOpacity=layerOpacity(state,'screen');
   const zero=surfaceZeroLevel(state.heightMode,SURFACE_HEIGHT),x=X_MIN+state.wallFraction*(X_MAX-X_MIN),openings=[...state.openings].sort((a,b)=>a[0]-b[0]);let cursor=0;
   const addSegment=(top,bottom,opacity=1)=>{
    if(bottom<=top)return;
    const yTop=Y_MAX-top*(Y_MAX-Y_MIN),yBottom=Y_MAX-bottom*(Y_MAX-Y_MIN),height=.18;
-   const mesh=new THREE.Mesh(new THREE.BoxGeometry(.055,yTop-yBottom,height),new THREE.MeshPhongMaterial({color:0xd9edf4,transparent:opacity<1,opacity}));
+   const mesh=new THREE.Mesh(new THREE.BoxGeometry(.055,yTop-yBottom,height),fade(new THREE.MeshPhongMaterial({color:state.screenColor?color(state.screenColor):0xd9edf4,transparent:opacity<1,opacity}),screenOpacity));
    mesh.position.set(x,(yTop+yBottom)/2,zero+height/2);dynamic.add(mesh);
   };
   openings.forEach(([top,bottom],index)=>{addSegment(cursor,top);const transmission=state.apertureWeights[index]??1;if(transmission<1)addSegment(top,bottom,1-transmission);cursor=Math.max(cursor,bottom);});addSegment(cursor,1);
-  const edgePositions=[];for(const [top,bottom] of openings)for(const v of [top,bottom]){const y=Y_MAX-v*(Y_MAX-Y_MIN);edgePositions.push(x-.12,y,zero+.185,x+.12,y,zero+.185);}dynamic.add(lines(edgePositions,null,.9));
+  const edgePositions=[];for(const [top,bottom] of openings)for(const v of [top,bottom]){const y=Y_MAX-v*(Y_MAX-Y_MIN);edgePositions.push(x-.12,y,zero+.185,x+.12,y,zero+.185);}dynamic.add(lines(edgePositions,null,.9*screenOpacity));
   if(state.whichPathFraction!==null){const marker=new THREE.Mesh(new THREE.BoxGeometry(.13,.13,.22),new THREE.MeshPhongMaterial({color:0xffd54a}));marker.position.set(x-.10,Y_MAX-state.whichPathFraction*(Y_MAX-Y_MIN),zero+.18);dynamic.add(marker);}
  }
 
  function addDetector(state){
-  if(!state.showDetector)return;
   const zero=surfaceZeroLevel(state.heightMode,SURFACE_HEIGHT),x=X_MAX+.04,base=zero+.08;
-  const wall=new THREE.Mesh(new THREE.BoxGeometry(.075,Y_MAX-Y_MIN,.16),new THREE.MeshPhongMaterial({color:color(state.detectorColor),transparent:true,opacity:.68}));wall.position.set(x,0,base);dynamic.add(wall);
+  if(state.showDetector){const wall=new THREE.Mesh(new THREE.BoxGeometry(.075,Y_MAX-Y_MIN,.16),fade(new THREE.MeshPhongMaterial({color:color(state.detectorColor),transparent:true,opacity:.68}),layerOpacity(state,'detector')));wall.position.set(x,0,base);dynamic.add(wall);}
   if(state.showProbability&&state.probability.length){
    const step=Math.max(1,Math.ceil(state.probability.length/300)),points=[];
    for(let i=0;i<state.probability.length;i+=step){const v=i/(state.probability.length-1);points.push(world(1.015,v,base+.9*state.probability[i]));}
-   const probability=line(points,new THREE.LineBasicMaterial({color:color(state.probabilityColor),linewidth:2}));dynamic.add(probability);recordObjects.push(probability);
+   const probability=line(points,fade(new THREE.LineBasicMaterial({color:color(state.probabilityColor),linewidth:2}),layerOpacity(state,'probability')));dynamic.add(probability);recordObjects.push(probability);
   }
   if(!state.showHits)return;
+  const hitOpacity=layerOpacity(state,'hits');
   const pointPositions=[],pointColors=[],errorPositions=[],errorColors=[];
   for(let i=0;i<state.hits.length;i++){
    if(!state.hits[i])continue;
@@ -137,27 +167,31 @@ export function mountPacketSurface3D({host}){
    pointPositions.push(x+.055,y,z);pointColors.push(c.r,c.g,c.b);
    errorPositions.push(x+.055,y,Math.max(base,z-e),x+.055,y,z+e);errorColors.push(c.r,c.g,c.b,c.r,c.g,c.b);
   }
-  if(pointPositions.length){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(pointPositions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(pointColors,3));const points=new THREE.Points(geometry,new THREE.PointsMaterial({size:.065,sizeAttenuation:true,vertexColors:true}));dynamic.add(points);recordObjects.push(points);}
-  if(errorPositions.length){const errors=lines(errorPositions,errorColors,.95);dynamic.add(errors);recordObjects.push(errors);}
+  if(pointPositions.length){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(pointPositions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(pointColors,3));const points=new THREE.Points(geometry,fade(new THREE.PointsMaterial({size:.065,sizeAttenuation:true,vertexColors:true}),hitOpacity));dynamic.add(points);recordObjects.push(points);}
+  if(errorPositions.length){const errors=lines(errorPositions,errorColors,.95*hitOpacity);dynamic.add(errors);recordObjects.push(errors);}
  }
 
  function addParticles(state){
-  const fixedZ=surfaceZeroLevel(state.heightMode,SURFACE_HEIGHT),particleZ=(u,v,lift)=>state.showWave&&state.heights?sampleHeight(state,u,v)*SURFACE_HEIGHT+lift:fixedZ+lift;
+  // Particles and trails always lie on the apparatus zero plane, the physical x–y plane.
+  const fixedZ=surfaceZeroLevel(state.heightMode,SURFACE_HEIGHT),particleZ=(u,v,lift)=>fixedZ+(state.pilotWave?pwStyle.height/100*SURFACE_HEIGHT:0)+lift;
   const trailPositions=[],trailColors=[],pointPositions=[],pointColors=[];
   if(state.showTrajectories)for(const trail of state.trails){const c=color(trail.color);for(let i=1;i<trail.points.length;i++){
    const a=trail.points[i-1],b=trail.points[i],az=particleZ(a[0],a[1],.035),bz=particleZ(b[0],b[1],.035);
    trailPositions.push(...world(a[0],a[1],az).toArray(),...world(b[0],b[1],bz).toArray());trailColors.push(c.r,c.g,c.b,c.r,c.g,c.b);
   }}
-  if(trailPositions.length)dynamic.add(lines(trailPositions,trailColors,.8));
+  if(trailPositions.length)dynamic.add(lines(trailPositions,trailColors,.8*layerOpacity(state,'trajectories')));
   if(state.showParticles)for(const particle of state.particles){const c=color(particle.color),z=particleZ(particle.u,particle.v,.06);pointPositions.push(...world(particle.u,particle.v,z).toArray());pointColors.push(c.r,c.g,c.b);}
-  if(pointPositions.length){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(pointPositions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(pointColors,3));dynamic.add(new THREE.Points(geometry,new THREE.PointsMaterial({size:.075,sizeAttenuation:true,vertexColors:true})))}
+  if(pointPositions.length){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(pointPositions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(pointColors,3));dynamic.add(new THREE.Points(geometry,fade(new THREE.PointsMaterial({size:.075,sizeAttenuation:true,vertexColors:true}),layerOpacity(state,'particles'))))}
  }
 
  function update(state){
-  lastState=state;const zero=surfaceZeroLevel(state.heightMode,SURFACE_HEIGHT),signed=zero>0;floor.position.z=zero-.025;floor.material.opacity=signed?.12:.76;floor.material.depthWrite=!signed;grid.position.z=zero-.018;grid.material.opacity=signed?.36:.46;recordObjects=[];while(dynamic.children.length)disposeObject(dynamic.children[0]);
+  lastState=state;pwControls.hidden=!state.pilotWave;
+  const legendColors=state.showWave&&state.phaseLegend?.length?state.phaseLegend:null;legend.hidden=!visible||!legendColors;
+  if(legendColors){const key=legendColors.join('|');if(key!==legendKey){legendKey=key;drawLegend(legendColors);}}
+  const zero=surfaceZeroLevel(state.heightMode,SURFACE_HEIGHT),signed=zero>0;floor.position.z=zero-.025;floor.material.opacity=signed?.12:.76;floor.material.depthWrite=!signed;grid.position.z=zero-.018;grid.material.opacity=signed?.36:.46;recordObjects=[];while(dynamic.children.length)disposeObject(dynamic.children[0]);
   addWave(state);addWall(state);addDetector(state);addParticles(state);render();
  }
- function setVisible(next){visible=!!next;renderer.domElement.hidden=!visible;overlay.hidden=!visible;if(visible){resize();if(lastState)update(lastState);cancelAnimationFrame(frame);frame=requestAnimationFrame(animate);}else cancelAnimationFrame(frame);}
+ function setVisible(next){visible=!!next;renderer.domElement.hidden=!visible;overlay.hidden=!visible;if(!visible)legend.hidden=true;if(visible){resize();if(lastState)update(lastState);cancelAnimationFrame(frame);frame=requestAnimationFrame(animate);}else cancelAnimationFrame(frame);}
  function capture(context,width,height,{includeWave=true,includeRecords=false}={}){
   const hidden=[];
   for(const object of dynamic.children){if(!includeWave&&object.userData.wave){hidden.push(object);object.visible=false;}}

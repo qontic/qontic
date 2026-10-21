@@ -2,13 +2,16 @@ Analytical Double-Slit Simulation
 
 This simulation is part of the Q-Ontic Lab project.
 
-The application provides a comparative visualization of
-multiple representational frameworks for the double-slit
-experiment, including collapse-based, pilot-wave, and
-Many-Worlds descriptions.
+The application compares three accounts of the double-slit
+experiment on one analytical wave model: Orthodox (sampled
+detections), Pilot-Wave (guided trajectories) and Many-Worlds
+(branching detector records).
 
 Live version:
-https://qontic.github.io/qontic/double-slit-analytical/
+https://qonticlab.rice.edu/apps/comparative/double-slit-analytical/
+
+Development preview:
+https://qontic.github.io/qontic-dev/apps/comparative/double-slit-analytical/
 
 Project:
-https://qontic.github.io/qontic/
+https://qonticlab.rice.edu/

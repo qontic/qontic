@@ -61,7 +61,9 @@ assert(engine.includes('packet-core-options'));
 assert(engine.includes('packet-slit-balance'));
 assert(engine.includes('apertureWeights'));
 assert(engine.includes('return (sourcePos+detectorDistance)/.7'));
-assert(shell.includes("updateParameter('detector-distance', 50, 3000"));
+// Saved settings restore values only; the creation ranges (e.g. lambda <= 50 nm) stay authoritative.
+assert(shell.includes("restoreParameterValue('detector-distance', state.detectorDistance)"));
+assert(!/updateParameter\('wavelength', 1, 500/.test(shell), 'saved settings must not widen the wavelength range');
 assert(engine.includes("slitColors={upper:'#22d3ee',lower:'#ff9f43'}"));
 assert(engine.includes('pending.push({index,cohort:a.cohort,slitSide:a.slitSide,wallY:a.wallY})'));
 assert(engine.includes("directedRow.innerHTML='Direct PW <input"));
@@ -82,7 +84,9 @@ assert(model.includes('sourceComponents'));
 assert(model.includes('if(p.whichPath)'));
 assert(engine.includes("whichPathDetector!=='none'&&next.centers.length===2"));
 assert(engine.includes('setWhichPath(){resetEngine();draw();}'));
-assert(surface.includes('state.showWave&&state.heights?sampleHeight'));
+// 2.125: Pilot-Wave particles stay on the apparatus zero plane; the wave is see-through in Pilot-Wave.
+assert(surface.includes('particleZ=(u,v,lift)=>fixedZ+(state.pilotWave?pwStyle.height/100*SURFACE_HEIGHT:0)+lift'));
+assert(surface.includes('seeThrough=!!state.pilotWave'));
 assert(engine.includes("colors=[[34,211,238],[255,159,67]]"));
 assert(template.includes('context.createLinearGradient(0, 0, canvas.width, 0)'));
 assert(template.includes('window.qonticUpdateWavePalettePreview = updateWavePalettePreview'));

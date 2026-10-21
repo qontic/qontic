@@ -105,6 +105,6 @@ assert(maxError<.07,'three-sigma slit-core screen CDF remains close to the Gauss
 const whichOrdered=whichResults.filter(y=>Math.abs(y)<6).sort((a,b)=>a-b),whichDy=12/(whichProfile.values.length-1);cdf=0;maxError=0;j=0;
 for(let i=1;i<whichProfile.values.length;i++){cdf+=(whichProfile.values[i-1]+whichProfile.values[i])*.5*whichDy/whichProfile.integral;const y=-6+i*whichDy;while(j<whichOrdered.length&&whichOrdered[j]<=y)j++;maxError=Math.max(maxError,Math.abs(j/whichOrdered.length-cdf));}
 assert(maxError<.075,'which-slit PW trajectories reproduce the incoherent screen density');
-const record=Array(100).fill(0);record[0]=1;const h=histogramLayout(record,profile,12,150);assert(Math.abs(2*h.hitScale-142)<1e-12);assert(Math.abs(Math.max(...h.curve)*h.predictionScale-142)<1e-10);assert.equal(h.total,1);
+const record=Array(100).fill(0);record[0]=1;const h=histogramLayout(record,profile,12,150);assert(Math.abs(2*h.hitScale-142)<1e-12);assert(Math.abs(h.predictionScale/h.hitScale-12/100)<1e-12,"single-hit prediction retains its expected-count amplitude");assert.equal(h.total,1);
 const t0=0,t1=.2;assert.equal(sourceEnvelope(0,t0,p).rho,sourceEnvelope(p.k*t1,t1,p).rho);
 console.log(JSON.stringify({passed:true,particles:12000,absorbed,screenHits:nInside,predictedFraction:profile.integral,CDFError:maxError}));

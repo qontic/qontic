@@ -1,3 +1,127 @@
+## 2.128 — 2026-10-21
+
+- Fixed: the wave palette swatch in the Display tab was blank on page load and appeared only after the palette was changed. It was drawn while its row was not yet attached to the page, so the lookup by id found nothing; the template now keeps a direct reference to the swatch. The default palette name is also recorded at start-up, so the swatch tooltip names it.
+- Rollback: backup/double-slit-before-palette-swatch-2.127-20261021.
+
+## 2.127 — 2026-10-20
+
+- Restored the 3D graphics of 2.125: palette-colored surface, previous floor and background, standard particles and trails, 96×64 mesh. The Phase hue style of 2.126 is removed.
+- Kept from 2.126: the Pilot-Wave 3D Wave-opacity slider (default back to 55%) and Particle-height slider, and the larger canvas.
+- Kept the phase wheel: in 3D, when Show is set to Phase, a corner wheel gives the surface color for each phase angle θ using the current palette and display range (cos θ, so +θ and −θ share a color). Hidden for |Ψ|², log |Ψ|² and with the which-slit detector.
+- Rollback: backup/double-slit-before-3d-restore-2.126-20261020.
+
+## 2.126 — 2026-10-20
+
+- 3D "Phase hue" color style (new default): the surface is colored by the complex phase θ (blue 0, violet +π/2, red ±π, magenta −π/2) with brightness set by the amplitude, on a dark floor; a phase-wheel legend appears in the corner. "2D palette" keeps the previous coloring. Selector in the 3D toolbar.
+- 3D Pilot-Wave in Phase hue: glowing particles and thick trails; uniformly colored particles are shown in yellow.
+- 3D toolbar sliders in Pilot-Wave: Wave (surface opacity, default 75%) and Particle height (height of the plane carrying particles and trails, 0–110% of the surface height; display only).
+- Finer 3D mesh (240×160) so the phase bands are resolved.
+- Larger canvas: the layout reserves 150 px instead of 270 px of the viewport height for page chrome, so the 4:3 canvas grows (e.g. 907×680 → 1067×800 on a 1500×950 window) and side margins shrink.
+- Rollback: backup/double-slit-before-3d-style-2.125-20261020.
+
+## 2.125 — 2026-10-20
+
+- 3D: Pilot-Wave particles and trajectories always lie on the fixed apparatus plane (the physical x–y plane) instead of riding the graph of the wave.
+- 3D in Pilot-Wave: the wave surface is semi-transparent (55%, times the Wave opacity slider) and drawn after the particles so they stay visible beneath it. Orthodox and Many-Worlds keep the nearly opaque surface.
+- Views text updated.
+- Rollback: backup/double-slit-before-3d-plane-2.124-20261020.
+
+## 2.124 — 2026-10-20
+
+- Removed the Front/back color mode added in 2.123 (reverted).
+- 3D view now applies the Display-tab opacity sliders: wave, slit wall, detector, probability curve, screen hits and error bars, particles and trajectories. Previously only the on/off state reached 3D.
+- In 3D, hiding the detector wall no longer hides the probability curve and hit histogram.
+- The 3D slit wall uses the Slit wall color swatch.
+- Rollback: backup/double-slit-before-3d-opacity-2.123-20261020.
+
+## 2.122 — 2026-10-20
+
+- Phone layout: smaller distance-scale and color-range overlays so the source and slits stay visible; Core option row wraps; compact PW/O/MW header badge; smaller Feedback button and room to scroll past it.
+- 3D view hides the 2D color-range control, which does not affect the 3D surface.
+- The Slit wall color swatch now sets the drawn wall color (default light gray-blue; the old unused blue default is migrated).
+- Pilot-Wave readout "No hit: absorbed · missed" explains why the same per-packet setting gives fewer hits than Orthodox and Many-Worlds.
+- Particle selector tooltip and Physics text: at fixed λ the mass changes only speed, energy and time scale.
+- Separation and slit-width limits also respect the ±3σ Direct PW window (strictest of the displayed windows); Views text notes it.
+- Cleanup: removed unreferenced packet-preview.js, spherical-worker.js, sampleFromCDF and lcg; one ?v= suffix for all local modules; README links and app.json description updated.
+- Rollback: backup/double-slit-before-open-issues-2.121-20261020.
+
+## 2.121 — 2026-10-19
+
+- Saved settings restore values within each control's own range; a reload no longer widens λ to 500 nm or the source-position minimum to 0.
+- Share links keep the which-slit detector and now also carry detector pixels, particle type, Direct PW, Pilot-Wave color mode, Show option, playback speed and flow settings.
+- Many-Worlds branch counter shows N^m exactly (e.g. 16² = 256) instead of rounding to a power of ten.
+- The app starts when browser storage is blocked (in-memory fallback); a corrupted saved state is ignored.
+- Reset Defaults clears only this app's settings, not every app on the site.
+- Readout renamed Packet Speed: it is the group velocity ħk/m (tooltip said phase velocity ω/k). Energy tooltip: central packet energy, not assigned to individual trajectories. Updated stale tooltips.
+- 3D text and Height menu use θ for the phase (φ is the transverse field). Views text: the eye button hides the wave in 2D and 3D.
+- Rollback: backup/double-slit-before-review-fixes-2.120-20261019.
+
+## 2.120 — 2026-10-05
+
+- Physics explains reduced-model probability current, streamline slope and physical arrow-shaft arc length.
+- Views explains field markers across interpretations, density fades and capped display motion; distinguishes the overlay from particle histories and weak-measurement reconstruction.
+- Corrected the histogram explanation to the shared expected-count scale introduced in 2.116. No physics or overlay behavior changed.
+- Rollback: backup/before-flow-math-2.119-20261005.
+
+## 2.119 — 2026-10-05
+
+- Flow Length and Separation use physical nm units. Arrow shafts follow the flow curve for the selected arc length.
+- Continuous transmitted marker paths through the slit plane; arrowheads anchor forward motion even when the field turns.
+- Fixed opacity reference and boundary fade prevent earlier arrows brightening as the leading arrows leave the wall or screen.
+- Rollback: backup/before-flow-boundaries-2.118-20261005.
+
+## 2.118 — 2026-10-05
+
+- Arrows checkbox, Length slider and value share one row; Streamlines and Separation share the next.
+- Limit animated marker displacement per frame to prevent backward temporal aliasing at high speeds or after long frames. Physics timing and detector statistics are unchanged; tooltip explains the display limit.
+- Rollback: backup/before-arrow-alias-fix-2.117-20261005.
+
+## 2.117 — 2026-10-05
+
+- Three flow-control rows: arrows; arrow length; streamlines and separation. Explanation moved to an information tooltip.
+- Arrow markers advance continuously along analytical flow curves with smooth density fades. Streamline separation now controls curve spacing.
+
+## 2.116 — 2026-10-05
+
+- Flow toggles and arrow spacing share one compact row; yellow arrows and orange streamlines contrast with blue waves.
+- Probability curves and hit histograms now share a count scale (N × bin width × normalized density), including 3D and branch previews.
+
+## 2.115 — 2026-10-05
+
+- Optional 2D current-velocity arrows and calculated streamlines in Display, shared by all interpretations; default off.
+- Arrow density and length controls; fade weak-density regions. Suppressed in 3D and during which-slit detection.
+- Pre-change rollback branch: backup/double-slit-before-flow-2.114-20261005 (commit 1a2ba0bc50a43fb7435b6cd43e936fd8b724ae7a). Restore only this app directory from that branch to retain unrelated later changes.
+- This release visualizes analytical flow; it does not simulate weak-measurement readings.
+
+## Version 2.114 — 2026-09-29
+
+- Replaced the individually wrapped phone toolbar buttons with one three-dot Simulation tools button and a labeled floating menu that is closed by default.
+- Close the phone tool menu after an action, an outside press, or Escape, while preserving the full toolbar on larger screens and in expanded view.
+
+## Version 2.113 — 2026-09-29
+
+- Removed the larger-header mode and its button; the shared template now always uses the compact header.
+- On phones, section tabs use short labels and the active interpretation becomes a compact O/PW/MW badge.
+
+## Version 2.112 — 2026-09-29
+
+- Added a remembered Hide Header control with a small restore button that remains available while the header is hidden.
+- On tablet and phone widths, the simulation canvas now appears before the controls and statistics.
+
+## Version 2.111 — 2026-09-29
+
+- Kept the section tabs and interpretation label left-aligned while moving the Screenshot and other canvas actions to the right edge of the responsive header.
+
+## Version 2.110 — 2026-09-29
+
+- Left-aligned the section tabs, interpretation label, and header tool groups.
+- Added responsive desktop, tablet, and phone layouts with wrapping header controls, stacked workspaces, compact branding, and touch-sized controls.
+
+## Version 2.109 — 2026-09-29
+
+- Moved the canvas utility controls into the application header beside Simulation, Physics, and Views.
+- Added a remembered compact/comfortable header toggle with a smaller logo and title in compact mode.
+
 ## Version 2.108 — 2026-09-29
 
 - Scale the observed histogram to its largest upper error-bar endpoint, n + √n, so every square-root error bar is fully visible while the prediction retains its independent probability-density scale.

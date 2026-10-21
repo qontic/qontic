@@ -17,9 +17,18 @@ const zero=histogramLayout([0,0,0,0],profile,4,108);
 assert.equal(zero.total,0);assert.equal(Math.max(...zero.curve),.5);
 const populated=histogramLayout([1,4,1,0],profile,4,108);
 assert.equal(populated.total,6);assert.deepEqual(populated.curve,zero.curve,'prediction is independent of hit count');
-assert(Math.abs(Math.max(...populated.curve)*populated.predictionScale-100)<1e-12,'prediction fills panel');
-assert(Math.abs(Math.max(...[1,4,1,0].map(n=>n+Math.sqrt(n)))*populated.hitScale-100)<1e-12,'largest upper error-bar endpoint fills panel');
-assert.notEqual(populated.predictionScale,populated.hitScale,'prediction and hits use separate scales');
+assert(Math.abs(populated.predictionScale/populated.hitScale-6)<1e-12,'density converted to expected counts using N times bin width');
+assert(Math.abs(6*populated.hitScale-100)<1e-12,'shared range includes largest upper error bar');
+for(const total of [8,800,800000]){
+ const counts=[total/8,3*total/8,3*total/8,total/8],layout=histogramLayout(counts,profile,4,108);
+ for(let i=0;i<counts.length;i++){
+  const densityAtBinCenter=(layout.curve[i]+layout.curve[i+1])/2;
+  assert(Math.abs(densityAtBinCenter*layout.predictionScale-counts[i]*layout.hitScale)<1e-10,'matching distribution aligns at every bin center, at low and high counts');
+  assert(Math.abs((layout.probabilityHeights[i]+layout.probabilityHeights[i+1])/2-layout.hitHeights[i])<1e-12,'3D uses the same relative count scale');
+  assert(layout.hitHeights[i]+layout.hitErrors[i]<=1+1e-12,'error bars fit shared range');
+ }
+}
+assert(zero.probabilityHeights.every(Number.isFinite),'zero-hit preview remains visible and finite');
 assert.equal(surfaceHeightValue('psi2',.25,1,0),.25);
 assert.equal(surfaceHeightValue('real',.25,1,0),.75);
 assert.equal(surfaceHeightValue('real',.25,-1,0),.25);

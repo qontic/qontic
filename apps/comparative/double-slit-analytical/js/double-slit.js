@@ -54,7 +54,7 @@ var colorPart="red"
 var colorProb="green"
 var colorPsi   ="white"
 var colorTraj="red"
-var colorScreen="blue"
+var colorScreen="#d4e6ef" // slit wall; matches the drawn wall
 var colorSensor='#90ee90';
 var colorScale="#000000"
 var currentCycleIndex=10000;
@@ -74,21 +74,7 @@ var startRealTime = 0; // real time when simulation started (for elapsed display
 // {bins, cdf} objects.  Sampling is O(log n) via binary search instead
 // of building million-entry arrays.
 //==================================================================================================
-function sampleFromCDF(dist) {
-   const r = Math.random();
-   const cdf = dist.cdf;
-   const bins = dist.bins;
-   // Binary search for the bin where cdf[i] >= r
-   let lo = 0, hi = cdf.length - 1;
-   while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (cdf[mid] < r) lo = mid + 1;
-      else hi = mid;
-   }
-   // Linearly interpolate within the bin for smooth sampling
-   const binWidth = bins.length > 1 ? (bins[1] - bins[0]) : 0;
-   return bins[lo] + (Math.random() - 0.5) * binWidth;
-}
+// (2.122: unused legacy sampleFromCDF removed; the packet engine samples detector pixels.)
 
 //==================================================================================================
 // Web Worker for off-main-thread precomputation
@@ -294,15 +280,6 @@ function renderWaveWithWebGL() { /* Retired packet-incompatible renderer/precomp
 //==================================================================================================================
 //
 //==================================================================================================================
-function lcg(seed) {
-   let state = seed;
-   return function() {
-      state = (1664525 * state + 1013904223) % 4294967296; // LCG formula
-      return state / 4294967296; // Normalize to [0, 1)
-   };
-}
-
-const random = lcg(55142);
 //==================================================================================================================
 //
 //==================================================================================================================
@@ -493,7 +470,7 @@ function createParameterInput(containerId, id, label, min, max, step, value, uni
       'det-pixels' : 'Detector Pixels',
       'wavelength' : 'Wavelength',
       'particleRate' : 'Number of particles injected per second in real time (your clock, not simulation time)',
-      'MaxPart' : 'Maximum Number of Particles',
+      'MaxPart' : 'Particles or hits per packet',
       'animationStep' : 'Simulation Speed Multiplier',
       'waveOpacity' : 'Wave Opacity',
       'trajOpacity' : 'Trajectory/Particle Opacity'
@@ -772,6 +749,17 @@ function updateParameter(id, newMin, newMax, newStep, newValue) {
    // Trigger update to ensure formatting & scaling refreshes
    $('#' + id).trigger('input');
 }
+// Set a saved value, clamped to the control's existing range; never widens the range.
+function restoreParameterValue(id, value) {
+   const $range = $('#' + id);
+   const v = parseFloat(value);
+   if (!$range.length || !Number.isFinite(v)) return;
+   const lo = parseFloat($range.attr('min')), hi = parseFloat($range.attr('max'));
+   const clamped = Math.min(Number.isFinite(hi) ? hi : v, Math.max(Number.isFinite(lo) ? lo : v, v));
+   $range.val(clamped);
+   $('#' + id + '-input').val(clamped);
+   $range.trigger('input');
+}
 //==================================================================================================================
 // Native color chooser using a hidden <input type="color">
 //==================================================================================================================
@@ -882,20 +870,24 @@ function getSimulationState() {
 //==============================================================================================================
 function saveSimulationState() {
   const state = getSimulationState();
-  localStorage.setItem('doubleSlitState', JSON.stringify(state));
+  try { localStorage.setItem('doubleSlitState', JSON.stringify(state)); } catch (_) {}
 }
 //==============================================================================================================
 //
 //==============================================================================================================
 function restoreSimulationState() {
-  const saved = localStorage.getItem('doubleSlitState');
-
-  if (!saved) return;
-
-  const state = JSON.parse(saved);
+  let state;
+  try {
+    const saved = localStorage.getItem('doubleSlitState');
+    if (!saved) return;
+    state = JSON.parse(saved);
+  } catch (_) { return; }
+  if (!state || typeof state !== 'object') return;
   // Version 2.96 changes the former black default to a visible red. Preserve
   // every explicitly selected non-black color while migrating the old default.
   if(state.colors&&['black','#000','#000000','rgb(0, 0, 0)'].includes(String(state.colors.hit).toLowerCase()))state.colors.hit='#ef4444';
+  // Version 2.122 draws the slit wall in its swatch color; migrate the old unused blue default.
+  if(state.colors&&['blue','#0000ff','rgb(0, 0, 255)'].includes(String(state.colors.screen).toLowerCase()))state.colors.screen='#d4e6ef';
   restoreDisplayOpacities(state.displayOpacities);
 
   // Clear old state if version doesn't match (units changed from mm to nm)
@@ -905,14 +897,16 @@ function restoreSimulationState() {
     return;
   }
 
-  updateParameter('wavelength', 1, 500, 1, state.wavelength);
-  updateParameter('slit-separation', 0, 2000, 1, state.slitSeparation);
-  updateParameter('source-position', 0, 1000, 1, state.sourcePosition);
-  updateParameter('detector-distance', 50, 3000, 1, state.detectorDistance);
-  updateParameter('det-pixels', 10, 500, 1, state.nDetectorPixels);
-  updateParameter('screen-height', 120, 5000, 10, state.screenHeight);
+  // Restore values only. The ranges set when the controls were created stay
+  // authoritative (e.g. lambda <= 50 nm keeps the paraxial regime stated in Physics).
+  restoreParameterValue('wavelength', state.wavelength);
+  restoreParameterValue('slit-separation', state.slitSeparation);
+  restoreParameterValue('source-position', state.sourcePosition);
+  restoreParameterValue('detector-distance', state.detectorDistance);
+  restoreParameterValue('det-pixels', state.nDetectorPixels);
+  restoreParameterValue('screen-height', state.screenHeight);
   if (state.particleRate) {
-    updateParameter('particleRate', 1, 100, 1, state.particleRate);
+    restoreParameterValue('particleRate', state.particleRate);
   }
 
 
@@ -982,13 +976,16 @@ function setupGeo(doPrecompute) {
    omega = particleType === 'photon' ? k * c : 0.5 * hbar * k * k / mass;
 
    var waveSpeed = omega/k;
-   // waveSpeed is in nm/ns which equals m/s (1 nm/ns = 1e-9 m / 1e-9 s = 1 m/s)
-   if (waveSpeed >= 1e6) {
-      $('#waveSpeed').text((waveSpeed / 1e6).toFixed(2) + " Mm/s");
-   } else if (waveSpeed >= 1000) {
-      $('#waveSpeed').text((waveSpeed / 1000).toFixed(2) + " km/s");
+   // The readout is the packet (group) speed hbar*k/m = 2*omega/k, matching the
+   // packet engine; waveSpeed (phase speed) is still used for legacy canvas motion.
+   var packetSpeed = particleType === 'photon' ? waveSpeed : 2 * waveSpeed;
+   // packetSpeed is in nm/ns which equals m/s (1 nm/ns = 1e-9 m / 1e-9 s = 1 m/s)
+   if (packetSpeed >= 1e6) {
+      $('#waveSpeed').text((packetSpeed / 1e6).toFixed(2) + " Mm/s");
+   } else if (packetSpeed >= 1000) {
+      $('#waveSpeed').text((packetSpeed / 1000).toFixed(2) + " km/s");
    } else {
-      $('#waveSpeed').text(waveSpeed.toFixed(2) + " m/s");
+      $('#waveSpeed').text(packetSpeed.toFixed(2) + " m/s");
    }
 
    // Calculate and display particle energy in eV
@@ -1267,11 +1264,24 @@ function updateModeExplanation() {
 }
 
 function updateBranchCountDisplay() {
-   const exponent = logNBranches.toFixed(0);
-   const hasBranches = logNBranches > 0;
-   $('#infoBranchCount')
-      .html(hasBranches ? `10<sup>${exponent}</sup>` : '1')
-      .attr('aria-label', hasBranches ? `10 to the power of ${exponent}` : '1');
+   // Each detection multiplies the branch count by the number of detector pixels N,
+   // so after m detections it is N^m. Show that exactly rather than rounding to 10^k.
+   const $count = $('#infoBranchCount');
+   if (!(logNBranches > 0)) { $count.text('1').attr('aria-label', '1'); return; }
+   const n = Math.round(parseFloat($('#det-pixels-input').val()));
+   const m = n > 1 ? Math.round(logNBranches / Math.log10(n)) : 0;
+   if (m >= 1 && Math.abs(m * Math.log10(n) - logNBranches) < 1e-6) {
+      if (m === 1 || logNBranches < 6) {
+         const exact = Math.round(Math.pow(n, m)).toLocaleString('en-US');
+         $count.html(m === 1 ? exact : `${n}<sup>${m}</sup> = ${exact}`).attr('aria-label', m === 1 ? exact : `${n} to the power of ${m}, ${exact}`);
+      } else {
+         $count.html(`${n}<sup>${m}</sup>`).attr('aria-label', `${n} to the power of ${m}`);
+      }
+      return;
+   }
+   // Pixel count changed during the record: fall back to a power of ten.
+   const exponent = logNBranches.toFixed(1);
+   $count.html(`10<sup>${exponent}</sup>`).attr('aria-label', `10 to the power of ${exponent}`);
 }
 
 function changeInterpretation(mode) {
@@ -1636,8 +1646,15 @@ $(document).ready(function() {
       $('#resetDefaultsButton').on('click', function() {
          // Remove the beforeunload listener so we don't re-save state
          window.removeEventListener('beforeunload', saveSimulationState);
-         // Clear all localStorage
-         localStorage.clear();
+         // Clear only this app's saved settings; other Q-Ontic apps share the origin.
+         try {
+            const own = ['doubleSlitState', 'showAdvanced', 'leftPanelWidth', 'canvasWidth', 'canvasHeight',
+                         'theme', 'controlsFontSize', 'infoFontSize'];
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+            keys.filter(k => own.includes(k) || /^qontic-(double-slit|pw)-/.test(k))
+                .forEach(k => localStorage.removeItem(k));
+         } catch (_) {}
          // Reload the page to apply defaults
          location.reload();
       });
@@ -1711,6 +1728,10 @@ $(document).ready(function() {
       const paletteIndex = 2; // Gray 
       const [paletteName, hexPalette] = paletteEntries[paletteIndex];
       graphPalette = window.paletteModule.prepareRgbPalette(hexPalette);
+      // 2.128: the Display-tab swatch was drawn before this default existed, so it
+      // stayed blank until the palette changed. Record the name and redraw it now.
+      window.paletteModule.setPaletteByName?.(paletteName);
+      window.qonticUpdateWavePalettePreview?.();
       
       // Initialize which-path detector palettes (blue and green)
       graphPaletteSlit1 = window.paletteModule.prepareRgbPalette(window.paletteModule.palettes.Blue);

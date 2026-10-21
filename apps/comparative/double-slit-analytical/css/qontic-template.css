@@ -69,7 +69,7 @@ body.analytical-template { padding: 0 18px 12px; }
 }
 
 @media (max-width: 600px) {
-  .analytical-template #leftPanel { display: flex; }
+  .analytical-template #leftPanel { display:flex; flex-direction:column; width:100%; }
   .analytical-template .qontic-app-header { min-height: 0; padding-block: 8px; }
   .analytical-template .qontic-brand img { width: 42px; height: 42px; }
   .analytical-template .qontic-app-title h1 { font-size: 25px; }
@@ -79,6 +79,8 @@ body.analytical-template { padding: 0 18px 12px; }
   .analytical-template #psiTabs { padding: 10px; }
   .analytical-template #canvas-wrapper { flex: none; }
   .analytical-template #Info { width: 100%; }
+  .analytical-template #canvas-container { width:100%; margin-block:6px; }
+  .analytical-template #shortcut-hint { display:none; }
 }
 
 @media (max-width: 600px) {
@@ -369,3 +371,47 @@ body.analytical-template { --font-size-base:13px; --font-size-sm:13px; --font-si
 .analytical-template #analytical-advanced .input-group:has(input[type=range]) > label {
   font-size:12px;
 }
+
+/* Two compact flow-control rows. */
+.flow-control-row { display:flex; align-items:center; gap:8px; font-size:11px; }
+.flow-settings .flow-toggle { display:flex; align-items:center; gap:4px; white-space:nowrap; width:auto; margin:0; font-size:11px; }
+.flow-toggle input { margin:0; flex:none; }
+.flow-spacing { display:flex; align-items:center; gap:4px; flex:1; min-width:0; }
+.flow-settings .flow-spacing label { width:auto; margin:0; font-size:11px; }
+.flow-spacing input[type=range] { width:40px; min-width:24px; flex:1; margin:0; }
+.flow-spacing output { white-space:nowrap; font-size:11px; }
+
+.flow-help { cursor:help; color:#b8dbe8; font-size:12px; }
+.flow-control-row { margin:6px 0; }
+.flow-settings .flow-control-row .flow-spacing { margin-left:auto; }
+.flow-settings .flow-spacing input[type=range] { grid-column:auto; width:40px; min-width:24px; }
+.flow-settings .flow-spacing label { display:block; white-space:nowrap; }
+
+/* 2.122: the wave-range control maps the 2D colors only; the 3D renderer does not use it. */
+.analytical-template #canvas-container.packet-surface-3d .qontic-range-panel { display:none !important; }
+
+/* 2.122: phone layout. Shrink the canvas overlays so the source and slits stay
+   visible, let the Core option row wrap, and keep the header label compact. */
+@media (max-width: 600px) {
+  .analytical-template #canvas-container .qontic-distance-scale { transform:scale(.6); transform-origin:top left; }
+  .analytical-template #canvas-container .qontic-range-panel { transform:scale(.6); transform-origin:bottom left; }
+  .analytical-template .packet-core-options { flex-wrap:wrap; row-gap:6px; }
+  .analytical-template .packet-core-options > select { flex:1 1 100%; }
+  .analytical-template .packet-core-options .packet-slit-colors { margin-left:8px !important; }
+}
+@media (max-width: 560px) {
+  /* qsf-style.css sets #view-label font-size by id, which overrode the shared compact (PW/O/MW) badge. */
+  .analytical-template .qontic-header-tools > #view-label { font-size:0; }
+}
+
+/* 2.126: Pilot-Wave 3D style sliders in the 3D toolbar. */
+.analytical-template .packet-surface-help .packet-surface-pw { display:flex;align-items:center;gap:10px; }
+.analytical-template .packet-surface-help .packet-surface-pw[hidden] { display:none; }
+.analytical-template .packet-surface-help .packet-surface-pw input[type=range] { pointer-events:auto;width:84px;accent-color:#55d8e6; }
+/* 2.126: larger canvas. The shared layout reserves 270px of the viewport height for
+   page chrome; this app reserves 150px, so the 4:3 canvas grows and side margins shrink. */
+.analytical-template .qontic-workspace { max-width:calc(var(--qontic-sidebar-width) + var(--qontic-layout-gap) + max(320px, (100dvh - 150px) * 4 / 3)); }
+.analytical-template .packet-surface-help { flex-wrap:wrap;max-width:calc(100% - 20px);box-sizing:border-box; }
+/* 2.127: 3D phase legend (shown when Show = Phase). */
+.analytical-template #canvas-container > canvas.packet-surface-legend { position:absolute;left:auto;top:auto;right:10px;bottom:10px;z-index:7;width:96px;height:96px;padding:4px;box-sizing:content-box;border:1px solid rgba(190,229,241,.22);border-radius:8px;background:rgba(5,10,16,.78);pointer-events:none; }
+.analytical-template #canvas-container > canvas.packet-surface-legend[hidden] { display:none; }

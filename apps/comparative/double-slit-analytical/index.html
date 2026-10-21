@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quantum Double-Slit Experiment Simulator</title>
+    <script>
+      // If browser storage is blocked (privacy modes, sandboxed frames), use an
+      // in-memory store so the app still starts; settings then last one visit.
+      (function () {
+        try { var s = window.localStorage; s.setItem('__qontic_probe', '1'); s.removeItem('__qontic_probe'); return; } catch (_) {}
+        var data = {};
+        var mem = {
+          getItem: function (k) { k = String(k); return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+          setItem: function (k, v) { data[String(k)] = String(v); },
+          removeItem: function (k) { delete data[String(k)]; },
+          clear: function () { data = {}; },
+          key: function (i) { return Object.keys(data)[i] ?? null; },
+          get length() { return Object.keys(data).length; }
+        };
+        try { Object.defineProperty(window, 'localStorage', { value: mem, configurable: true }); } catch (_) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="../../../shared/favicon.svg">
     <link rel="stylesheet" href="../../../shared/back-home.css" />
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
@@ -16,7 +33,7 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="js/palette.js"></script>
     <script>window.qonticTemplateLayout = true;</script>
-    <script src="js/double-slit.js?v=2.108"></script>
+    <script src="js/double-slit.js?v=2.128"></script>
     <link rel="stylesheet" href="css/qsf-style.css?v=20260908-layout3">
     <script defer src="../../../shared/back-home.js"></script>
     <style>
@@ -37,13 +54,13 @@
         vertical-align: baseline;
       }
     </style>
-    <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=resources-20260916">
-    <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.0">
-    <link rel="stylesheet" href="css/qontic-template.css?v=2.108">
+    <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=3.7">
+    <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.5">
+    <link rel="stylesheet" href="css/qontic-template.css?v=2.128">
     <script type="importmap">
       {"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
     </script>
-    <script type="module" src="js/qontic-template.js?v=2.108"></script>
+    <script type="module" src="js/qontic-template.js?v=2.128"></script>
 </head>
 <body>
   <!-- Loading overlay — visible until JS init completes -->
@@ -83,7 +100,7 @@
         <!-- Fixed experiment controls — always visible above all tabs -->
         <div id="experiment-bar">
             <button id="toggleSlits" data-tip="Click to cycle: Both slits open → Slit 1 only → Slit 2 only.">Both Slits</button>
-            <button id="toggleWhichPath" data-tip="Click to toggle a which-path detector at one of the slits. Destroys interference.">No Detector</button>
+            <button id="toggleWhichPath" data-tip="Cycle the ideal which-slit detector: none, upper slit, or lower slit. The two detector-tagged waves add incoherently.">No Detector</button>
             <button id="toggleView" data-tip="Cycle view: Orthodox (sampled detections) → Pilot-Wave (guided trajectories) → Many-Worlds (outcome weights and one record). Changing interpretation preserves the run and accumulated hits.">Orthodox</button>
             <div id="setupBtnStatus" class="btn-status-line">&nbsp;</div>
         </div>
@@ -146,7 +163,7 @@
               <span class="material-icons" style="font-size: 16px;">dark_mode</span>
               <span class="theme-toggle-label">Dark Theme</span>
             </button>
-            <button id="advancedToggle" class="theme-toggle-btn" data-tip="Show or hide advanced tabs (Physics, Setup, Graphics).">
+            <button id="advancedToggle" class="theme-toggle-btn" data-tip="Show or hide the advanced controls.">
               <span class="material-icons" style="font-size: 16px;">tune</span>
               <span id="advancedToggleLabel">Advanced</span>
             </button>
@@ -290,17 +307,21 @@
                <td class="label">Real Time:</td>
 	       <td align=right class="value" id="realTime">0</td><td> 
              </tr>
-              <tr data-tip="Phase velocity of the quantum wave (ω/k)">
-               <td class="label">Wave Speed:</td>
+              <tr data-tip="Group velocity of the packet, v = ħk/m = h/(mλ). The phase velocity ω/k is half of this.">
+               <td class="label">Packet Speed:</td>
 	       <td align=right class="value" id="waveSpeed">0</td><td> 
              </tr>
-              <tr data-tip="Kinetic energy of particles based on de Broglie wavelength: E = h²/(2mλ²)">
+              <tr data-tip="Central energy of the packet, E = ħ²k²/(2m) = h²/(2mλ²). It is not assigned to individual Pilot-Wave trajectories.">
                <td class="label">Energy:</td>
 	       <td align=right class="value" id="particleEnergy">0</td><td> 
              </tr>
            <tr class="info-box" data-tip="Number of detector hits">
                <td class="label">Hits:</td>
                <td align=right class="value"><span id="nhits">0</span></td> 
+           </tr>
+           <tr class="info-box bohmian-only" data-tip="Pilot-Wave trials that gave no screen hit: absorbed at the slit wall, or passing outside the displayed screen. Orthodox and Many-Worlds count screen registrations only, so the same per-packet setting gives more hits there.">
+               <td class="label">No hit:</td>
+               <td align=right class="value"><span id="noHitCount">0 absorbed · 0 missed</span></td>
            </tr>
            <tr class="info-box advanced-info" data-tip="Number of simulation steps completed">
                <td class="label">Steps:</td>
@@ -390,7 +411,7 @@
   <button id="closePopup2Btn" onclick="$('#palettePopup2').hide()">Close</button>
 </div>
 
-<div id="versionInfo" style="text-align: center; font-size: 0.85em; color: var(--text-muted); margin-top: 16px; padding: 12px; border-top: 1px solid var(--border-color);"> Q-Ontic analytical double slit · Version 26</div>
+<div id="versionInfo" style="text-align: center; font-size: 0.85em; color: var(--text-muted); margin-top: 16px; padding: 12px; border-top: 1px solid var(--border-color);"> Q-Ontic analytical double slit</div>
 <!-- Visitor counter removed to avoid browser warnings about
   parser-blocking cross-site scripts injected via document.write. -->
 
