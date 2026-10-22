@@ -67,6 +67,19 @@
     .invitation h2,.invitation p { margin:0; }
     .invitation p { font-size:.88rem; }
     .small { color:var(--muted); }
+    .heritage { margin-top:1rem; padding:1.1rem 1.2rem 1rem; color:#e6f0f7; background:radial-gradient(circle at 88% 0%,#28678b 0,transparent 45%),linear-gradient(150deg,#082641,#10446e); border-top:3px solid var(--gold); box-shadow:0 8px 25px rgba(8,38,65,.12); }
+    .heritage .kicker { margin:0 0 .25rem; color:#f4d696; font-size:.7rem; font-weight:750; letter-spacing:.13em; text-transform:uppercase; }
+    .heritage h2 { margin:0 0 .55rem; color:#fff; font:normal 1.4rem/1.2 Georgia,serif; }
+    .heritage p { font-size:.9rem; }
+    .timeline { list-style:none; display:grid; grid-template-columns:repeat(3,1fr); margin:.9rem 0 .8rem; padding:0; position:relative; }
+    .timeline::before { content:""; position:absolute; left:8px; right:8px; top:7px; height:2px; background:linear-gradient(90deg,rgba(232,189,103,.35),var(--gold)); }
+    .timeline li { position:relative; padding:1.35rem .6rem 0 0; font-size:.8rem; line-height:1.35; color:#d3e4ef; }
+    .timeline li::before { content:""; position:absolute; left:0; top:0; width:16px; height:16px; border-radius:50%; background:#0d3b62; border:2px solid var(--gold); }
+    .timeline li:last-child::before { background:var(--gold); box-shadow:0 0 0 4px rgba(232,189,103,.25); }
+    .timeline .year { display:block; color:#fff; font:normal 1.35rem/1.1 Georgia,serif; }
+    .timeline .place { display:block; color:#f4d696; font-size:.7rem; font-weight:750; letter-spacing:.08em; text-transform:uppercase; margin:.1rem 0 .2rem; }
+    .heritage .ref { margin:0; color:#b8cfde; font-size:.74rem; }
+    .heritage .ref em { color:#d3e4ef; }
     .tabs { display:flex; gap:.25rem; margin:0 0 1rem; border-bottom:2px solid var(--line); }
     .tabs a { padding:.55rem 1rem; margin-bottom:-2px; border-bottom:3px solid transparent; color:var(--muted); font-weight:700; font-size:.95rem; text-decoration:none; }
     .tabs a:hover { color:var(--navy); }
@@ -89,6 +102,7 @@
       .event-logo { width:76px; height:76px; align-self:start; }
       .hero-details span + span::before { margin-right:.6rem; }
       .venue-grid { grid-template-columns:1fr; }
+      .timeline li { padding-right:.35rem; font-size:.76rem; }
       .venue-hero img { height:180px; }
       .tabs a { padding:.5rem .7rem; }
       .invitation { display:block; }
@@ -157,6 +171,18 @@
           <dt>Convened by</dt><dd>Rice University's <a href="https://qonticlab.rice.edu/">Q-Ontic Lab</a></dd>
         </dl>
       </aside>
+      <section class="heritage" aria-labelledby="heritage-title">
+        <p class="kicker">1927 · 2027</p>
+        <h2 id="heritage-title">A century after Solvay</h2>
+        <p>In October 1927 the fifth Solvay Conference in Brussels set rival accounts of the new quantum theory side by side. Louis de Broglie, who had introduced matter waves in his Paris thesis, presented his pilot-wave theory; Born and Heisenberg presented quantum mechanics; Schrödinger, wave mechanics. No consensus emerged.</p>
+        <ol class="timeline">
+          <li><span class="year">1924</span><span class="place">Paris</span>De Broglie's thesis on matter waves</li>
+          <li><span class="year">1927</span><span class="place">Brussels</span>Rival accounts debated at Solvay</li>
+          <li><span class="year">2027</span><span class="place">Paris</span>What should students learn from them?</li>
+        </ol>
+        <p>A hundred years on, the debate is still open. This meeting returns to Paris to ask what it means for teaching.</p>
+        <p class="ref">See G. Bacciagaluppi and A. Valentini, <em>Quantum Theory at the Crossroads: Reconsidering the 1927 Solvay Conference</em> (Cambridge University Press, 2009).</p>
+      </section>
       </div>
     </div>
     </div>
