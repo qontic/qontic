@@ -58,19 +58,21 @@
     .program dt { color:var(--blue); font-weight:800; }
     .program dd { margin:0; font-size:.88rem; }
     .program strong { display:block; color:var(--navy); }
-    .committee { list-style:none; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.45rem; margin:.45rem 0 0; padding:0; }
-    .committee li { display:flex; align-items:center; gap:.65rem; padding:.55rem .7rem; background:#fff; border:1px solid var(--line); border-left:3px solid var(--blue); }
-    .committee li.chair { grid-column:1 / -1; border-left-color:var(--gold); }
-    .committee .initials { flex:none; display:grid; place-items:center; width:2.2rem; height:2.2rem; border-radius:50%; background:#e5eff5; color:var(--navy); font:600 .82rem/1 Georgia,serif; letter-spacing:.03em; }
-    .committee li.chair .initials { background:var(--gold); color:#132c43; }
-    .committee .who { min-width:0; display:flex; flex-direction:column; }
-    .committee strong { color:var(--navy); font-size:.92rem; line-height:1.25; }
-    .committee .affiliation { color:var(--muted); font-size:.8rem; line-height:1.3; }
-    .committee .role { margin-left:.4rem; padding:.05rem .4rem; border-radius:3px; background:#fbf1dc; color:#7a5a17; font-size:.66rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; vertical-align:2px; }
+    .committee { list-style:none; margin:.35rem 0 0; padding:0; columns:2; column-gap:1.4rem; font-size:.86rem; line-height:1.35; }
+    .committee li { break-inside:avoid; margin-bottom:.4rem; }
+    .committee strong { color:var(--navy); font-weight:650; }
+    .committee .affiliation { display:block; color:var(--muted); font-size:.8rem; }
     .invitation { display:flex; align-items:baseline; gap:.8rem; margin-top:.8rem; padding:.6rem .85rem; background:#e5eff5; border-left:4px solid var(--blue); }
     .invitation h2,.invitation p { margin:0; }
     .invitation p { font-size:.88rem; }
     .small { color:var(--muted); }
+    .glance { display:grid; grid-template-columns:150px minmax(0,1fr); gap:1.1rem; padding:0 1rem 0 0; }
+    .glance-photo { margin:0; display:flex; flex-direction:column; }
+    .glance-photo img { display:block; width:100%; flex:1; min-height:230px; object-fit:cover; object-position:center 30%; }
+    .glance-photo figcaption { padding:.2rem .4rem .3rem; color:var(--muted); font-size:.6rem; line-height:1.3; }
+    .glance-photo figcaption a { color:inherit; }
+    .glance-body { padding:.8rem 0 .9rem; }
+    .glance-body h2 { margin-top:0 !important; }
     .heritage { margin-top:1rem; padding:1.1rem 1.2rem 1rem; color:#e6f0f7; background:radial-gradient(circle at 88% 0%,#28678b 0,transparent 45%),linear-gradient(150deg,#082641,#10446e); border-top:3px solid var(--gold); box-shadow:0 8px 25px rgba(8,38,65,.12); }
     .heritage .kicker { margin:0 0 .25rem; color:#f4d696; font-size:.7rem; font-weight:750; letter-spacing:.13em; text-transform:uppercase; }
     .heritage h2 { margin:0 0 .55rem; color:#fff; font:normal 1.4rem/1.2 Georgia,serif; }
@@ -106,7 +108,8 @@
       .event-logo { width:76px; height:76px; align-self:start; }
       .hero-details span + span::before { margin-right:.6rem; }
       .venue-grid { grid-template-columns:1fr; }
-      .committee { grid-template-columns:1fr; }
+      .glance { grid-template-columns:110px minmax(0,1fr); gap:.8rem; }
+      .committee { columns:1; }
       .timeline li { padding-right:.35rem; font-size:.76rem; }
       .venue-hero img { height:180px; }
       .tabs a { padding:.5rem .7rem; }
@@ -158,16 +161,17 @@
         <section id="committee" aria-labelledby="committee-title">
           <h2 id="committee-title">Organizing committee</h2>
           <ul class="committee">
-            <li class="chair"><span class="initials" aria-hidden="true">PY</span><span class="who"><span><strong>Pablo Yepes</strong> <span class="role">Chair</span></span><span class="affiliation">Rice University</span></span></li>
-            <li><span class="initials" aria-hidden="true">AK</span><span class="who"><span><strong>Anssi Kuha</strong></span><span class="affiliation">Metropolia University of Applied Sciences</span></span></li>
-            <li><span class="initials" aria-hidden="true">TN</span><span class="who"><span><strong>Travis Norsen</strong></span><span class="affiliation">Smith College</span></span></li>
-            <li><span class="initials" aria-hidden="true">XO</span><span class="who"><span><strong>Xavier Oriols</strong></span><span class="affiliation">Universitat Autònoma de Barcelona</span></span></li>
-            <li><span class="initials" aria-hidden="true">JS</span><span class="who"><span><strong>Jared Stenson</strong></span><span class="affiliation">Rice University</span></span></li>
+            <li><strong>Pablo Yepes</strong> <span class="small">(chair)</span><span class="affiliation">Rice University</span></li>
+            <li><strong>Anssi Kuha</strong><span class="affiliation">Metropolia University of Applied Sciences</span></li>
+            <li><strong>Travis Norsen</strong><span class="affiliation">Smith College</span></li>
+            <li><strong>Xavier Oriols</strong><span class="affiliation">Universitat Autònoma de Barcelona</span></li>
+            <li><strong>Jared Stenson</strong><span class="affiliation">Rice University</span></li>
           </ul>
         </section>
       </div>
-      <div class="content-column"><aside class="side-card" aria-label="Conference details">
-        <figure class="venue-photo"><img src="https://global.rice.edu/_astro/image002-1.By1NjzXl_cQ5rf.jpg" alt="Courtyard at the Rice Global Paris Center" width="2048" height="1152" loading="lazy" /><figcaption>Rice Global Paris Center courtyard · Photo: Rice Global</figcaption></figure>
+      <div class="content-column"><aside class="side-card glance" aria-label="Conference details">
+        <figure class="glance-photo"><img src="eiffel-tower.jpg" alt="The Eiffel Tower seen from the Champ de Mars" width="440" height="953" /><figcaption><a href="https://commons.wikimedia.org/wiki/File:Tour_Eiffel_Wikimedia_Commons.jpg">Photo</a>: Benh LIEU SONG, <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>, cropped</figcaption></figure>
+        <div class="glance-body">
         <h2>At a glance</h2>
         <dl>
           <dt>When</dt><dd>Wednesday, July 21 (morning) to Friday, July 23, 2027</dd>
@@ -175,6 +179,7 @@
           <dt>Format</dt><dd>Invited talks, round tables, and working groups</dd>
           <dt>Convened by</dt><dd>Rice University's <a href="https://qonticlab.rice.edu/">Q-Ontic Lab</a></dd>
         </dl>
+        </div>
       </aside>
       <section class="heritage" aria-labelledby="heritage-title">
         <p class="kicker">1927 · 2027</p>
