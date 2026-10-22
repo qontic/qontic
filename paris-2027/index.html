@@ -66,13 +66,15 @@
     .invitation h2,.invitation p { margin:0; }
     .invitation p { font-size:.88rem; }
     .small { color:var(--muted); }
-    .glance { display:grid; grid-template-columns:150px minmax(0,1fr); gap:1.1rem; padding:0 1rem 0 0; }
-    .glance-photo { margin:0; display:flex; flex-direction:column; }
-    .glance-photo img { display:block; width:100%; flex:1; min-height:230px; object-fit:cover; object-position:center 30%; }
-    .glance-photo figcaption { padding:.2rem .4rem .3rem; color:var(--muted); font-size:.6rem; line-height:1.3; }
+    .glance { display:grid; grid-template-columns:118px minmax(0,1fr); gap:1.1rem; padding:0 1rem 0 0; }
+    .glance-photo { position:relative; margin:0; overflow:hidden; background:#2c5f93; }
+    .glance-photo img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 30%; }
+    .glance-photo figcaption { position:absolute; left:0; right:0; bottom:0; padding:1.2rem .35rem .25rem; background:linear-gradient(transparent,rgba(0,0,0,.6)); color:#eef2f5; font-size:.56rem; line-height:1.25; }
     .glance-photo figcaption a { color:inherit; }
     .glance-body { padding:.8rem 0 .9rem; }
-    .glance-body h2 { margin-top:0 !important; }
+    .glance-body h2 { margin-top:0 !important; font-size:1.5rem !important; }
+    .glance-body dt { margin-top:.5rem; font-size:.72rem; }
+    .glance-body dd { font-size:1rem; }
     .heritage { margin-top:1rem; padding:1.1rem 1.2rem 1rem; color:#e6f0f7; background:radial-gradient(circle at 88% 0%,#28678b 0,transparent 45%),linear-gradient(150deg,#082641,#10446e); border-top:3px solid var(--gold); box-shadow:0 8px 25px rgba(8,38,65,.12); }
     .heritage .kicker { margin:0 0 .25rem; color:#f4d696; font-size:.7rem; font-weight:750; letter-spacing:.13em; text-transform:uppercase; }
     .heritage h2 { margin:0 0 .55rem; color:#fff; font:normal 1.4rem/1.2 Georgia,serif; }
