@@ -58,11 +58,15 @@
     .program dt { color:var(--blue); font-weight:800; }
     .program dd { margin:0; font-size:.88rem; }
     .program strong { display:block; color:var(--navy); }
-    .committee { list-style:none; margin:.4rem 0 0; padding:0; }
-    .committee li { display:flex; flex-wrap:wrap; justify-content:space-between; gap:0 1rem; padding:.42rem 0; border-top:1px solid var(--line); font-size:.88rem; }
-    .committee strong { color:var(--navy); }
-    .committee .role { color:var(--muted); font-weight:400; }
-    .committee .affiliation { color:var(--muted); }
+    .committee { list-style:none; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.45rem; margin:.45rem 0 0; padding:0; }
+    .committee li { display:flex; align-items:center; gap:.65rem; padding:.55rem .7rem; background:#fff; border:1px solid var(--line); border-left:3px solid var(--blue); }
+    .committee li.chair { grid-column:1 / -1; border-left-color:var(--gold); }
+    .committee .initials { flex:none; display:grid; place-items:center; width:2.2rem; height:2.2rem; border-radius:50%; background:#e5eff5; color:var(--navy); font:600 .82rem/1 Georgia,serif; letter-spacing:.03em; }
+    .committee li.chair .initials { background:var(--gold); color:#132c43; }
+    .committee .who { min-width:0; display:flex; flex-direction:column; }
+    .committee strong { color:var(--navy); font-size:.92rem; line-height:1.25; }
+    .committee .affiliation { color:var(--muted); font-size:.8rem; line-height:1.3; }
+    .committee .role { margin-left:.4rem; padding:.05rem .4rem; border-radius:3px; background:#fbf1dc; color:#7a5a17; font-size:.66rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; vertical-align:2px; }
     .invitation { display:flex; align-items:baseline; gap:.8rem; margin-top:.8rem; padding:.6rem .85rem; background:#e5eff5; border-left:4px solid var(--blue); }
     .invitation h2,.invitation p { margin:0; }
     .invitation p { font-size:.88rem; }
@@ -102,6 +106,7 @@
       .event-logo { width:76px; height:76px; align-self:start; }
       .hero-details span + span::before { margin-right:.6rem; }
       .venue-grid { grid-template-columns:1fr; }
+      .committee { grid-template-columns:1fr; }
       .timeline li { padding-right:.35rem; font-size:.76rem; }
       .venue-hero img { height:180px; }
       .tabs a { padding:.5rem .7rem; }
@@ -153,11 +158,11 @@
         <section id="committee" aria-labelledby="committee-title">
           <h2 id="committee-title">Organizing committee</h2>
           <ul class="committee">
-            <li><span><strong>Pablo Yepes</strong> <span class="role">(chair)</span></span><span class="affiliation">Rice University</span></li>
-            <li><strong>Anssi Kuha</strong><span class="affiliation">Metropolia University of Applied Sciences</span></li>
-            <li><strong>Travis Norsen</strong><span class="affiliation">Smith College</span></li>
-            <li><strong>Xavier Oriols</strong><span class="affiliation">Universitat Autònoma de Barcelona</span></li>
-            <li><strong>Jared Stenson</strong><span class="affiliation">Rice University</span></li>
+            <li class="chair"><span class="initials" aria-hidden="true">PY</span><span class="who"><span><strong>Pablo Yepes</strong> <span class="role">Chair</span></span><span class="affiliation">Rice University</span></span></li>
+            <li><span class="initials" aria-hidden="true">AK</span><span class="who"><span><strong>Anssi Kuha</strong></span><span class="affiliation">Metropolia University of Applied Sciences</span></span></li>
+            <li><span class="initials" aria-hidden="true">TN</span><span class="who"><span><strong>Travis Norsen</strong></span><span class="affiliation">Smith College</span></span></li>
+            <li><span class="initials" aria-hidden="true">XO</span><span class="who"><span><strong>Xavier Oriols</strong></span><span class="affiliation">Universitat Autònoma de Barcelona</span></span></li>
+            <li><span class="initials" aria-hidden="true">JS</span><span class="who"><span><strong>Jared Stenson</strong></span><span class="affiliation">Rice University</span></span></li>
           </ul>
         </section>
       </div>
