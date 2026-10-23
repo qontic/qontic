@@ -98,7 +98,7 @@
     .glance-body { display:flex; flex-direction:column; justify-content:center; }
     .people-block { max-width:880px; }
     .people-block + .people-block { margin-top:1.4rem; }
-    #committee .committee { columns:3; margin-top:.6rem; }
+    #committee .committee, #advisory .committee { columns:3; margin-top:.6rem; }
     .participant-list { columns:3; margin-top:.6rem; }
     .tabs { display:flex; gap:.25rem; margin:0 0 1rem; border-bottom:2px solid var(--line); }
     .tabs a { padding:.55rem 1rem; margin-bottom:-2px; border-bottom:3px solid transparent; color:var(--muted); font-weight:700; font-size:.95rem; text-decoration:none; }
@@ -123,7 +123,7 @@
       .hero-details span + span::before { margin-right:.6rem; }
       .venue-grid { grid-template-columns:1fr; }
       .glance { grid-template-columns:110px minmax(0,1fr); gap:.8rem; }
-      .committee, #committee .committee { columns:1; }
+      .committee, #committee .committee, #advisory .committee { columns:1; }
       #overview > .heritage { grid-template-columns:1fr; padding:1.1rem 1.2rem 1rem; }
       .participant-list { columns:2; }
       .timeline li { padding-right:.35rem; font-size:.76rem; }
@@ -248,6 +248,14 @@
             <li><strong>Jared Stenson</strong><span class="affiliation">Rice University</span></li>
           </ul>
         </section>
+      <section id="advisory" class="people-block" aria-labelledby="advisory-title">
+        <h2 id="advisory-title">Advisory committee</h2>
+        <ul class="committee">
+          <li><strong>Jean Bricmont</strong><span class="affiliation">UCLouvain</span></li>
+          <li><strong>Dustin Lazarovici</strong><span class="affiliation">Technion – Israel Institute of Technology</span></li>
+          <li><strong>Avraham Merzel</strong><span class="affiliation">Hebrew University of Jerusalem</span></li>
+        </ul>
+      </section>
 
     </div>
     <section id="contact" class="invitation" aria-labelledby="contact-title">
