@@ -88,6 +88,18 @@
     .timeline .place { display:block; color:#f4d696; font-size:.7rem; font-weight:750; letter-spacing:.08em; text-transform:uppercase; margin:.1rem 0 .2rem; }
     .heritage .ref { margin:0; color:#b8cfde; font-size:.74rem; }
     .heritage .ref em { color:#d3e4ef; }
+    .aim p { font-size:1.06rem; line-height:1.55; }
+    .heritage-wrap { margin-top:1.2rem; }
+    #overview > .heritage { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:0 2rem; align-items:center; margin-top:1.2rem; padding:1.3rem 1.5rem 1.1rem; }
+    #overview > .heritage .timeline { margin-top:.4rem; }
+    #overview .content-grid { align-items:stretch; }
+    #overview .content-column:last-child { display:flex; }
+    #overview .glance { flex:1; }
+    .glance-body { display:flex; flex-direction:column; justify-content:center; }
+    .people-block { max-width:880px; }
+    .people-block + .people-block { margin-top:1.4rem; }
+    #committee .committee { columns:3; margin-top:.6rem; }
+    .participant-list { columns:3; margin-top:.6rem; }
     .tabs { display:flex; gap:.25rem; margin:0 0 1rem; border-bottom:2px solid var(--line); }
     .tabs a { padding:.55rem 1rem; margin-bottom:-2px; border-bottom:3px solid transparent; color:var(--muted); font-weight:700; font-size:.95rem; text-decoration:none; }
     .tabs a:hover { color:var(--navy); }
@@ -111,10 +123,13 @@
       .hero-details span + span::before { margin-right:.6rem; }
       .venue-grid { grid-template-columns:1fr; }
       .glance { grid-template-columns:110px minmax(0,1fr); gap:.8rem; }
-      .committee { columns:1; }
+      .committee, #committee .committee { columns:1; }
+      #overview > .heritage { grid-template-columns:1fr; padding:1.1rem 1.2rem 1rem; }
+      .participant-list { columns:2; }
       .timeline li { padding-right:.35rem; font-size:.76rem; }
       .venue-hero img { height:180px; }
-      .tabs a { padding:.5rem .7rem; }
+      .tabs { overflow-x:auto; scrollbar-width:none; }
+      .tabs a { padding:.5rem .55rem; white-space:nowrap; font-size:.9rem; }
       .invitation { display:block; }
       .invitation h2 { margin-bottom:.2rem; }
     }
@@ -143,32 +158,15 @@
       <a href="#overview" id="tab-overview" role="tab" aria-controls="overview" aria-selected="true">Overview</a>
       <a href="#program" id="tab-program" role="tab" aria-controls="program" aria-selected="false">Program</a>
       <a href="#venue" id="tab-venue" role="tab" aria-controls="venue" aria-selected="false">Venue</a>
+      <a href="#people" id="tab-people" role="tab" aria-controls="people" aria-selected="false">People</a>
     </nav>
     <div id="overview" class="tab-panel" role="tabpanel" aria-labelledby="tab-overview">
     <div class="content-grid">
       <div class="content-column">
-        <section aria-labelledby="about-title">
+        <section aria-labelledby="about-title" class="aim">
           <h2 id="about-title">The meeting</h2>
           <p>Quantum mechanics predicts experiments with extraordinary precision, yet physicists still disagree about what happens between observations. Several complete accounts give the same predictions and very different pictures of the world. Most courses teach one.</p>
           <p>This meeting explores whether students gain from seeing these accounts side by side and judging them for themselves. We will look at what the approach offers, where its difficulties lie, and how it can sit alongside the standard course. Proponents of the main views, physics educators, education researchers, historians, and philosophers will take up the question together.</p>
-        </section>
-        <section id="themes" aria-labelledby="themes-title">
-          <h2 id="themes-title">Questions for quantum education</h2>
-          <div class="themes">
-            <div class="theme"><h3>What does each view explain?</h3><p>How do the main views account for measurement and its outcomes?</p></div>
-            <div class="theme"><h3>What can students gain?</h3><p>At what stage of a course should students meet different views, and what does each offer them?</p></div>
-            <div class="theme"><h3>What improves learning?</h3><p>What can education research, history, and simulations contribute to instruction?</p></div>
-          </div>
-        </section>
-        <section id="committee" aria-labelledby="committee-title">
-          <h2 id="committee-title">Organizing committee</h2>
-          <ul class="committee">
-            <li><strong>Pablo Yepes</strong> <span class="small">(chair)</span><span class="affiliation">Rice University</span></li>
-            <li><strong>Anssi Kuha</strong><span class="affiliation">Metropolia University of Applied Sciences</span></li>
-            <li><strong>Travis Norsen</strong><span class="affiliation">Smith College</span></li>
-            <li><strong>Xavier Oriols</strong><span class="affiliation">Universitat Autònoma de Barcelona</span></li>
-            <li><strong>Jared Stenson</strong><span class="affiliation">Rice University</span></li>
-          </ul>
         </section>
       </div>
       <div class="content-column"><aside class="side-card glance" aria-label="Conference details">
@@ -183,19 +181,23 @@
         </dl>
         </div>
       </aside>
-      <section class="heritage" aria-labelledby="heritage-title">
-        <p class="kicker">1927 · 2027</p>
-        <h2 id="heritage-title">A century after Solvay</h2>
-        <p>In October 1927 the fifth Solvay Conference in Brussels set rival accounts of the new quantum theory side by side. Louis de Broglie, who had introduced matter waves in his Paris thesis, presented his pilot-wave theory; Born and Heisenberg presented quantum mechanics; Schrödinger, wave mechanics. The debate did not end there.</p>
-        <ol class="timeline">
-          <li><span class="year">1924</span><span class="place">Paris</span>De Broglie's thesis on matter waves</li>
-          <li><span class="year">1927</span><span class="place">Brussels</span>Rival accounts debated at Solvay</li>
-          <li><span class="year">2027</span><span class="place">Paris</span>What should students learn from them?</li>
-        </ol>
-        <p>A hundred years on, the debate is still open. This meeting returns to Paris to ask what it means for teaching.</p>
-      </section>
       </div>
     </div>
+    <section class="heritage" aria-labelledby="heritage-title">
+      <div class="heritage-text">
+      <p class="kicker">1927 · 2027</p>
+      <h2 id="heritage-title">A century after Solvay</h2>
+      <p>In October 1927 the fifth Solvay Conference in Brussels set rival accounts of the new quantum theory side by side. Louis de Broglie, who had introduced matter waves in his Paris thesis, presented his pilot-wave theory; Born and Heisenberg presented quantum mechanics; Schrödinger, wave mechanics. The debate did not end there.</p>
+      </div>
+      <div class="heritage-side">
+      <ol class="timeline">
+        <li><span class="year">1924</span><span class="place">Paris</span>De Broglie's thesis on matter waves</li>
+        <li><span class="year">1927</span><span class="place">Brussels</span>Rival accounts debated at Solvay</li>
+        <li><span class="year">2027</span><span class="place">Paris</span>What should students learn from them?</li>
+      </ol>
+      <p>A hundred years on, the debate is still open. This meeting returns to Paris to ask what it means for teaching.</p>
+      </div>
+    </section>
     </div>
     <div id="program" class="tab-panel" role="tabpanel" aria-labelledby="tab-program">
     <section aria-labelledby="program-title">
@@ -234,6 +236,19 @@
           <p>Many hotels are within walking distance in the Marais and around Châtelet. July is high season in Paris; we recommend booking early.</p>
         </div>
       </div>
+    </div>
+    <div id="people" class="tab-panel" role="tabpanel" aria-labelledby="tab-people">
+      <section id="committee" class="people-block" aria-labelledby="committee-title">
+          <h2 id="committee-title">Organizing committee</h2>
+          <ul class="committee">
+            <li><strong>Pablo Yepes</strong> <span class="small">(chair)</span><span class="affiliation">Rice University</span></li>
+            <li><strong>Anssi Kuha</strong><span class="affiliation">Metropolia University of Applied Sciences</span></li>
+            <li><strong>Travis Norsen</strong><span class="affiliation">Smith College</span></li>
+            <li><strong>Xavier Oriols</strong><span class="affiliation">Universitat Autònoma de Barcelona</span></li>
+            <li><strong>Jared Stenson</strong><span class="affiliation">Rice University</span></li>
+          </ul>
+        </section>
+
     </div>
     <section id="contact" class="invitation" aria-labelledby="contact-title">
       <h2 id="contact-title">Contact</h2>
