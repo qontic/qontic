@@ -34,6 +34,9 @@
     .hero-details span + span::before { content:"•"; margin-right:1rem; color:var(--gold); }
     .button { display:inline-block; padding:.48rem .85rem; border-radius:4px; background:var(--gold); color:#132c43; font-size:.88rem; font-weight:750; text-decoration:none; }
     .button:hover { background:#f3d493; }
+    .hero-actions { display:flex; flex-wrap:wrap; gap:.5rem; }
+    .button.secondary { background:transparent; color:inherit; border:1px solid var(--gold); }
+    .button.secondary:hover { background:rgba(243,212,147,.15); }
     main { padding:1rem 0 1.1rem; }
     .content-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.16fr); gap:1.4rem; align-items:start; }
     .content-column { min-width:0; }
@@ -151,7 +154,7 @@
       <p class="question">What do students gain from exploring different accounts of the quantum world?</p>
       <p class="hero-context">A meeting in the centenary year of the 1927 Solvay Conference.</p>
       <div class="hero-bottom"><div class="hero-details"><span>Paris, France</span><span>Three-day working meeting</span><span>Limited to 35 participants</span></div>
-      <a class="button" href="mailto:yepes@rice.edu">Contact the organizers</a></div>
+      <div class="hero-actions"><a class="button" href="registration/">Register (by invitation)</a> <a class="button secondary" href="mailto:yepes@rice.edu">Contact the organizers</a></div></div>
     </div><img class="event-logo" src="paris2027-logo.png" alt="Paris 2027 conference logo" width="130" height="130" /></div></div>
   </header>
   <main class="shell">
