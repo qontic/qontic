@@ -1,5 +1,10 @@
 ## 2.128 — 2026-10-21
 
+- Opens in Orthodox when no link or saved state chooses a view. Previously the checked Particles/Trajectories boxes made Pilot-Wave the default.
+- Slit button reads Upper Slit Only / Lower Slit Only, matching the which-slit detector (Detector @ Upper / Lower) and the companion notebook.
+- Many-Worlds readout renamed "Branch records"; its tooltip says N^m depends on the detector pixel size and is not a physical count of worlds.
+- Phones (≤600 px): the distance-scale and color-range overlays are hidden so the source and wall stay visible; the greyed PW/O/MW header chip is hidden (≤560 px), since the view pill above Start names the view.
+- Changes follow simulated student reviews of the double-slit notebook.
 - Fixed: the wave palette swatch in the Display tab was blank on page load and appeared only after the palette was changed. It was drawn while its row was not yet attached to the page, so the lookup by id found nothing; the template now keeps a direct reference to the swatch. The default palette name is also recorded at start-up, so the swatch tooltip names it.
 - Rollback: backup/double-slit-before-palette-swatch-2.127-20261021.
 

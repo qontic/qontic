@@ -402,6 +402,13 @@ body.analytical-template { --font-size-base:13px; --font-size-sm:13px; --font-si
 @media (max-width: 560px) {
   /* qsf-style.css sets #view-label font-size by id, which overrode the shared compact (PW/O/MW) badge. */
   .analytical-template .qontic-header-tools > #view-label { font-size:0; }
+  /* The view pill above Start names the view; the greyed header chip looked like a broken button. */
+  .analytical-template .qontic-header-tools > #view-label { display:none; }
+}
+@media (max-width: 600px) {
+  /* Keep the source and wall visible on phones; the scale and color-range overlays covered them. */
+  .analytical-template #canvas-container .qontic-distance-scale,
+  .analytical-template #canvas-container .qontic-range-panel { display:none; }
 }
 
 /* 2.126: Pilot-Wave 3D style sliders in the 3D toolbar. */

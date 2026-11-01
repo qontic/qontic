@@ -99,7 +99,7 @@
      <div id="psiTabs" class="container">
         <!-- Fixed experiment controls — always visible above all tabs -->
         <div id="experiment-bar">
-            <button id="toggleSlits" data-tip="Click to cycle: Both slits open → Slit 1 only → Slit 2 only.">Both Slits</button>
+            <button id="toggleSlits" data-tip="Click to cycle: Both slits open → upper slit only → lower slit only.">Both Slits</button>
             <button id="toggleWhichPath" data-tip="Cycle the ideal which-slit detector: none, upper slit, or lower slit. The two detector-tagged waves add incoherently.">No Detector</button>
             <button id="toggleView" data-tip="Cycle view: Orthodox (sampled detections) → Pilot-Wave (guided trajectories) → Many-Worlds (outcome weights and one record). Changing interpretation preserves the run and accumulated hits.">Orthodox</button>
             <div id="setupBtnStatus" class="btn-status-line">&nbsp;</div>
@@ -331,8 +331,8 @@
                <td class="label">Particles:</td>
                <td align=right class="value"><span id="shownParticles">0</span> active<span id="maxParticlesDisplay" hidden>100</span></td> 
            </tr>
-           <tr class="info-box manyworlds-only info-highlight" data-tip="Finite detector model: each detection splits every existing branch into N sensor-outcome branches. After m detections the count is N^m; weights need not be equal.">
-               <td class="label">Branches:</td>
+           <tr class="info-box manyworlds-only info-highlight" data-tip="Each hit splits every existing record over the N detector pixels, so after m hits there are N^m possible records, with unequal weights. The number depends on the chosen pixel size (Det. Pixels); it is a count of display records, not a physical count of worlds.">
+               <td class="label">Branch records:</td>
                <td align=right class="value"><span id="infoBranchCount">1</span></td> 
            </tr>
            </table>

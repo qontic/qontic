@@ -1185,9 +1185,9 @@ function updateSlitButton() {
    if (slit1Open && slit2Open) {
       label = 'Both Slits';
    } else if (slit1Open) {
-      label = 'Slit 1 Only';
+      label = 'Upper Slit Only';
    } else {
-      label = 'Slit 2 Only';
+      label = 'Lower Slit Only';
    }
    $('#toggleSlits').text(label);
 }
@@ -1780,7 +1780,8 @@ $(document).ready(function() {
 
       const particlesOn = $("#plot_particles").is(":checked");
       const trajectoriesOn = $("#plot_trajectories").is(":checked");
-      let defaultMode = (particlesOn || trajectoriesOn) ? "bohmian" : "copenhagen";
+      // Open in Orthodox unless a link or saved state asks for another view.
+      let defaultMode = "copenhagen";
       // Set interpretation variable and update display
       interpretation = defaultMode;
       updateInterpretationDisplay();

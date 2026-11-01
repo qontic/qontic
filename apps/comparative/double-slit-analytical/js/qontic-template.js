@@ -276,7 +276,7 @@ $(function () {
   sync();
 
   mountQonticShell({
-    title: 'Double Slit', compactHeader: true, navigation: 'breadcrumbs',
+    title: 'Double Slit', navigation: 'breadcrumbs',
     version: `Analytical double slit · Version ${APP_RELEASE.version} · ${APP_RELEASE.date}`,
     homeHref: '../../../index.html',
   });
@@ -385,7 +385,7 @@ $(function () {
   let media;
   media=mountQonticMedia({
     stage: document.getElementById('canvas-wrapper'), controls,
-    filename: 'double-slit', headerTools: false, labelNode:document.getElementById('view-label'), rangeControl:window.qonticWaveRangeControl,
+    filename: 'double-slit', labelNode:document.getElementById('view-label'), rangeControl:window.qonticWaveRangeControl,
     coordinateControl:coordinates,
     scaleControl:{getVisible:()=>elementOpacity('plot_scales')>0,setVisible:shown=>{if(!shown)lastScaleOpacity=elementOpacity('plot_scales')||1;const slider=document.getElementById('plot_scales-opacity');slider.value=shown?lastScaleOpacity*100:0;slider.dispatchEvent(new Event('input',{bubbles:true}));slider.dispatchEvent(new Event('change',{bubbles:true}));}},
     getShareUrl: () => location.href.split('#')[0] + buildUrlHash(),
