@@ -42,8 +42,17 @@ export function histogramLayout(record,profile,screenHeight,width){
  const available=Math.max(0,width-8);
  const predictionMaximum=Math.max(1e-30,...curve);
  const observedMaximum=Math.max(1,...record.map(n=>n+Math.sqrt(n)));
- return {curve,predictionScale:available/predictionMaximum,hitScale:available/observedMaximum,total,binHeight,
-  probabilityHeights:curve.map(value=>value/predictionMaximum),hitHeights:record.map(n=>n/observedMaximum),hitErrors:record.map(n=>Math.sqrt(n)/observedMaximum)};
+ // At low statistics, fit the sparse markers and their error bars to the panel.
+ // Once the predicted peak contains enough counts, smoothly move to the
+ // probability normalization N*dy so the observations align with the green
+ // prediction. Smoothstep avoids a visible jump between the two regimes.
+ const expectedPeak=Math.max(1e-30,total*binHeight*predictionMaximum);
+ const progress=Math.max(0,Math.min(1,(expectedPeak-4)/(25-4)));
+ const normalizedWeight=progress*progress*(3-2*progress);
+ const inverseHitMaximum=(1-normalizedWeight)/observedMaximum+normalizedWeight/expectedPeak;
+ const hitMaximum=1/Math.max(1e-30,inverseHitMaximum);
+ return {curve,predictionScale:available/predictionMaximum,hitScale:available/hitMaximum,total,binHeight,
+  probabilityHeights:curve.map(value=>value/predictionMaximum),hitHeights:record.map(n=>n/hitMaximum),hitErrors:record.map(n=>Math.sqrt(n)/hitMaximum)};
 }
 // Display mapping for the optional height graph. Signed quantities use 1/2 as
 // zero so the WebGL surface remains above its plotting plane.

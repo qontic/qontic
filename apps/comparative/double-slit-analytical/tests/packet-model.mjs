@@ -23,14 +23,19 @@ const populated=histogramLayout([1,4,1,0],profile,4,108);
 assert.equal(populated.total,6);assert.deepEqual(populated.curve,zero.curve,'prediction is independent of hit count');
 assert.equal(populated.predictionScale,zero.predictionScale,'prediction display scale is independent of hit count');
 assert(Math.abs(Math.max(...populated.hitHeights.map((height,i)=>height+populated.hitErrors[i]))-1)<1e-12,'largest observed marker and error bar fill the available width');
-for(const total of [8,800,800000]){
+const large=histogramLayout([8,24,24,8],profile,4,108);
+for(let i=0;i<4;i++){
+ const densityAtBinCenter=(large.probabilityHeights[i]+large.probabilityHeights[i+1])/2;
+ assert(Math.abs(densityAtBinCenter-large.hitHeights[i])<1e-12,'large samples use the prediction normalization');
+}
+for(const total of [8,64,800000]){
  const counts=[total/8,3*total/8,3*total/8,total/8],layout=histogramLayout(counts,profile,4,108);
  const peakDensity=Math.max(...counts.map((_,i)=>(layout.probabilityHeights[i]+layout.probabilityHeights[i+1])/2));
  const peakHit=Math.max(...layout.hitHeights);
  for(let i=0;i<counts.length;i++){
   const densityAtBinCenter=(layout.probabilityHeights[i]+layout.probabilityHeights[i+1])/2;
   assert(Math.abs(densityAtBinCenter/peakDensity-layout.hitHeights[i]/peakHit)<1e-12,'matching distributions retain the same normalized shape');
-  assert(layout.hitHeights[i]+layout.hitErrors[i]<=1+1e-12,'observed error bars fit their display range');
+  if(total===8)assert(layout.hitHeights[i]+layout.hitErrors[i]<=1+1e-12,'low-statistics error bars fit their display range');
  }
 }
 assert(zero.probabilityHeights.every(Number.isFinite),'zero-hit preview remains visible and finite');
