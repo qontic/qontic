@@ -33,26 +33,17 @@ export function screenProfile(p,ymin,ymax,samples=1025,steps=1000){
  const integral=values.reduce((sum,v,i)=>sum+v*((i===0||i===samples-1)?.5:1),0)*dy;
  return {values,integral};
 }
-// Convert the smooth probability density to expected bin counts so the
-// prediction, observations and error bars use a common count scale.
+// Keep the smooth prediction fixed at the full available width. Observed hits
+// and their error bars use their own scale, so accumulating hits never makes
+// the predicted histogram shrink or move.
 export function histogramLayout(record,profile,screenHeight,width){
  const total=record.reduce((a,b)=>a+b,0),binHeight=screenHeight/record.length;
  const curve=profile.values.map(v=>v/Math.max(1e-30,profile.integral));
  const available=Math.max(0,width-8);
  const predictionMaximum=Math.max(1e-30,...curve);
- // A probability density and a count histogram require the conversion N*dy.
- // One shared maximum preserves their relative amplitudes and includes error bars.
- const referenceTotal=Math.max(1,total),countsPerDensity=referenceTotal*binHeight;
- const expectedCurve=curve.map(value=>value*countsPerDensity);
- const maximum=Math.max(1e-30,predictionMaximum*countsPerDensity,...record.map(n=>n+Math.sqrt(n)));
- // A single hit has a one-count error bar, which can otherwise compress the
- // smooth prediction almost to the axis. Keep only the prediction readable at
- // very low statistics; the observed counts and their errors retain the common
- // count scale. The floor becomes inactive as soon as that scale is larger.
- const sharedPredictionPeak=predictionMaximum*countsPerDensity/maximum;
- const predictionDisplayBoost=sharedPredictionPeak>0?Math.max(1,.35/sharedPredictionPeak):1;
- return {curve,predictionScale:available*countsPerDensity/maximum*predictionDisplayBoost,hitScale:available/maximum,total,binHeight,
-  probabilityHeights:expectedCurve.map(value=>value/maximum*predictionDisplayBoost),hitHeights:record.map(n=>n/maximum),hitErrors:record.map(n=>Math.sqrt(n)/maximum)};
+ const observedMaximum=Math.max(1,...record.map(n=>n+Math.sqrt(n)));
+ return {curve,predictionScale:available/predictionMaximum,hitScale:available/observedMaximum,total,binHeight,
+  probabilityHeights:curve.map(value=>value/predictionMaximum),hitHeights:record.map(n=>n/observedMaximum),hitErrors:record.map(n=>Math.sqrt(n)/observedMaximum)};
 }
 // Display mapping for the optional height graph. Signed quantities use 1/2 as
 // zero so the WebGL surface remains above its plotting plane.
@@ -73,3 +64,4 @@ export function surfaceZeroLevel(mode,height=.72){
 export function surfacePhaseRate(physicalRate,cap=2){
  return Math.min(Math.max(0,physicalRate),cap);
 }
+

@@ -15,20 +15,22 @@ for(const [x,t,s] of [[-2,1,.8],[.3,4,1.2],[3,2,2]]){
 const profile={values:[0,1,2,1,0],integral:4};
 const zero=histogramLayout([0,0,0,0],profile,4,108);
 assert.equal(zero.total,0);assert.equal(Math.max(...zero.curve),.5);
+assert.equal(Math.max(...zero.probabilityHeights),1,'prediction fills the available histogram width before any hits');
 const firstHit=histogramLayout([1,0,0,0],profile,4,108);
-assert(Math.abs(Math.max(...firstHit.probabilityHeights)-.35)<1e-12,'first hit keeps prediction visibly above the low-statistics floor');
-assert(Math.max(...firstHit.hitHeights.map((height,i)=>height+firstHit.hitErrors[i]))<=1+1e-12,'first-hit error bar stays on the common count scale');
+assert.equal(Math.max(...firstHit.probabilityHeights),1,'first hit does not rescale the prediction');
+assert(Math.abs(Math.max(...firstHit.hitHeights.map((height,i)=>height+firstHit.hitErrors[i]))-1)<1e-12,'first-hit marker and error bar fit the available width');
 const populated=histogramLayout([1,4,1,0],profile,4,108);
 assert.equal(populated.total,6);assert.deepEqual(populated.curve,zero.curve,'prediction is independent of hit count');
-assert(Math.abs(populated.predictionScale/populated.hitScale-6)<1e-12,'density converted to expected counts using N times bin width');
-assert(Math.abs(6*populated.hitScale-100)<1e-12,'shared range includes largest upper error bar');
+assert.equal(populated.predictionScale,zero.predictionScale,'prediction display scale is independent of hit count');
+assert(Math.abs(Math.max(...populated.hitHeights.map((height,i)=>height+populated.hitErrors[i]))-1)<1e-12,'largest observed marker and error bar fill the available width');
 for(const total of [8,800,800000]){
  const counts=[total/8,3*total/8,3*total/8,total/8],layout=histogramLayout(counts,profile,4,108);
+ const peakDensity=Math.max(...counts.map((_,i)=>(layout.probabilityHeights[i]+layout.probabilityHeights[i+1])/2));
+ const peakHit=Math.max(...layout.hitHeights);
  for(let i=0;i<counts.length;i++){
-  const densityAtBinCenter=(layout.curve[i]+layout.curve[i+1])/2;
-  assert(Math.abs(densityAtBinCenter*layout.predictionScale-counts[i]*layout.hitScale)<1e-10,'matching distribution aligns at every bin center, at low and high counts');
-  assert(Math.abs((layout.probabilityHeights[i]+layout.probabilityHeights[i+1])/2-layout.hitHeights[i])<1e-12,'3D uses the same relative count scale');
-  assert(layout.hitHeights[i]+layout.hitErrors[i]<=1+1e-12,'error bars fit shared range');
+  const densityAtBinCenter=(layout.probabilityHeights[i]+layout.probabilityHeights[i+1])/2;
+  assert(Math.abs(densityAtBinCenter/peakDensity-layout.hitHeights[i]/peakHit)<1e-12,'matching distributions retain the same normalized shape');
+  assert(layout.hitHeights[i]+layout.hitErrors[i]<=1+1e-12,'observed error bars fit their display range');
  }
 }
 assert(zero.probabilityHeights.every(Number.isFinite),'zero-hit preview remains visible and finite');
@@ -51,3 +53,4 @@ assert.equal(surfacePhaseRate(1.25),1.25);
 assert.equal(surfacePhaseRate(18),2);
 assert.equal(surfacePhaseRate(-1),0);
 console.log(JSON.stringify({normalization:'pass',spreading:'pass',gradients:'pass',histogramScale:'pass',surfaceHeights:'pass'}));
+

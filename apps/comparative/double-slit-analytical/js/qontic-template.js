@@ -1,6 +1,6 @@
 import { mountExpandedResize } from '../../../../shared/qontic-expanded-resize.js?v=1';
 import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
-import { mountPacketEngine } from './packet-engine.js?cache=20261101';
+import { mountPacketEngine } from './packet-engine.js?cache=histogram-fit';
 import { mountMWBranching } from './mw-branching.js?cache=20261101';
 import { APP_RELEASE } from './release.js?cache=20261101';
 import { mountCoordinateTools, mountDistanceScale, mountValueRange } from '../../../../shared/qontic-overlays.js?v=5';
