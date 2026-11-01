@@ -1,14 +1,21 @@
 // Optional shared presentation tools. Models supply canvas layers and playback hooks.
-export function mountQonticMedia({stage, controls, getCanvases, beginRecording = () => {}, endRecording = () => {}, filename = 'qontic-simulation', getShareUrl = () => location.href, onRecord = null, headerTools = false, labelNode = null, scaleControl = null, rangeControl = null, coordinateControl = null}) {
+export function mountQonticMedia({stage, controls, getCanvases, beginRecording = () => {}, endRecording = () => {}, filename = 'qontic-simulation', getShareUrl = () => location.href, onRecord = null, headerTools = true, labelNode = null, scaleControl = null, rangeControl = null, coordinateControl = null, dynamicCanvases = false}) {
   if (!document.querySelector('link[data-qontic-media]')) {
     const link = document.createElement('link');
-    link.rel = 'stylesheet'; link.href = new URL('./qontic-media.css?v=3.1', import.meta.url);
+    link.rel = 'stylesheet'; link.href = new URL('./qontic-media.css?v=3.8', import.meta.url);
     link.dataset.qonticMedia = ''; document.head.append(link);
   }
   const toolbar = document.createElement('div'); toolbar.className = 'qontic-media-toolbar';
   toolbar.setAttribute('role','group'); toolbar.setAttribute('aria-label','Simulation tools');
   if (labelNode) {
     labelNode.classList.add('qontic-stage-label');
+    const syncCompactLabel = () => {
+      const label = labelNode.textContent.trim();
+      labelNode.dataset.compactLabel = label.split(/[\s-]+/).filter(Boolean).map(word => word[0]).join('').toUpperCase() || label;
+      labelNode.title = label;
+    };
+    syncCompactLabel();
+    new MutationObserver(syncCompactLabel).observe(labelNode, {childList:true,subtree:true,characterData:true});
     toolbar.append(labelNode);
   }
   const icons = {
@@ -79,8 +86,16 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
       setTimeout(()=>setAction(share,'share','Share link','Copy a link to this simulation'),1800);
     }catch(error){notice.textContent='Could not copy the link. Please use the address bar.';}
   });
-  // Opt-in header placement keeps existing media consumers unchanged.
+  // Header placement is the template default; pass headerTools:false for a
+  // model whose controls must remain attached to the simulation stage.
   const titleRow = headerTools && stage.closest('.shell')?.querySelector('.qontic-title-row');
+  let labelHome, mediaMenuButton, headerToolGroup;
+  const closeMediaMenu = ({restoreFocus = false} = {}) => {
+    if (!headerToolGroup?.classList.contains('qontic-media-menu-open')) return;
+    headerToolGroup.classList.remove('qontic-media-menu-open');
+    mediaMenuButton?.setAttribute('aria-expanded','false');
+    if (restoreFocus) mediaMenuButton?.focus();
+  };
   if (titleRow) {
     titleRow.classList.add('qontic-title-with-tools');
     let tools = titleRow.querySelector('.qontic-header-tools');
@@ -90,7 +105,50 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
       titleRow.append(tools);
       if (tabs) tools.append(tabs);
     }
-    tools.append(toolbar);
+    headerToolGroup = tools;
+    const endControl = tools.querySelector('.qontic-header-end-control');
+    if (labelNode?.parentElement === toolbar) {
+      labelHome = document.createComment('Simulation state label position');
+      if (endControl) {
+        tools.insertBefore(labelHome, endControl);
+        tools.insertBefore(labelNode, endControl);
+      } else {
+        tools.append(labelHome, labelNode);
+      }
+    }
+    toolbar.id = document.getElementById('qontic-media-tools') ? `qontic-media-tools-${Date.now()}` : 'qontic-media-tools';
+    mediaMenuButton = document.createElement('button');
+    mediaMenuButton.type = 'button';
+    mediaMenuButton.className = 'qontic-header-icon-button qontic-media-menu-toggle';
+    mediaMenuButton.setAttribute('aria-label','Simulation tools');
+    mediaMenuButton.setAttribute('aria-controls',toolbar.id);
+    mediaMenuButton.setAttribute('aria-expanded','false');
+    mediaMenuButton.dataset.tooltip = 'Simulation tools';
+    mediaMenuButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>';
+    if (endControl) {
+      tools.insertBefore(toolbar, endControl);
+      tools.insertBefore(mediaMenuButton, endControl);
+    } else tools.append(toolbar,mediaMenuButton);
+    mediaMenuButton.addEventListener('click',event=>{
+      event.stopPropagation();
+      const open=tools.classList.toggle('qontic-media-menu-open');
+      mediaMenuButton.setAttribute('aria-expanded',String(open));
+      if(open) requestAnimationFrame(()=>toolbar.querySelector('button:not(:disabled)')?.focus());
+    });
+    toolbar.addEventListener('click',event=>{
+      if(event.target.closest('button')) closeMediaMenu();
+    });
+    document.addEventListener('pointerdown',event=>{
+      if(!tools.contains(event.target)) closeMediaMenu();
+    });
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape'&&tools.classList.contains('qontic-media-menu-open')){
+        event.preventDefault();event.stopPropagation();closeMediaMenu({restoreFocus:true});
+      }
+    },true);
+    const phoneMedia=matchMedia('(max-width: 560px)');
+    const closeWideMenu=event=>{if(!event.matches)closeMediaMenu();};
+    phoneMedia.addEventListener?.('change',closeWideMenu);
   } else stage.prepend(toolbar);
   const toolbarHome = document.createComment('Simulation tools position');
   toolbar.before(toolbarHome);
@@ -100,6 +158,7 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
   const setExpanded = value => {
     if (value === expanded.open) return;
     if (value) {
+      closeMediaMenu();
       home = document.createComment('Simulation position'); stage.replaceWith(home);
       if (controls) {
         controlHome = document.createComment('Playback position'); controls.replaceWith(controlHome);
@@ -107,11 +166,17 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
         controls.setAttribute('show-tabs','false'); controls.setAttribute('show-interpretation','false');
         expanded.append(controls);
       }
-      if (titleRow) stage.prepend(toolbar);
+      if (titleRow) {
+        if (labelHome && labelNode) toolbar.prepend(labelNode);
+        stage.prepend(toolbar);
+      }
       expanded.append(stage); expanded.showModal();
     } else {
       expanded.close(); home.replaceWith(stage);
-      if (titleRow) toolbarHome.after(toolbar);
+      if (titleRow) {
+        toolbarHome.after(toolbar);
+        if (labelHome && labelNode) labelHome.after(labelNode);
+      }
       if (controls) {
         controlHome.replaceWith(controls);
         for (const [name, value] of attributes) value === null ? controls.removeAttribute(name) : controls.setAttribute(name,value);
@@ -155,7 +220,8 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
     if (recording) { stop(); return; }
     if (!duration.reportValidity()) return;
     try {
-      const layers = getCanvases().filter(canvas => {const r=canvas.getBoundingClientRect();return r.width>0 && r.height>0;});
+      const visibleCanvases = () => getCanvases().filter(canvas => {const r=canvas.getBoundingClientRect();return r.width>0 && r.height>0;});
+      const layers = visibleCanvases();
       if (!layers.length) throw new Error('Open the simulation view before recording.');
       const bounds = layers.map(c => c.getBoundingClientRect());
       const left = Math.min(...bounds.map(r=>r.left)), top = Math.min(...bounds.map(r=>r.top));
@@ -166,7 +232,8 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
       const draw = () => {
         ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-primary').trim() || '#0f172a';
         ctx.fillRect(0,0,output.width,output.height);
-        layers.forEach((canvas,i) => { const r=bounds[i];ctx.drawImage(canvas,(r.left-left)*output.width/width,(r.top-top)*output.height/height,r.width*output.width/width,r.height*output.height/height); });
+        const frameLayers = dynamicCanvases ? visibleCanvases() : layers;
+        frameLayers.forEach((canvas,i) => { const r=dynamicCanvases?canvas.getBoundingClientRect():bounds[i];ctx.drawImage(canvas,(r.left-left)*output.width/width,(r.top-top)*output.height/height,r.width*output.width/width,r.height*output.height/height); });
       };
       draw(); stream = output.captureStream(0); const captureTrack = stream.getVideoTracks()[0];
       const mimeType = ['video/webm;codecs=vp8','video/webm;codecs=vp9','video/webm','video/mp4'].find(type=>MediaRecorder.isTypeSupported(type));
@@ -198,3 +265,4 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
   window.addEventListener('pagehide',()=>{stop();if(url)URL.revokeObjectURL(url);});
   return {setExpanded, stopRecording:stop, syncScale, syncRange, syncCoordinates};
 }
+
