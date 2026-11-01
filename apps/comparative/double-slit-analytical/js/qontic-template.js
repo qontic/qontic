@@ -4,7 +4,7 @@ import { mountPacketEngine } from './packet-engine.js?cache=histogram-normalized
 import { mountMWBranching } from './mw-branching.js?cache=20261101';
 import { APP_RELEASE } from './release.js?cache=20261101';
 import { mountCoordinateTools, mountDistanceScale, mountValueRange } from '../../../../shared/qontic-overlays.js?v=5';
-import { mountQonticMedia } from '../../../../shared/qontic-media.js?cache=mw-recording';
+import { mountQonticMedia } from '../../../../shared/qontic-media.js?cache=mw-recording-clean';
 import { enableResizableSidebar } from '../../../../shared/qontic-resize.js?v=1';
 import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=3.7';
 import '../../../../shared/qontic-controls.js?v=3.1';
@@ -389,11 +389,19 @@ $(function () {
     coordinateControl:coordinates,
     scaleControl:{getVisible:()=>elementOpacity('plot_scales')>0,setVisible:shown=>{if(!shown)lastScaleOpacity=elementOpacity('plot_scales')||1;const slider=document.getElementById('plot_scales-opacity');slider.value=shown?lastScaleOpacity*100:0;slider.dispatchEvent(new Event('input',{bubbles:true}));slider.dispatchEvent(new Event('change',{bubbles:true}));}},
     getShareUrl: () => location.href.split('#')[0] + buildUrlHash(),
-    getCanvases: () => [...container.querySelectorAll('canvas')].sort((a,b) => {
+    getCanvases: () => {
+      const canvases=[...container.querySelectorAll('canvas')];
+      const visibleBranches=canvases.filter(canvas=>{
+        if(!canvas.closest('.mw-branch-overlay'))return false;
+        const rect=canvas.getBoundingClientRect(),style=getComputedStyle(canvas);
+        return rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&style.opacity!=='0';
+      });
+      return (visibleBranches.length?visibleBranches:canvases.filter(canvas=>!canvas.closest('.mw-branch-overlay'))).sort((a,b) => {
       const aBranch=!!a.closest('.mw-branch-overlay'),bBranch=!!b.closest('.mw-branch-overlay');
       if(aBranch!==bBranch)return aBranch?1:-1;
       return (Number(getComputedStyle(a).zIndex) || 0) - (Number(getComputedStyle(b).zIndex) || 0);
-    }),
+      });
+    },
     beginRecording: () => {
       const wasRunning = isAnimating;
       if (!wasRunning) $('#startButton').trigger('click');

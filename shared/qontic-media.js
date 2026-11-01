@@ -220,7 +220,7 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
     if (recording) { stop(); return; }
     if (!duration.reportValidity()) return;
     try {
-      const visibleCanvases = () => getCanvases().filter(canvas => {const r=canvas.getBoundingClientRect();return r.width>0 && r.height>0;});
+      const visibleCanvases = () => getCanvases().filter(canvas => {const r=canvas.getBoundingClientRect(),style=getComputedStyle(canvas);return r.width>0 && r.height>0 && style.display!=='none' && style.visibility!=='hidden' && style.opacity!=='0';});
       const layers = visibleCanvases();
       if (!layers.length) throw new Error('Open the simulation view before recording.');
       const bounds = layers.map(c => c.getBoundingClientRect());
