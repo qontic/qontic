@@ -15,6 +15,9 @@ for(const [x,t,s] of [[-2,1,.8],[.3,4,1.2],[3,2,2]]){
 const profile={values:[0,1,2,1,0],integral:4};
 const zero=histogramLayout([0,0,0,0],profile,4,108);
 assert.equal(zero.total,0);assert.equal(Math.max(...zero.curve),.5);
+const firstHit=histogramLayout([1,0,0,0],profile,4,108);
+assert(Math.abs(Math.max(...firstHit.probabilityHeights)-.35)<1e-12,'first hit keeps prediction visibly above the low-statistics floor');
+assert(Math.max(...firstHit.hitHeights.map((height,i)=>height+firstHit.hitErrors[i]))<=1+1e-12,'first-hit error bar stays on the common count scale');
 const populated=histogramLayout([1,4,1,0],profile,4,108);
 assert.equal(populated.total,6);assert.deepEqual(populated.curve,zero.curve,'prediction is independent of hit count');
 assert(Math.abs(populated.predictionScale/populated.hitScale-6)<1e-12,'density converted to expected counts using N times bin width');

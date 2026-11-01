@@ -45,8 +45,14 @@ export function histogramLayout(record,profile,screenHeight,width){
  const referenceTotal=Math.max(1,total),countsPerDensity=referenceTotal*binHeight;
  const expectedCurve=curve.map(value=>value*countsPerDensity);
  const maximum=Math.max(1e-30,predictionMaximum*countsPerDensity,...record.map(n=>n+Math.sqrt(n)));
- return {curve,predictionScale:available*countsPerDensity/maximum,hitScale:available/maximum,total,binHeight,
-  probabilityHeights:expectedCurve.map(value=>value/maximum),hitHeights:record.map(n=>n/maximum),hitErrors:record.map(n=>Math.sqrt(n)/maximum)};
+ // A single hit has a one-count error bar, which can otherwise compress the
+ // smooth prediction almost to the axis. Keep only the prediction readable at
+ // very low statistics; the observed counts and their errors retain the common
+ // count scale. The floor becomes inactive as soon as that scale is larger.
+ const sharedPredictionPeak=predictionMaximum*countsPerDensity/maximum;
+ const predictionDisplayBoost=sharedPredictionPeak>0?Math.max(1,.35/sharedPredictionPeak):1;
+ return {curve,predictionScale:available*countsPerDensity/maximum*predictionDisplayBoost,hitScale:available/maximum,total,binHeight,
+  probabilityHeights:expectedCurve.map(value=>value/maximum*predictionDisplayBoost),hitHeights:record.map(n=>n/maximum),hitErrors:record.map(n=>Math.sqrt(n)/maximum)};
 }
 // Display mapping for the optional height graph. Signed quantities use 1/2 as
 // zero so the WebGL surface remains above its plotting plane.
