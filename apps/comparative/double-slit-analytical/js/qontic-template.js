@@ -1,8 +1,8 @@
 import { mountExpandedResize } from '../../../../shared/qontic-expanded-resize.js?v=1';
 import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
-import { mountPacketEngine } from './packet-engine.js?v=2.128';
-import { mountMWBranching } from './mw-branching.js?v=2.128';
-import { APP_RELEASE } from './release.js?v=2.128';
+import { mountPacketEngine } from './packet-engine.js?cache=20261101';
+import { mountMWBranching } from './mw-branching.js?cache=20261101';
+import { APP_RELEASE } from './release.js?cache=20261101';
 import { mountCoordinateTools, mountDistanceScale, mountValueRange } from '../../../../shared/qontic-overlays.js?v=5';
 import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=3.8';
 import { enableResizableSidebar } from '../../../../shared/qontic-resize.js?v=1';

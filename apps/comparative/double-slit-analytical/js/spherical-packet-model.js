@@ -2,7 +2,7 @@
 // Exact outgoing Helmholtz kernels and Schrodinger frequency evolution.
 // A prescribed thin aperture boundary is an approximation to wall scattering.
 // The spectral integrals are quadrature, not time stepping of the wave PDE.
-import {aperture} from './source-packet-model.js?v=2.128';
+import {aperture} from './source-packet-model.js?cache=20261101';
 
 export function hankel0(z) {
   if (!(z>0)) throw new RangeError('The ideal point source is singular at r=0');
