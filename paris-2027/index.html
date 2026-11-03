@@ -98,6 +98,7 @@
     #overview .glance { flex:1; }
     .glance-body { display:flex; flex-direction:column; justify-content:center; }
     .people-block { max-width:880px; }
+    .consent { max-width:62ch; margin:0 0 .8rem; color:var(--muted); font-size:.92rem; }
     .people-block + .people-block { margin-top:1.4rem; }
     #committee .committee, #advisory .committee { columns:3; margin-top:.6rem; }
     .participant-list { columns:3; margin-top:.6rem; }
@@ -160,6 +161,7 @@
       <a href="#program" id="tab-program" role="tab" aria-controls="program" aria-selected="false">Program</a>
       <a href="#venue" id="tab-venue" role="tab" aria-controls="venue" aria-selected="false">Venue</a>
       <a href="#people" id="tab-people" role="tab" aria-controls="people" aria-selected="false">Committees</a>
+      <a href="#participants" id="tab-participants" role="tab" aria-controls="participants" aria-selected="false">Participants</a>
     </nav>
     <div id="overview" class="tab-panel" role="tabpanel" aria-labelledby="tab-overview">
     <div class="content-grid">
@@ -261,6 +263,26 @@
       </section>
 
     </div>
+    <div id="participants" class="tab-panel" role="tabpanel" aria-labelledby="tab-participants">
+      <section class="people-block" aria-labelledby="participants-title">
+        <h2 id="participants-title">Participants</h2>
+        <p class="consent">Registered participants who have agreed to have their names listed on this page. The list grows as registrations come in; participants who preferred not to be listed are not shown.</p>
+        <ul class="committee" id="participant-list">
+          <li><strong>Maria Bondani</strong><span class="affiliation">CNR – Istituto di Fotonica e Nanotecnologie</span></li>
+          <li><strong>Kim Krijtenburg-Lewerissa</strong><span class="affiliation">Utrecht University, Freudenthal Institute</span></li>
+          <li><strong>Anssi Kuha</strong><span class="affiliation">Metropolia University of Applied Sciences</span></li>
+          <li><strong>Avraham Merzel</strong><span class="affiliation">Hebrew University of Jerusalem</span></li>
+          <li><strong>Travis Norsen</strong><span class="affiliation">Smith College</span></li>
+          <li><strong>Xavier Oriols</strong><span class="affiliation">Universitat Autònoma de Barcelona</span></li>
+          <li><strong>Gina Passante</strong><span class="affiliation">California State University, Fullerton</span></li>
+          <li><strong>Rachel Scherr</strong><span class="affiliation">University of Washington Bothell</span></li>
+          <li><strong>Jer Steeger</strong><span class="affiliation">University of Bristol</span></li>
+          <li><strong>A. Shadi Tahvildar-Zadeh</strong><span class="affiliation">Rutgers University</span></li>
+          <li><strong>Pablo Yepes</strong><span class="affiliation">Rice University</span></li>
+        </ul>
+        <p class="small" id="participant-count">11 listed · updated November 3, 2026</p>
+      </section>
+    </div>
   </main>
   <footer><div class="shell">Organized by <a href="https://qonticlab.rice.edu/">Q-Ontic Lab</a> at Rice University, with support from Rice Global Paris.</div></footer>
   <script>
@@ -288,6 +310,27 @@
       });
       window.addEventListener('hashchange', function () { show(location.hash.slice(1)); });
       show(location.hash.slice(1) || 'overview');
+    })();
+  </script>
+  <script>
+    (function () {
+      var list = document.getElementById('participant-list'), count = document.getElementById('participant-count');
+      if (!list || !window.fetch) return;
+      fetch('participants.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+        if (!d || !d.participants || !d.participants.length) return;
+        var rows = d.participants.slice().sort(function (a, b) {
+          var ka = (a.name || '').split(' ').pop(), kb = (b.name || '').split(' ').pop();
+          return ka.localeCompare(kb) || (a.name || '').localeCompare(b.name || '');
+        });
+        list.textContent = '';
+        rows.forEach(function (p) {
+          var li = document.createElement('li'), n = document.createElement('strong'), a = document.createElement('span');
+          n.textContent = p.name || ''; a.className = 'affiliation'; a.textContent = p.affiliation || '';
+          li.appendChild(n); li.appendChild(a); list.appendChild(li);
+        });
+        var when = d.updated ? new Date(d.updated + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+        count.textContent = rows.length + ' listed' + (when ? ' · updated ' + when : '');
+      }).catch(function () {});
     })();
   </script>
 </body>

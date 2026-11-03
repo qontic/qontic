@@ -1,0 +1,50 @@
+{
+  "updated": "2026-11-03",
+  "note": "Registered participants who agreed to be listed. Generated from the registration form responses; do not edit by hand.",
+  "participants": [
+    {
+      "name": "Maria Bondani",
+      "affiliation": "CNR – Istituto di Fotonica e Nanotecnologie"
+    },
+    {
+      "name": "Kim Krijtenburg-Lewerissa",
+      "affiliation": "Utrecht University, Freudenthal Institute"
+    },
+    {
+      "name": "Anssi Kuha",
+      "affiliation": "Metropolia University of Applied Sciences"
+    },
+    {
+      "name": "Avraham Merzel",
+      "affiliation": "Hebrew University of Jerusalem"
+    },
+    {
+      "name": "Travis Norsen",
+      "affiliation": "Smith College"
+    },
+    {
+      "name": "Xavier Oriols",
+      "affiliation": "Universitat Autònoma de Barcelona"
+    },
+    {
+      "name": "Gina Passante",
+      "affiliation": "California State University, Fullerton"
+    },
+    {
+      "name": "Rachel Scherr",
+      "affiliation": "University of Washington Bothell"
+    },
+    {
+      "name": "Jer Steeger",
+      "affiliation": "University of Bristol"
+    },
+    {
+      "name": "A. Shadi Tahvildar-Zadeh",
+      "affiliation": "Rutgers University"
+    },
+    {
+      "name": "Pablo Yepes",
+      "affiliation": "Rice University"
+    }
+  ]
+}
