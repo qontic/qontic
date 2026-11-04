@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Teaching Quantum Mechanics as Physics | Paris 2027</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
   <meta name="description" content="A meeting of up to 35 participants at the Rice Global Paris Center, July 21–23, 2027, bringing proponents of different views of quantum mechanics together with physics educators in the centenary year of the 1927 Solvay Conference." />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Teaching Quantum Mechanics as Physics · Paris 2027" />
@@ -19,7 +20,8 @@
     html { scroll-behavior:smooth; }
     body { margin:0; background:var(--paper); color:var(--ink); font:15.5px/1.48 system-ui,-apple-system,"Segoe UI",sans-serif; }
     a { color:#075f98; }
-    a:focus-visible { outline:3px solid var(--gold); outline-offset:4px; }
+    a:focus-visible { outline:3px solid var(--navy); outline-offset:3px; }
+    .hero a:focus-visible, .heritage a:focus-visible, footer a:focus-visible { outline-color:var(--gold); }
     .shell { width:min(1160px,calc(100% - 2.5rem)); margin:auto; }
     .hero { color:#fff; background:radial-gradient(circle at 75% 12%,#28678b 0,transparent 38%),linear-gradient(125deg,#082641,#10446e 72%,#0a3658); padding:1.55rem 0 1.45rem; }
     .hero-layout { display:grid; grid-template-columns:minmax(0,1fr) 130px; gap:1.5rem; align-items:center; }
@@ -69,7 +71,7 @@
     .glance { display:grid; grid-template-columns:165px minmax(0,1fr); gap:1.1rem; padding:0 1rem 0 0; }
     .glance-photo { position:relative; margin:0; overflow:hidden; background:#2c5f93; }
     .glance-photo img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 30%; }
-    .glance-photo figcaption { position:absolute; left:0; right:0; bottom:0; padding:1.2rem .35rem .25rem; background:linear-gradient(transparent,rgba(0,0,0,.6)); color:#eef2f5; font-size:.56rem; line-height:1.25; }
+    .glance-photo figcaption { position:absolute; left:0; right:0; bottom:0; padding:1.2rem .35rem .25rem; background:linear-gradient(transparent,rgba(0,0,0,.6)); color:#eef2f5; font-size:.7rem; line-height:1.25; }
     .glance-photo figcaption a { color:inherit; }
     .glance-body { padding:.8rem 0 .9rem; }
     .glance-body h2 { margin-top:0 !important; font-size:1.5rem !important; }
@@ -102,7 +104,7 @@
     .acc-views button { padding:.4rem .9rem; border:0; background:#fff; color:var(--muted); font:inherit; font-size:.88rem; font-weight:700; cursor:pointer; }
     .acc-views button + button { border-left:1px solid var(--line); }
     .acc-views button[aria-pressed="true"] { background:var(--navy); color:#fff; }
-    .acc-views button:focus-visible { outline:3px solid var(--gold); outline-offset:-3px; }
+    .acc-views button:focus-visible { outline:3px solid var(--navy); outline-offset:2px; }
     .hotel-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem; margin:.4rem 0 0; padding:0; list-style:none; }
     .hotel-cards li { background:#fff; border:1px solid var(--line); display:flex; flex-direction:column; min-width:0; }
     .hotel-cards .ph { aspect-ratio:3/2; max-width:100%; background:linear-gradient(150deg,#0d3b62,#176ca6); display:flex; align-items:center; justify-content:center; overflow:hidden; }
@@ -152,8 +154,8 @@
       .participant-list { columns:2; }
       .timeline li { padding-right:.35rem; font-size:.76rem; }
       .venue-hero img { height:180px; }
-      .tabs { overflow-x:auto; scrollbar-width:none; }
-      .tabs a { padding:.5rem .55rem; white-space:nowrap; font-size:.9rem; }
+      .tabs { flex-wrap:wrap; column-gap:.1rem; }
+      .tabs a { padding:.45rem .5rem; white-space:nowrap; font-size:.9rem; }
       .invitation { display:block; }
       .invitation h2 { margin-bottom:.2rem; }
     }
@@ -169,7 +171,7 @@
 <body>
   <header>
     <div class="hero"><div class="shell hero-layout"><div>
-      <p class="eyebrow">Rice Global Paris Center · July 21–23, 2027</p>
+      <p class="eyebrow">Rice Global Paris Center · July&nbsp;21–23, 2027</p>
       <h1>Teaching Quantum Mechanics as Physics</h1>
       <p class="question">What do students gain from exploring different accounts of the quantum world?</p>
       <p class="hero-context">A meeting in the centenary year of the 1927 Solvay Conference.</p>
@@ -211,7 +213,7 @@
       <div class="heritage-text">
       <p class="kicker">1927 · 2027</p>
       <h2 id="heritage-title">A century after Solvay</h2>
-      <p>In October 1927 the fifth Solvay Conference in Brussels set alternative accounts of the new quantum theory side by side. Louis de Broglie, who had introduced matter waves in his Paris thesis, presented his pilot-wave theory; Born and Heisenberg presented quantum mechanics; Schrödinger, wave mechanics. The debate did not end there.</p>
+      <p>In October 1927 the fifth Solvay Conference in Brussels set alternative accounts of the new quantum theory side by side. Louis de Broglie, who had introduced matter waves in his Paris thesis, presented his pilot-wave theory; Born and Heisenberg presented quantum mechanics; Schrödinger, wave mechanics. It was there too that Bohr and Einstein began their decades-long exchange over what the theory means. The debate did not end there.</p>
       </div>
       <div class="heritage-side">
       <ol class="timeline">
@@ -239,16 +241,16 @@
         <div>
           <figure class="venue-photos">
             <div class="gallery">
-              <img class="wide" src="rgp-facade.jpg" alt="Courtyard façade of the Rice Global Paris Center" loading="lazy" />
-              <img src="rgp-garden.jpg" alt="Conference participants in the center's garden courtyard" loading="lazy" />
-              <img src="rgp-entrance.jpg" alt="Entrance to the Rice Global Paris Center" loading="lazy" style="object-position:center 60%" />
+              <img class="wide" src="rgp-facade.jpg" alt="Courtyard façade of the Rice Global Paris Center" width="1080" height="720" loading="lazy" />
+              <img src="rgp-garden.jpg" alt="Conference participants in the center's garden courtyard" width="1000" height="668" loading="lazy" />
+              <img src="rgp-entrance.jpg" alt="Entrance to the Rice Global Paris Center" width="750" height="1001" loading="lazy" style="object-position:center 60%" />
             </div>
             <figcaption>The courtyard, the garden, and the entrance to the center.</figcaption>
           </figure>
         </div>
         <div>
           <h2 style="margin-top:0">Rice Global Paris Center</h2>
-          <p>The meeting takes place at Rice University's center in the Marais, one of the oldest neighborhoods in Paris. The building dates from 1540 and was built as a private residence in the reign of Francis I. It is set back from the street around a private courtyard and garden, and now hosts research meetings, conferences, and student programs.</p>
+          <p>The meeting takes place at Rice University's center in the Marais, one of the oldest neighborhoods in Paris. The building is a 16th-century hôtel particulier, the former Hôtel Raoul de La Faye, listed as a historic monument since 1966. It is set back from the street around a private courtyard and garden, and now hosts research meetings, conferences, and student programs.</p>
           <p>The meeting room seats 35, which sets the size of the meeting. The center is air-conditioned.</p>
           <aside class="side-card" aria-label="Venue address" style="margin-top:1rem">
             <p style="margin:0"><a href="https://www.google.com/maps/search/?api=1&amp;query=5+rue+Sainte-Croix+de+la+Bretonnerie+75004+Paris" target="_blank" rel="noopener" title="Open in Google Maps">5 rue Sainte-Croix de la Bretonnerie<br />75004 Paris, France</a></p>
@@ -257,7 +259,8 @@
           <ul class="travel">
             <li><strong>Metro:</strong> Hôtel de Ville (lines 1 and 11) or Saint-Paul (line 1), a few minutes' walk.</li>
             <li><strong>From Charles de Gaulle airport:</strong> RER B to Châtelet–Les Halles, then metro line 1 or a short walk; about 70 minutes.</li>
-            <li><strong>From Orly airport:</strong> metro line 14 to Châtelet, then metro line 1 or a short walk.</li>
+            <li><strong>From Orly airport:</strong> metro line 14 to Châtelet, about 25 minutes, then metro line 1 or a short walk.</li>
+            <li><strong>From Gare du Nord (Eurostar):</strong> RER B or D to Châtelet–Les Halles, one stop, then metro line 1 or a short walk.</li>
             <li><strong>From Gare de Lyon:</strong> metro line 1, about 15 minutes.</li>
           </ul>
           <p class="small">The streets around the center are narrow; public transport or walking is recommended.</p>
@@ -267,7 +270,7 @@
     <div id="accommodation" class="tab-panel" role="tabpanel" aria-labelledby="tab-accommodation">
       <section class="people-block" aria-labelledby="accommodation-title">
         <h2 id="accommodation-title">Accommodation</h2>
-        <p>Participants book their own lodging; there is no group rate. July is high season in Paris, so we recommend booking early, with a refundable rate. Not all small hotels in the Marais have air conditioning, so check before booking. The hotels below are air-conditioned and come from a list prepared by Rice Global Paris; times are to the center.</p>
+        <p>Participants book their own lodging; there is no group rate. July is high season in Paris, so we recommend booking early, with a refundable rate. Not all small hotels in the Marais have air conditioning, so check before booking. The hotels in the first two lists are air-conditioned and come from a list prepared by Rice Global Paris; times are to the center.</p>
         <p class="small">Price guide per night: $ under $250 · $$ $250–400 · $$$ over $400. Indicative only, based on recent typical rates on Kayak; July is high season and usually costs more.</p>
         <div class="acc-views" role="group" aria-label="Show hotels as" hidden>
           <button type="button" data-view="list" aria-pressed="true">List</button>
@@ -277,14 +280,13 @@
         <div id="acc-list">
         <h3 style="margin-top:1rem">Within a 10-minute walk</h3>
         <ul class="travel">
-            <li><strong><a href="https://www.vieuxmarais.com/" target="_blank" rel="noopener">Hotel du Vieux Marais</a></strong> · 3★ · 2 min walk · $$</li>
+            <li><strong><a href="https://www.vieuxmarais.com/" target="_blank" rel="noopener">Hôtel du Vieux Marais</a></strong> · 3★ · 2 min walk · $$</li>
             <li><strong><a href="https://www.hoteldenice.com/en/" target="_blank" rel="noopener">Hôtel de Nice</a></strong> · 3★ · 3 min walk · $$</li>
             <li><strong><a href="https://www.hotel-9confidentiel-paris.fr" target="_blank" rel="noopener">Hôtel 9 Confidentiel</a></strong> · 4★ · 4 min walk · $$$</li>
             <li><strong><a href="https://www.beaubourg-paris-hotel.com/en/" target="_blank" rel="noopener">Hôtel Beaubourg</a></strong> · 3★ · 5 min walk · $</li>
             <li><strong><a href="https://bourgtibourg.com/en/" target="_blank" rel="noopener">Hôtel Bourg Tibourg</a></strong> · 4★ · 5 min walk · $$$</li>
             <li><strong><a href="https://www.carondebeaumarchais.com/en/" target="_blank" rel="noopener">Hôtel Caron de Beaumarchais</a></strong> · 3★ · 5 min walk · $$</li>
             <li><strong><a href="https://www.duo-paris.com/en/" target="_blank" rel="noopener">Hôtel Duo</a></strong> · 4★ · 5 min walk · $$</li>
-            <li><strong><a href="https://www.lecompostelle.com/en/" target="_blank" rel="noopener">Hôtel Le Compostelle</a></strong> · 3★ · 5 min walk</li>
             <li><strong><a href="https://www.grandhotelmalher.com/en/" target="_blank" rel="noopener">Grand Hôtel Malher</a></strong> · 3★ · 6 min walk · $$$</li>
             <li><strong><a href="https://hotelemile.com/en/" target="_blank" rel="noopener">Hôtel Emile Le Marais</a></strong> · 3★ · 6 min walk · $</li>
             <li><strong><a href="https://www.hotelcaron.com/en/" target="_blank" rel="noopener">Hôtel Caron Le Marais</a></strong> · 3★ · 9 min walk · $$</li>
@@ -371,7 +373,12 @@
       document.documentElement.classList.add('js');
       var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role="tab"]'));
       function show(id, focus) {
-        if (!document.getElementById(id)) id = 'overview';
+        var ids = tabs.map(function (t) { return t.getAttribute('aria-controls'); });
+        var target = id ? document.getElementById(id) : null, scrollTo = null;
+        if (ids.indexOf(id) < 0) {
+          var panel = target && target.closest ? target.closest('.tab-panel') : null;
+          if (panel && ids.indexOf(panel.id) >= 0) { scrollTo = target; id = panel.id; } else id = 'overview';
+        }
         tabs.forEach(function (t) {
           var on = t.getAttribute('aria-controls') === id;
           t.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -379,6 +386,7 @@
           document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
           if (on && focus) t.focus();
         });
+        if (scrollTo) setTimeout(function () { scrollTo.scrollIntoView(); }, 0);
       }
       tabs.forEach(function (t, i) {
         t.addEventListener('click', function (e) { e.preventDefault(); var id = t.getAttribute('aria-controls'); history.replaceState(null, '', '#' + id); show(id); });
@@ -414,10 +422,9 @@
       }).catch(function () {});
     })();
   </script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <script>
     (function () {
-      var HOTELS = [{"n": "Hotel du Vieux Marais", "u": "https://www.vieuxmarais.com/", "s": 3, "t": "2 min walk", "lat": 48.8590972, "lon": 2.3554124, "img": "hotels/vieux-marais.jpg", "near": 1, "p": "$$"}, {"n": "Hôtel de Nice", "u": "https://www.hoteldenice.com/en/", "s": 3, "t": "3 min walk", "lat": 48.8566421, "lon": 2.3558042, "img": "hotels/nice.jpg", "near": 1, "p": "$$"}, {"n": "Hôtel 9 Confidentiel", "u": "https://www.hotel-9confidentiel-paris.fr", "s": 4, "t": "4 min walk", "lat": 48.8567518, "lon": 2.3555776, "img": "hotels/9-confidentiel.jpg", "near": 1, "p": "$$$"}, {"n": "Hôtel Beaubourg", "u": "https://www.beaubourg-paris-hotel.com/en/", "s": 3, "t": "5 min walk", "lat": 48.8599665, "lon": 2.3532944, "img": "hotels/beaubourg.jpg", "near": 1, "p": "$"}, {"n": "Hôtel Bourg Tibourg", "u": "https://bourgtibourg.com/en/", "s": 4, "t": "5 min walk", "lat": 48.8572327, "lon": 2.3558833, "img": "hotels/bourg-tibourg.jpg", "near": 1, "p": "$$$"}, {"n": "Hôtel Caron de Beaumarchais", "u": "https://www.carondebeaumarchais.com/en/", "s": 3, "t": "5 min walk", "lat": 48.8564409, "lon": 2.3568792, "img": "hotels/caron-beaumarchais.jpg", "near": 1, "p": "$$"}, {"n": "Hôtel Duo", "u": "https://www.duo-paris.com/en/", "s": 4, "t": "5 min walk", "lat": 48.8581215, "lon": 2.3529074, "img": "hotels/duo.jpg", "near": 1, "p": "$$"}, {"n": "Hôtel Le Compostelle", "u": "https://www.lecompostelle.com/en/", "s": 3, "t": "5 min walk", "lat": 48.8564705, "lon": 2.3570558, "img": "hotels/compostelle.jpg", "near": 1, "p": ""}, {"n": "Grand Hôtel Malher", "u": "https://www.grandhotelmalher.com/en/", "s": 3, "t": "6 min walk", "lat": 48.8557065, "lon": 2.3610973, "img": "hotels/malher.jpg", "near": 1, "p": "$$$"}, {"n": "Hôtel Emile Le Marais", "u": "https://hotelemile.com/en/", "s": 3, "t": "6 min walk", "lat": 48.8553688, "lon": 2.3612718, "img": "hotels/emile.jpg", "near": 1, "p": "$"}, {"n": "Hôtel Caron Le Marais", "u": "https://www.hotelcaron.com/en/", "s": 3, "t": "9 min walk", "lat": 48.8550826, "lon": 2.3625198, "img": "hotels/caron.jpg", "near": 1, "p": "$$"}, {"n": "Hôtel Charles V", "u": "https://www.hotelcharlesv.fr/en/", "s": 4, "t": "10 min walk", "lat": 48.8534874, "lon": 2.3618354, "img": "hotels/charles-v.jpg", "near": 1, "p": "$$$"}, {"n": "Novotel Gare de Lyon", "u": "https://all.accor.com/hotel/1735/index.en.shtml", "s": 4, "t": "about 16 min by metro", "lat": 48.845301, "lon": 2.3752606, "img": "hotels/novotel-gare-de-lyon.jpg", "near": 0, "p": "$$"}, {"n": "Ibis Paris Bastille Opéra", "u": "https://all.accor.com/hotel/1399/index.en.shtml", "s": 3, "t": "about 17 min by metro, 20 min on foot", "lat": 48.8574804, "lon": 2.3729399, "img": "hotels/ibis-bastille-opera.jpg", "near": 0, "p": "$"}, {"n": "Moxy Paris Bastille", "u": "https://www.marriott.com/en-us/hotels/parob-moxy-paris-bastille/overview/", "s": 3, "t": "about 20 min on foot", "lat": 48.8575819, "lon": 2.3698609, "img": "hotels/moxy-bastille.jpg", "near": 0, "p": "$$"}, {"n": "MIJE Marais (Fourcy)", "u": "https://www.mije.com/auberge-jeunesse-paris", "s": null, "k": "Youth hostel, breakfast included", "t": "8 min walk", "lat": 48.8547701, "lon": 2.3591511, "img": "hotels/mije-marais.jpg", "near": 0, "b": 1, "p": "$", "x": "air conditioning unclear; some shared toilets"}, {"n": "The People Paris Marais", "u": "https://www.thepeoplehostel.com/en/destinations/paris-marais/", "s": null, "k": "Hostel, private rooms with bathroom", "t": "15 min walk", "lat": 48.8499618, "lon": 2.3631985, "img": "hotels/the-people-marais.jpg", "near": 0, "b": 1, "p": "$", "x": "no air conditioning"}, {"n": "B&B Hotel Paris Porte des Lilas", "u": "https://www.hotel-bb.com/en/hotel/paris-porte-des-lilas", "s": 2, "t": "about 20 min by metro (line 11, direct)", "lat": 48.880128, "lon": 2.4075591, "img": "hotels/bb-porte-des-lilas.jpg", "near": 0, "b": 1, "p": "$"}, {"n": "Generator Paris", "u": "https://staygenerator.com/hostels/paris", "s": null, "k": "Hostel, private rooms with bathroom", "t": "about 25 min by metro", "lat": 48.878222, "lon": 2.3696115, "img": "hotels/generator-paris.jpg", "near": 0, "b": 1, "p": "$"}];
+      var HOTELS = [{"n": "Hôtel du Vieux Marais", "u": "https://www.vieuxmarais.com/", "s": 3, "t": "2 min walk", "lat": 48.8590972, "lon": 2.3554124, "img": "hotels/vieux-marais.jpg", "near": 1, "p": "$$"}, {"n": "Hôtel de Nice", "u": "https://www.hoteldenice.com/en/", "s": 3, "t": "3 min walk", "lat": 48.8566421, "lon": 2.3558042, "img": "hotels/nice.jpg", "near": 1, "p": "$$"}, {"n": "Hôtel 9 Confidentiel", "u": "https://www.hotel-9confidentiel-paris.fr", "s": 4, "t": "4 min walk", "lat": 48.8567518, "lon": 2.3555776, "img": "hotels/9-confidentiel.jpg", "near": 1, "p": "$$$"}, {"n": "Hôtel Beaubourg", "u": "https://www.beaubourg-paris-hotel.com/en/", "s": 3, "t": "5 min walk", "lat": 48.8599665, "lon": 2.3532944, "img": "hotels/beaubourg.jpg", "near": 1, "p": "$"}, {"n": "Hôtel Bourg Tibourg", "u": "https://bourgtibourg.com/en/", "s": 4, "t": "5 min walk", "lat": 48.8572327, "lon": 2.3558833, "img": "hotels/bourg-tibourg.jpg", "near": 1, "p": "$$$"}, {"n": "Hôtel Caron de Beaumarchais", "u": "https://www.carondebeaumarchais.com/en/", "s": 3, "t": "5 min walk", "lat": 48.8564409, "lon": 2.3568792, "img": "hotels/caron-beaumarchais.jpg", "near": 1, "p": "$$"}, {"n": "Hôtel Duo", "u": "https://www.duo-paris.com/en/", "s": 4, "t": "5 min walk", "lat": 48.8581215, "lon": 2.3529074, "img": "hotels/duo.jpg", "near": 1, "p": "$$"}, {"n": "Grand Hôtel Malher", "u": "https://www.grandhotelmalher.com/en/", "s": 3, "t": "6 min walk", "lat": 48.8557065, "lon": 2.3610973, "img": "hotels/malher.jpg", "near": 1, "p": "$$$"}, {"n": "Hôtel Emile Le Marais", "u": "https://hotelemile.com/en/", "s": 3, "t": "6 min walk", "lat": 48.8553688, "lon": 2.3612718, "img": "hotels/emile.jpg", "near": 1, "p": "$"}, {"n": "Hôtel Caron Le Marais", "u": "https://www.hotelcaron.com/en/", "s": 3, "t": "9 min walk", "lat": 48.8550826, "lon": 2.3625198, "img": "hotels/caron.jpg", "near": 1, "p": "$$"}, {"n": "Hôtel Charles V", "u": "https://www.hotelcharlesv.fr/en/", "s": 4, "t": "10 min walk", "lat": 48.8534874, "lon": 2.3618354, "img": "hotels/charles-v.jpg", "near": 1, "p": "$$$"}, {"n": "Novotel Gare de Lyon", "u": "https://all.accor.com/hotel/1735/index.en.shtml", "s": 4, "t": "about 16 min by metro", "lat": 48.845301, "lon": 2.3752606, "img": "hotels/novotel-gare-de-lyon.jpg", "near": 0, "p": "$$"}, {"n": "Ibis Paris Bastille Opéra", "u": "https://all.accor.com/hotel/1399/index.en.shtml", "s": 3, "t": "about 17 min by metro, 20 min on foot", "lat": 48.8574804, "lon": 2.3729399, "img": "hotels/ibis-bastille-opera.jpg", "near": 0, "p": "$"}, {"n": "Moxy Paris Bastille", "u": "https://www.marriott.com/en-us/hotels/parob-moxy-paris-bastille/overview/", "s": 3, "t": "about 20 min on foot", "lat": 48.8575819, "lon": 2.3698609, "img": "hotels/moxy-bastille.jpg", "near": 0, "p": "$$"}, {"n": "MIJE Marais (Fourcy)", "u": "https://www.mije.com/auberge-jeunesse-paris", "s": null, "k": "Youth hostel, breakfast included", "t": "8 min walk", "lat": 48.8547701, "lon": 2.3591511, "img": "hotels/mije-marais.jpg", "near": 0, "b": 1, "p": "$", "x": "air conditioning unclear; some shared toilets"}, {"n": "The People Paris Marais", "u": "https://www.thepeoplehostel.com/en/destinations/paris-marais/", "s": null, "k": "Hostel, private rooms with bathroom", "t": "15 min walk", "lat": 48.8499618, "lon": 2.3631985, "img": "hotels/the-people-marais.jpg", "near": 0, "b": 1, "p": "$", "x": "no air conditioning"}, {"n": "B&B Hotel Paris Porte des Lilas", "u": "https://www.hotel-bb.com/en/hotel/paris-porte-des-lilas", "s": 2, "t": "about 20 min by metro (line 11, direct)", "lat": 48.880128, "lon": 2.4075591, "img": "hotels/bb-porte-des-lilas.jpg", "near": 0, "b": 1, "p": "$"}, {"n": "Generator Paris", "u": "https://staygenerator.com/hostels/paris", "s": null, "k": "Hostel, private rooms with bathroom", "t": "about 25 min by metro", "lat": 48.878222, "lon": 2.3696115, "img": "hotels/generator-paris.jpg", "near": 0, "b": 1, "p": "$"}];
       var CENTER = [48.857665, 2.3572269];
       var box = document.getElementById('accommodation'); if (!box) return;
       var sw = box.querySelector('.acc-views'); sw.hidden = false;
@@ -442,22 +449,25 @@
       function buildMap() {
         if (map || mapLoading) { if (map) map.invalidateSize(); return; }
         mapLoading = true;
+        var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        css.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='; css.crossOrigin = ''; document.head.appendChild(css);
         var sc = document.createElement('script');
         sc.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
         sc.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='; sc.crossOrigin = '';
         sc.onload = function () {
           map = L.map('acc-map-canvas', { scrollWheelZoom: false });
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }).addTo(map);
-          var pts = [CENTER];
-          L.circleMarker(CENTER, { radius: 11, color: '#092d52', weight: 2, fillColor: '#e8bd67', fillOpacity: 1 }).addTo(map).bindPopup('<strong>Rice Global Paris Center</strong><br>5 rue Sainte-Croix de la Bretonnerie');
+          var pts = [CENTER], hover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
           HOTELS.forEach(function (h) {
             var c = h.b ? '#2f8a57' : h.near ? '#176ca6' : '#6b7c8a';
             var pop = document.createElement('div'), a = document.createElement('a');
             a.href = h.u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = h.n; a.style.fontWeight = '700';
             pop.appendChild(a); pop.appendChild(document.createElement('br')); pop.appendChild(document.createTextNode(meta(h)));
-            L.circleMarker([h.lat, h.lon], { radius: 7, color: '#fff', weight: 2, fillColor: c, fillOpacity: 1 }).addTo(map).bindPopup(pop).bindTooltip(h.n);
-            pts.push([h.lat, h.lon]);
+            var mk = L.circleMarker([h.lat, h.lon], { radius: 7, color: '#fff', weight: 2, fillColor: c, fillOpacity: 1 }).addTo(map).bindPopup(pop);
+            if (hover) mk.bindTooltip(h.n);
+            if (h.near) pts.push([h.lat, h.lon]);
           });
+          L.circleMarker(CENTER, { radius: 11, color: '#092d52', weight: 2, fillColor: '#e8bd67', fillOpacity: 1 }).addTo(map).bindPopup('<strong>Rice Global Paris Center</strong><br>5 rue Sainte-Croix de la Bretonnerie');
           map.fitBounds(pts, { padding: [24, 24] });
         };
         sc.onerror = function () { document.getElementById('acc-map-canvas').textContent = 'The map could not be loaded. Use the list view instead.'; };
@@ -472,7 +482,10 @@
       }
       sw.addEventListener('click', function (e) { var b = e.target.closest('button[data-view]'); if (b) show(b.dataset.view); });
       // Leaflet needs a resize once its tab becomes visible
-      window.addEventListener('hashchange', function () { if (map && location.hash === '#accommodation') setTimeout(function () { map.invalidateSize(); }, 50); });
+      var accTab = document.getElementById('tab-accommodation');
+      function refit() { if (map) setTimeout(function () { map.invalidateSize(); }, 50); }
+      if (accTab) accTab.addEventListener('click', refit);
+      window.addEventListener('hashchange', function () { if (location.hash === '#accommodation') refit(); });
     })();
   </script>
 </body>
