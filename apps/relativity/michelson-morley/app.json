@@ -1,0 +1,24 @@
+{
+  "id": "michelson-morley-two-accounts",
+  "title": "Michelson–Morley: Two Accounts",
+  "type": "app",
+  "category": "relativity",
+  "module": "michelson-morley",
+  "topics": [
+    "michelson-morley",
+    "interferometry",
+    "special-relativity",
+    "length-contraction"
+  ],
+  "level": "introductory",
+  "description": "The Michelson–Morley interferometer told twice: Lorentz's apparatus that shrinks as it moves through a resting ether, and Einstein's apparatus at rest with no ether. Same arrival times, same clock readings, two stories; with the 1887 expectation for contrast.",
+  "tags": [
+    "Relativity",
+    "Prediction mode",
+    "Two accounts",
+    "Lorentz",
+    "Einstein"
+  ],
+  "entry": "index.html",
+  "status": "published"
+}

@@ -271,9 +271,10 @@
         </a>`;
       }).join("");
 
+      if (!rows) return ""; // a section whose modules have nothing published is not shown
       return `<section class="collection-section">
         <div class="section-header"><h2>${esc(section.title)}</h2><p>${esc(section.description || "")}</p></div>
-        <div class="module-list">${rows || '<p class="empty">No modules yet.</p>'}</div>
+        <div class="module-list">${rows}</div>
       </section>`;
     }).join("");
   }

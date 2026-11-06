@@ -146,8 +146,9 @@
   text-transform: uppercase;
 }
 
-.qontic-app-title:hover .qontic-title-purpose,
-.qontic-app-title:focus-within .qontic-title-purpose {
+/* Only on title hover or keyboard focus of the title block, not when a section tab is focused. */
+.qontic-app-title:has(h1:hover) .qontic-title-purpose,
+.qontic-app-title:focus-visible .qontic-title-purpose {
   opacity: 1;
   transform: none;
 }

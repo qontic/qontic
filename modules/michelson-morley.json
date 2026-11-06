@@ -1,7 +1,12 @@
 {
   "id": "michelson-morley",
   "title": "Michelson–Morley Experiment",
-  "summary": "Interferometry, ether-drift predictions, the null result, and the transition to special relativity.",
-  "topics": ["michelson-morley", "interferometry", "special-relativity"],
+  "summary": "The null result told twice: Lorentz's shrinking apparatus in a resting ether, and Einstein's apparatus at rest with no ether.",
+  "topics": [
+    "michelson-morley",
+    "interferometry",
+    "special-relativity",
+    "length-contraction"
+  ],
   "order": 70
 }

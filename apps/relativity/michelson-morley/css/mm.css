@@ -1,0 +1,113 @@
+/* Michelson–Morley: app-scoped styles. Shared layout comes from qontic-app.css. */
+body.mm-app *, body.mm-app *::before, body.mm-app *::after { box-sizing: border-box; }
+body.mm-app {
+  margin: 0;
+  background: radial-gradient(circle at 70% -10%, #17354b 0, #07111c 42%, #040a11);
+  color: #d9edf7;
+  font: 14px Inter, Arial, sans-serif;
+}
+body.mm-app.qontic-light { background: #eef3f6; color: #183747; }
+:root.qontic-light { --qontic-panel-background: #ffffff; --qontic-panel-border: #b9cdd6; --qontic-text: #183747; --qontic-muted: #5f7684; }
+.mm-app .shell { max-width: 1540px; margin: auto; padding: 0 18px 20px; }
+.mm-app .hidden { display: none !important; }
+
+.mm-app .control-tab-body { margin-top: -1px; }
+.mm-app .control-pane { display: grid; gap: 10px; }
+.mm-app .control-row { display: grid; grid-template-columns: 112px 1fr 58px; align-items: center; gap: 7px; color: #afc4d3; font-size: 13px; }
+.mm-app .control-row input[type=range] { width: 100%; }
+.mm-app .control-row output { text-align: right; color: #66dce8; font-variant-numeric: tabular-nums; }
+.mm-app .core-hint { margin: -4px 0 0; color: #8299aa; font-size: 12px; line-height: 1.45; }
+.mm-app .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #244052; color: #afc4d3; font-size: 13px; }
+.mm-app .toggle { position: relative; flex: none; width: 38px; height: 21px; border: 1px solid #31556c; border-radius: 99px; background: #07131e; cursor: pointer; }
+.mm-app .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 13px; height: 13px; border-radius: 50%; background: #7891a4; transition: .15s; }
+.mm-app .toggle[aria-pressed=true] { border-color: #55d8e6; background: #173e4c; }
+.mm-app .toggle[aria-pressed=true]::after { left: 20px; background: #72e4ed; }
+.mm-app .qontic-app-toggle-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.mm-app .qontic-app-toggle-group .qontic-app-toggle { flex: 1 1 auto; }
+
+.qontic-light.mm-app .control-row,
+.qontic-light.mm-app .toggle-row { color: #35505f; border-color: #d3e0e6; }
+.qontic-light.mm-app .control-row output { color: #0b6f7d; }
+.qontic-light.mm-app .core-hint { color: #5f7684; }
+.qontic-light.mm-app .toggle { background: #eef4f6; border-color: #aec2cb; }
+
+.mm-app .visualization { position: relative; overflow: hidden; background: linear-gradient(145deg, #06131e, #0a2131); }
+.qontic-light.mm-app .visualization { background: #fbfdfe; }
+.mm-app .canvas-host { position: relative; width: 100%; height: clamp(340px, calc(100dvh - 330px), 700px); }
+.mm-app .canvas-host.tall { height: clamp(460px, calc(100dvh - 260px), 860px); }
+.mm-app #stage { display: block; width: 100%; height: 100%; }
+
+.mm-app .results-panel { margin-top: 12px; overflow: hidden; }
+.mm-app .results-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 9px; background: #102839; }
+.mm-app .results-head strong { font-size: 12px; }
+.mm-app .results-head button { border: 0; background: transparent; color: #9edce5; cursor: pointer; font-size: 15px; }
+.mm-app .results-body[hidden] { display: none; }
+.mm-app .results-body { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; padding: 9px 10px; color: #a9becd; font-size: 12px; }
+.mm-app .results-body output { color: #f0ca61; text-align: right; font-variant-numeric: tabular-nums; }
+.qontic-light.mm-app .results-panel { color: #183747; }
+.qontic-light.mm-app .results-head { background: #dcebf1; }
+.qontic-light.mm-app .results-body { color: #35505f; }
+.qontic-light.mm-app .results-body output { color: #9a6200; }
+
+
+.mm-app .details-panel { max-width: 860px; margin: 0 auto; padding: 18px 26px 24px; line-height: 1.6; font-size: 15px; }
+.mm-app .details-panel h2 { margin: 22px 0 6px; font-size: 17px; color: #7cecff; }
+.mm-app .details-panel h2:first-child { margin-top: 4px; }
+.qontic-light.mm-app .details-panel h2 { color: #075c69; }
+.mm-app .details-panel a { color: #70e2ed; }
+.qontic-light.mm-app .details-panel a { color: #0b6f7d; }
+.mm-app .formula { text-align: center; font-size: 16px; }
+.mm-app .references { font-size: 13.5px; }
+.mm-app .references li { margin: 4px 0; }
+
+@media (max-width: 760px) {
+  .mm-app .shell { padding: 0 10px 14px; }
+  .mm-app .canvas-host { height: 420px; }
+  .mm-app .canvas-host.tall { height: 760px; }
+  .mm-app .results-body { font-size: 11px; gap: 3px 8px; }
+  .mm-app .details-panel { padding: 14px 14px 20px; font-size: 14px; }
+}
+
+.mm-app .setup-list { margin: 0 0 10px; padding-left: 20px; }
+.mm-app .setup-list li { margin: 0 0 6px; }
+.mm-app .setup-list b { color: #7cecff; font-weight: 600; }
+.qontic-light.mm-app .setup-list b { color: #075c69; }
+.mm-app .setup-back { margin: 8px 0 0 !important; text-align: right; }
+.mm-app .link-button { border: 0; padding: 0; background: none; color: #70e2ed; font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.qontic-light.mm-app .link-button { color: #0b6f7d; }
+.mm-app #showSetup { width: 100%; }
+
+/* Story strip below the canvas: setup, question, live readout, verdict. Never covers the simulation. */
+.mm-app .story { padding: 12px 14px 14px; border-top: 1px solid #23465a; font-size: 14px; line-height: 1.5; min-height: 92px; }
+.mm-app .story-title { margin: 0 0 8px; font-weight: 600; color: #7cecff; }
+.mm-app .story .setup-list { margin: 0 0 10px; padding-left: 20px; columns: 2 300px; column-gap: 28px; }
+.mm-app .story .setup-list li { break-inside: avoid; }
+.mm-app .story-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.mm-app .story-buttons button { flex: 0 1 auto; }
+.mm-app .reason-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
+.mm-app .reason-buttons button { text-align: left; white-space: normal; line-height: 1.35; padding: 8px 10px; }
+.mm-app .story-links { margin: 8px 0 0; font-size: 12px; color: #7f98a7; }
+.mm-app .story-live { margin: 0; font-variant-numeric: tabular-nums; color: #d6e9f2; font-size: 15px; }
+.mm-app #verdict { margin-bottom: 10px; }
+.mm-app #verdict strong { color: #f0ca61; }
+.mm-app #verdict .feedback { display: block; margin-top: 6px; color: #afc4d3; }
+.mm-app .spoiler-note { padding: 8px 12px; border: 1px solid #42657a; border-radius: 7px; color: #f0ca61; font-size: 14px; }
+.qontic-light.mm-app .story { border-top-color: #c9d9e0; }
+.qontic-light.mm-app .story-title { color: #075c69; }
+.qontic-light.mm-app .story-live { color: #183747; }
+.qontic-light.mm-app #verdict strong { color: #9a6200; }
+.qontic-light.mm-app #verdict .feedback { color: #35505f; }
+.qontic-light.mm-app .spoiler-note { color: #9a6200; border-color: #c9d9e0; }
+
+/* Michelson–Morley additions */
+.mm-app .trade { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin: 10px 0; }
+.mm-app .trade > div { border: 1px solid #2b4e63; border-radius: 8px; padding: 8px 11px; font-size: 13px; line-height: 1.45; }
+.mm-app .trade h3 { margin: 0 0 4px; font-size: 13.5px; color: #7cecff; }
+.mm-app .trade p { margin: 3px 0; }
+.mm-app .trade b { color: #f0ca61; font-weight: 600; }
+.qontic-light.mm-app .trade > div { border-color: #c9d9e0; }
+.qontic-light.mm-app .trade h3 { color: #075c69; }
+.qontic-light.mm-app .trade b { color: #9a6200; }
+.mm-app .details-panel table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.mm-app .details-panel td, .mm-app .details-panel th { border: 1px solid #2b4e63; padding: 6px 9px; vertical-align: top; text-align: left; }
+.qontic-light.mm-app .details-panel td, .qontic-light.mm-app .details-panel th { border-color: #c9d9e0; }

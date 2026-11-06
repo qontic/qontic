@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Michelson–Morley: Two Accounts — Q-Ontic Lab</title>
+<meta name="description" content="The Michelson–Morley experiment drawn with the apparatus moving and at rest, and read two ways: by Lorentz, with a true rest frame and shrinking moving bodies, and by Einstein, with no special frame. Same pictures, same clock readings, two stories.">
+<link rel="icon" type="image/svg+xml" href="../../../shared/favicon.svg">
+<link rel="stylesheet" href="../../../shared/qontic-shell.css?v=3.7">
+<link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.5">
+<link rel="stylesheet" href="css/mm.css?v=0.2.2">
+</head>
+<body class="mm-app">
+<main class="shell">
+<header><div><p class="eyebrow">Q-Ontic · Relativity</p><h1>Michelson–Morley: Two Accounts</h1></div></header>
+<nav class="tabs" aria-label="App sections">
+  <button class="active" type="button" data-view="sim">Simulation</button>
+  <button type="button" data-view="physics">Physics</button>
+  <button type="button" data-view="rationale">Rationale</button>
+</nav>
+
+<section class="lab qontic-workspace" data-panel="sim">
+  <aside class="controls qontic-sidebar qontic-panel qontic-control-panel">
+    <section class="always-controls" aria-label="Simulation controls">
+      <qontic-controls show-interpretation="false" running="false" auto-run="false" show-reset="true" speed="1" speed-min="0.25" speed-max="3" speed-step="0.25" active-tab="core" show-advanced="false"></qontic-controls>
+    </section>
+    <div class="control-tab-body qontic-control-body">
+      <div class="control-pane" data-control-pane="core">
+        <div class="qontic-control-section">
+          <div class="qontic-control-section-title">View</div>
+          <div class="qontic-app-toggle-group view-group" role="group" aria-label="View">
+            <button class="qontic-app-toggle active" type="button" data-frameview="classical" aria-pressed="true" title="What Michelson and Morley expected in 1887: light moves at c through a resting ether, and the moving apparatus keeps its shape.">1887 expectation</button>
+            <button class="qontic-app-toggle" type="button" data-frameview="moving" aria-pressed="false" title="The relativistic picture in a frame where the apparatus moves: it is shorter along its motion and its clock runs slow. Lorentz and Einstein both draw this picture.">Apparatus moving</button>
+            <button class="qontic-app-toggle" type="button" data-frameview="rest" aria-pressed="false" title="The same events in the apparatus's own frame, where it is at rest. Lorentz and Einstein both draw this picture.">Apparatus at rest</button>
+            <button class="qontic-app-toggle" type="button" data-frameview="both" aria-pressed="false" title="Apparatus moving and at rest together, run on the apparatus clock.">Both</button>
+          </div>
+        </div>
+        <label class="control-row" title="Speed of the apparatus, as a fraction of c, in the frame where it moves. Exaggerated: Earth's orbital speed is about 0.0001 c.">
+          <span>Speed of the apparatus</span><input id="beta" type="range" min="0.05" max="0.8" step="0.05" value="0.6" aria-label="Speed of the apparatus as a fraction of c"><output id="betaOut">0.60 c</output>
+        </label>
+        <p class="core-hint" id="betaHint"></p>
+        <label class="control-row" title="Angle between arm 1 and the direction of motion. Michelson and Morley turned their apparatus slowly while watching the fringes.">
+          <span>Rotation</span><input id="theta" type="range" min="0" max="90" step="5" value="0" aria-label="Rotation of the apparatus in degrees"><output id="thetaOut">0°</output>
+        </label>
+        <button type="button" class="qontic-app-toggle qontic-app-toggle--wide" id="showSetup">Show the setup</button>
+        <div class="toggle-row"><span>Ask for a prediction</span><button class="toggle" type="button" data-toggle="predict" aria-pressed="true" aria-label="Ask for a prediction before each run"></button></div>
+      </div>
+
+      <div class="control-pane hidden" data-control-pane="display">
+        <div class="toggle-row"><span>Light paths</span><button class="toggle" type="button" data-toggle="trails" aria-pressed="true" aria-label="Show the paths of the light pulses"></button></div>
+        <div class="toggle-row"><span>Rest-length outline</span><button class="toggle" type="button" data-toggle="ghost" aria-pressed="true" aria-label="Show the outline of the arms at their rest length"></button></div>
+        <div class="toggle-row"><span>Reference markers</span><button class="toggle" type="button" data-toggle="ether" aria-pressed="true" aria-label="Show reference markers"></button></div>
+        <div class="toggle-row"><span>Delay vs rotation chart</span><button class="toggle" type="button" data-toggle="curve" aria-pressed="true" aria-label="Show the chart of the delay against the rotation angle"></button></div>
+      </div>
+    </div>
+    <section class="results-panel qontic-panel" data-results-panel aria-label="Results">
+      <div class="results-head"><strong>Results</strong><button type="button" data-results-collapse aria-label="Collapse results">−</button></div>
+      <div class="results-body">
+        <span id="clockName">Apparatus clock</span><output data-result="clock">—</output>
+        <span id="rowEther">Time in the frame where it moves</span><output id="rowEtherOut" data-result="ether">—</output>
+        <span>Arm 1 back at</span><output data-result="t1">—</output>
+        <span>Arm 2 back at</span><output data-result="t2">—</output>
+        <span>Delay, arm 1 − arm 2</span><output data-result="diff">—</output>
+        <span>Arm along the motion</span><output data-result="len">—</output>
+      </div>
+    </section>
+  </aside>
+
+  <div class="visualization qontic-stage qontic-panel">
+    <div class="canvas-host">
+      <canvas id="stage" aria-label="Michelson–Morley interferometer simulation"></canvas>
+    </div>
+    <div class="story" id="story" aria-live="polite">
+      <div id="setupStep" class="story-step">
+        <p class="story-title">The setup</p>
+        <ol class="setup-list" id="setupList"></ol>
+        <div class="story-buttons"><button type="button" class="qontic-app-toggle" id="setupNext">Next: the question</button></div>
+      </div>
+      <div id="questionStep" class="story-step hidden">
+        <p class="story-title" id="predictionText"></p>
+        <div class="reason-buttons" id="predictButtons"></div>
+        <p class="story-links"><button type="button" class="link-button" id="setupBack">Back to the setup</button> · <button type="button" class="link-button" data-predict="skip">Skip and just run it</button></p>
+      </div>
+      <div id="runStep" class="story-step hidden">
+        <p class="story-live" id="liveLine"></p>
+      </div>
+      <div id="verdictStep" class="story-step hidden">
+        <div id="verdict"></div>
+        <div class="story-buttons" id="nextSteps"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="details-panel qontic-panel qontic-reading-panel hidden" data-panel="physics">
+  <p class="spoiler-note">Run the simulation first: this page gives the answers.</p>
+  <h2>The apparatus</h2>
+  <p>A beam splitter divides a light pulse into two halves. One runs along arm 1, the other along arm 2, at right angles. Both arms have length L when the apparatus is at rest. Each half reflects from a mirror and comes back to the splitter, where the two halves are recombined and watched as interference fringes. If the halves arrive together, the fringes sit in one place; if one half is late by a time Δt, the fringes move by cΔt/λ, where λ is the wavelength. The simulation draws each half as a single dot so the arrival times can be seen directly.</p>
+
+  <h2>The 1887 expectation</h2>
+  <p>Suppose light moves at c through a resting ether and the apparatus moves through it at speed v, keeping its shape. Along the motion, the light goes out at c − v relative to the apparatus and back at c + v. Across the motion, it must aim slightly ahead and travels a slanted path. With γ = 1/√(1 − v²/c²):</p>
+  <p class="formula">t<sub>along</sub> = 2Lγ²/c, &nbsp; t<sub>across</sub> = 2Lγ/c, &nbsp; Δt = 2Lγ(γ − 1)/c ≈ Lv²/c³ for v ≪ c.</p>
+  <p>At the exaggerated 0.6 c of the simulation, γ = 1.25 and the exact delay is 0.625 L/c.</p>
+  <p>Turning the apparatus by 90° swaps the arms and reverses the sign of Δt, so the fringes should move as it turns. The chart in the corner of the simulation shows the expected delay at each angle: zero at 45°, reversed at 90°. Michelson and Morley folded each light path with mirrors to about 11 m, or 2 × 10⁷ wavelengths. At Earth's orbital speed (v/c ≈ 10⁻⁴) and λ ≈ 550 nm, the expected shift for a 90° turn was 2Lv²/(λc²) ≈ 0.4 of a fringe. They found a shift “certainly less than the twentieth part of this, and probably less than the fortieth part,” consistent with none.<sup><a href="#ref-1">1</a></sup></p>
+
+  <h2>The relativistic picture, in two frames</h2>
+  <p>The views <em>Apparatus moving</em> and <em>Apparatus at rest</em> show the same events in two frames. With the apparatus moving at v, its arm along the motion is shorter by 1/γ and its clock runs slow by 1/γ. With the apparatus at rest, both arms are L, and markers at rest in the other frame stream past, closer together. Lorentz and Einstein both draw these two pictures. They differ in how they read them: for Lorentz one frame is the true rest frame, which he called the ether; for Einstein no frame is special.</p>
+
+  <h2>Lorentz's account</h2>
+  <p>Keep the ether, and suppose that a body moving through it is shorter along its motion by the factor 1/γ. FitzGerald suggested this in 1889,<sup><a href="#ref-2">2</a></sup> and Lorentz independently soon after. Lorentz tied it to the forces that hold matter together: they are electromagnetic, and the field of a moving charge is flattened along the motion. The arm along the motion is then L/γ long, its round trip takes 2(L/γ)γ²/c = 2Lγ/c, exactly the time across. The two halves arrive together at every angle. In the simulation, the dotted outline shows each arm's length at rest.</p>
+  <p>Contraction alone explains the null result. Larmor and Lorentz also found that processes in a moving body run slow by 1/γ, so the clock carried by the apparatus reads 2L/c when the halves return, not 2Lγ/c. The slow clocks are needed for the Kennedy–Thorndike experiment of 1932, which used arms of unequal length.<sup><a href="#ref-3">3</a></sup></p>
+  <p>Turn the apparatus to 45° in this account and the arms no longer look perpendicular in the frame where the apparatus moves: contraction along the motion changes angles as well as lengths. In the apparatus's own measurements they are still at right angles, because its rulers have contracted too.</p>
+
+  <h2>Einstein's account</h2>
+  <p>In 1905 Einstein took two principles as starting points: the laws of physics are the same for every uniformly moving observer, and light moves at c for each of them.<sup><a href="#ref-4">4</a></sup> There is no ether, and no frame is special. In the apparatus's own frame both arms are L, light moves at c out and back, and each half returns after 2L/c. In a frame in which the apparatus moves, as in the <em>Apparatus moving</em> view, it is shorter and its clock is slow, exactly as Lorentz says. For Einstein these follow from the principles, which also fix how the forces inside the arms must behave; that frame has no special status.</p>
+
+  <h2>What the two accounts agree on</h2>
+  <p>Everything that can be measured in special relativity. In <em>Both</em>, the two panels run on the apparatus clock: the halves leave at 0 and return together at 2L/c in each. If the top frame is the true rest frame, Lorentz's account says that the true time is longer, 2Lγ/c, and that the apparatus clock is slow; no measurement can check that, because on this account the true rest frame cannot be found by any experiment.</p>
+
+  <h2>What the model assumes</h2>
+  <ul>
+    <li>Units with c = 1. Lengths in units of L, times in units of L/c.</li>
+    <li>Speeds are exaggerated so that the effects can be seen. At 0.0001 c the contraction is five parts in a billion.</li>
+    <li>Each half of the pulse is a point; mirrors and splitter are ideal. The light paths are shown, not the fringes.</li>
+    <li>The rotation angle is measured in the apparatus's rest frame. The apparatus moves along its arm 1 direction when the angle is 0°.</li>
+    <li>The 1887 and <em>Apparatus moving</em> panels are drawn in a frame where the apparatus moves at v; the <em>Apparatus at rest</em> panel in its rest frame, where the speed slider only sets how fast the other frame's markers stream past.</li>
+  </ul>
+</section>
+
+<section class="details-panel qontic-panel qontic-reading-panel hidden" data-panel="rationale">
+  <h2>Two accounts, one set of results</h2>
+  <p>Lorentz's account and Einstein's predict the same result for this experiment and for every other experiment in special relativity; extending Lorentz's view to gravitation takes further assumptions. They differ on what is happening. In Lorentz's, there is a true rest frame, which he called the ether, and the apparatus physically shrinks because the forces inside it change with motion; the true rest frame exists but can never be detected. In Einstein's, no frame is special; contraction and slow clocks follow from the equivalence of all uniformly moving frames.</p>
+  <div class="trade">
+    <div>
+      <h3>Lorentz</h3>
+      <p><b>Keeps:</b> one true rest frame (his ether) and one true time.</p>
+      <p><b>Adds:</b> moving bodies shorten along their motion and moving clocks run slow, because the forces inside them change.</p>
+      <p><b>Owes:</b> a reason why no experiment can find the true rest frame. Defenders reply that this follows if all the forces that hold matter together share the same symmetry.<sup><a href="#ref-5">5</a>,<a href="#ref-6">6</a></sup></p>
+    </div>
+    <div>
+      <h3>Einstein</h3>
+      <p><b>Keeps:</b> the old principle that uniform motion cannot be detected, now extended to light.</p>
+      <p><b>Adds:</b> light moves at c for every observer; lengths, durations and simultaneity depend on the frame.</p>
+      <p><b>Owes:</b> a physical account of why rods and clocks obey the principles. Defenders reply that the principles are the explanation.</p>
+    </div>
+  </div>
+
+  <h2>Why it belongs here</h2>
+  <p>Einstein's route is the one taught today: it is short and general. John Bell argued that Lorentz's longer road is still worth teaching, because it gives a physical picture of why moving things change, and because the facts do not force a choice between the two.<sup><a href="#ref-5">5</a></sup> Harvey Brown develops the dynamical view at book length.<sup><a href="#ref-6">6</a></sup> The companion app <a href="../bell-spaceships/index.html">Bell's Spaceships</a> takes Lorentz's road through a question that confuses many physicists.</p>
+  <p>The formulations of quantum mechanics are in a similar position: views that agree on predictions and disagree on what is happening. One difference: there, some proposals, such as spontaneous-collapse models, do predict different results and are being tested.</p>
+
+  <h2>References</h2>
+  <ol class="references">
+    <li id="ref-1">A. A. Michelson and E. W. Morley, “On the relative motion of the Earth and the luminiferous ether,” <em>American Journal of Science</em> (3rd series) <strong>34</strong> (203), 333–345 (1887), doi:10.2475/ajs.s3-34.203.333.</li>
+    <li id="ref-2">G. F. FitzGerald, “The ether and the Earth's atmosphere,” <em>Science</em> <strong>13</strong>, 390 (1889).</li>
+    <li id="ref-3">R. J. Kennedy and E. M. Thorndike, “Experimental establishment of the relativity of time,” <em>Physical Review</em> <strong>42</strong> (3), 400–418 (1932), doi:10.1103/PhysRev.42.400.</li>
+    <li id="ref-4">A. Einstein, “Zur Elektrodynamik bewegter Körper,” <em>Annalen der Physik</em> <strong>17</strong>, 891–921 (1905).</li>
+    <li id="ref-5">J. S. Bell, “How to teach special relativity,” <em>Progress in Scientific Culture</em> <strong>1</strong> (2) (1976). Reprinted in J. S. Bell, <em>Speakable and Unspeakable in Quantum Mechanics</em> (Cambridge University Press, 1987; 2nd ed. 2004), pp. 67–80.</li>
+    <li id="ref-6">H. R. Brown, <em>Physical Relativity: Space-time Structure from a Dynamical Perspective</em> (Oxford University Press, 2005).</li>
+  </ol>
+</section>
+</main>
+<script type="module" src="js/app.js?v=0.2.2"></script>
+</body>
+</html>

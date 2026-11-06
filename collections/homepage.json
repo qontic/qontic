@@ -24,8 +24,16 @@
       "description": "Extensions, deeper conceptual questions, and more specialized topics.",
       "items": [
         { "type": "module", "id": "measurement" },
-        { "type": "module", "id": "delayed-choice" },
-        { "type": "module", "id": "michelson-morley" }
+        { "type": "module", "id": "delayed-choice" }
+      ]
+    },
+    {
+      "id": "relativity",
+      "title": "Relativity: Two Accounts",
+      "description": "Special relativity told by Lorentz and by Einstein: two accounts that agree on every measurement and disagree on what is happening. The same situation as the formulations of quantum mechanics, in a setting most students already know.",
+      "items": [
+        { "type": "module", "id": "michelson-morley" },
+        { "type": "module", "id": "bell-spaceships" }
       ]
     },
     {
