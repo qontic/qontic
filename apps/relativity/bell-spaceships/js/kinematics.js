@@ -19,6 +19,9 @@ export function makeModel({ beta = 0.9, accel = 0.6, L = 1, k, mode = 'bell' } =
   if (k === undefined) k = mode === 'rigid' ? 1 : 0;
   const b = Math.min(Math.max(beta, 1e-4), 0.9999);
   const gf = 1 / Math.sqrt(1 - b * b);
+  // Keep every neighbouring pair of prescribed worldlines in order, including
+  // the coasting phase. Leave at least 5% of the original local proper spacing.
+  k = Math.min(Math.max(k, 0), maxFrontSetting(b));
   // Worldline of the thread element starting at x0 (0 = rear, L = front):
   // proper acceleration a(x0) with 1/a(x0) = 1/a + k x0, the same family that
   // contains both ships. k = 0: all equal; k = 1: Born-rigid (common pivot).
@@ -38,6 +41,27 @@ export function makeModel({ beta = 0.9, accel = 0.6, L = 1, k, mode = 'bell' } =
 // Final elongation once both ships coast: (gamma - 1)(1 - k).
 export function finalStrain(model) {
   return (model.gammaF - 1) * (1 - model.k);
+}
+
+// Slider steps of 0.05; the cap also applies to shared links and direct callers.
+export function maxFrontSetting(beta) {
+  const g = gammaOf(Math.min(Math.max(beta, 1e-4), 0.9999));
+  return Math.min(1.5, Math.floor((1 + 0.95 / (g - 1)) * 20 + 1e-10) / 20);
+}
+
+// Local stretch at a material point x0. Differentiating the prescribed
+// worldlines gives gamma(v) dx/dx0 = k + (1-k) gamma(v), also while coasting.
+// This is a kinematic assumption, not an elastic equation of motion.
+export function localStrainAt(model, x0, t) {
+  const a = model.accel / (1 + model.k * model.accel * x0);
+  const at = a * Math.max(0, t);
+  const g = Math.min(model.gammaF, Math.sqrt(1 + at * at));
+  return (1 - model.k) * (g - 1);
+}
+
+// Largest local stretch (or compression for k > 1), at the rear end.
+export function peakStrainAt(model, t) {
+  return localStrainAt(model, 0, t);
 }
 
 // State of ship i (0 = rear B, 1 = front C) at launch-frame time t.
@@ -117,25 +141,13 @@ export function runEnd(model) {
   return tAcc * 1.2 + 2.5 * model.L;
 }
 
-// First launch-frame time at which the elongation reaches breakStrain,
+// First launch-frame time at which any piece reaches breakStrain,
 // or null if the thread survives the whole run.
 export function findBreak(model, breakStrain, tEnd = runEnd(model)) {
-  const n = 600;
-  let prevT = 0;
-  for (let k = 1; k <= n; k++) {
-    const t = (tEnd * k) / n;
-    if (strainAt(model, t) >= breakStrain) {
-      let lo = prevT;
-      let hi = t;
-      for (let j = 0; j < 50; j++) {
-        const mid = 0.5 * (lo + hi);
-        if (strainAt(model, mid) >= breakStrain) hi = mid; else lo = mid;
-      }
-      return hi;
-    }
-    prevT = t;
-  }
-  return null;
+  if (model.k >= 1 || finalStrain(model) < breakStrain - 1e-12) return null;
+  const g = 1 + breakStrain / (1 - model.k);
+  const t = Math.sqrt((g - 1) * (g + 1)) / model.accel;
+  return t <= tEnd ? t : null;
 }
 
 // Launch-frame time of the rear ship's event whose line of simultaneity

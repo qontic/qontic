@@ -106,3 +106,5 @@ body.spaceship-app.qontic-light { background: #eef3f6; color: #183747; }
 .spaceship-app .control-row.disabled { opacity: .45; }
 .spaceship-app #explore { display: grid; gap: 10px; }
 .spaceship-app #explore.hidden { display: none !important; }
+
+.spaceship-app .model-note { margin: 0; padding: 6px 14px; font-size: 11px; }

@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="../../../shared/favicon.svg">
 <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=3.7">
 <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.5">
-<link rel="stylesheet" href="css/spaceships.css?v=0.6.3">
+<link rel="stylesheet" href="css/spaceships.css?v=0.6.4">
 </head>
 <body class="spaceship-app">
 <main class="shell">
@@ -39,6 +39,7 @@
           <span>Hold the front ship back</span><input id="kSlider" type="range" min="0" max="1.5" step="0.05" value="0" aria-label="How much the front engine is turned down, k"><output id="kOut">0.00</output>
         </label>
         <p class="core-hint" id="modeHint"></p>
+        <p class="core-hint" id="kLimitHint"></p>
         <label class="control-row" title="Speed at which both ships stop accelerating and coast, as a fraction of c.">
           <span>Final speed</span><input id="beta" type="range" min="0.05" max="0.99" step="0.01" value="0.90" aria-label="Final speed as a fraction of c"><output id="betaOut">0.90 c</output>
         </label>
@@ -61,10 +62,10 @@
       </div>
 
       <div class="control-pane hidden" data-control-pane="advanced">
-        <label class="control-row" title="Proper acceleration of the rear ship, in units of c²/L. With a gentler front engine the front ship's is a/(1 + aL/c²).">
+        <label class="control-row" title="Proper acceleration of the rear ship, in units of c²/L. The front ship's is a/(1 + k·aL/c²).">
           <span>Rear acceleration</span><input id="accel" type="range" min="0.05" max="1" step="0.05" value="0.2" aria-label="Proper acceleration of the rear ship in units of c squared over L"><output id="accelOut">0.20</output>
         </label>
-        <p class="core-hint">Proper acceleration in units of c²/L, where L is the initial distance between the ships. Bell's argument assumes gentle acceleration (aL ≪ c²), so that the thread is always close to equilibrium. The final state does not depend on it.</p>
+        <p class="core-hint">Proper acceleration in units of c²/L, where L is the initial distance between the ships. Bell's argument assumes gentle acceleration. This model prescribes the motion of the thread; its final stretch does not depend on the acceleration.</p>
         <p class="core-hint" id="frontAccelHint"></p>
       </div>
 
@@ -84,7 +85,7 @@
         <span id="vLabel">Speed of the ships</span><output data-result="v">—</output>
         <span>Gap between ships</span><output data-result="sepLab">—</output>
         <span>Thread's relaxed length</span><output data-result="natural">—</output>
-        <span>Stretch</span><output data-result="strain">—</output>
+        <span>Greatest stretch</span><output data-result="strain">—</output>
         <span class="ship-only hidden">Gap, ships' frame</span><output class="ship-only hidden" data-result="sepShip">—</output>
         <span>Thread</span><output data-result="status">—</output>
         <span class="results-note hidden" id="resultsNote">Frozen at the moment it snapped; the ships on screen keep going.</span>
@@ -96,6 +97,7 @@
     <div class="canvas-host">
       <canvas id="stage" aria-label="Bell's spaceship simulation"></canvas>
     </div>
+    <p class="core-hint model-note">Simplified thread: it breaks when any part reaches its stretch limit. See Physics for the assumptions.</p>
     <div class="story" id="story" aria-live="polite">
       <div id="setupStep" class="story-step">
         <p class="story-title">The setup</p>
@@ -155,10 +157,12 @@
   <h2>What the model assumes</h2>
   <ul>
     <li>Units with c = 1. Lengths in units of L, times in units of L/c.</li>
-    <li>Each ship has a constant proper acceleration until it reaches the final speed, then coasts. The default acceleration is gentle (aL = 0.2 c²).</li>
-    <li>The thread has no mass and does not pull on the ships. Its elongation is its proper length divided by its rest length L, minus 1. Each piece of the thread is taken to follow a worldline of the same family as the ships (front proper acceleration a/(1 + k·aL/c²), interpolated along the thread), and a piece moving at speed v that spans dx in A's frame has proper length γ dx. In Bell's case (k = 0) this gives exactly γ − 1 at every moment, the gap divided by the relaxed length L/γ. For k = 1 it gives zero at every moment. When the two ships have different speeds, the pieces of the thread also move at different speeds, so there is no single relaxed length: the app then shows the stretch only, and the Results show the mean speed with both values.</li>
-    <li>The ships' frame and the spacetime diagram show the distance in the rear ship's momentary rest frame; its scale is in L, measured in that frame from B. It equals γL once the ships coast; during the acceleration it is somewhat larger, because in that frame the front ship is ahead in its program. The gap at the snap is taken along B's line of simultaneity through the break, which meets B's path at an earlier moment, when B was slower.</li>
-    <li>The break is drawn at the middle of the thread. The recoil of the two halves is schematic.</li>
+    <li>Each ship has a constant proper acceleration until it reaches the final speed, then coasts. The default is aL = 0.2 c². Whether acceleration is gentle for a real thread also depends on its elastic response.</li>
+    <li>The thread does not pull on the ships. We prescribe the motion of each piece, using the same family of acceleration programs as the ships. This illustrates the stretching without solving the thread's elastic response. The exact snap time is therefore a result of this simplified model, not a prediction for a particular material.</li>
+    <li>A small piece moving at speed v and spanning dx in A's frame has proper length γ dx. Its stretch is this length divided by its initial length, minus 1. The thread breaks when any piece reaches the chosen limit. In Bell's case all pieces stretch equally by γ − 1; with a gentler front engine the rear end reaches the limit first. Results show the greatest stretch. At k = 1 every piece stays unstretched. Above k = 1 we draw a slack thread schematically; the slider is limited so that the ships and the prescribed pieces cannot pass one another.</li>
+    <li>When the pieces move at different speeds, there is no single relaxed length in A's frame. The app then shows the greatest stretch and both ships' speeds.</li>
+    <li>The ships' frame and the spacetime diagram show the distance in the rear ship's momentary rest frame; its scale is in L, measured in that frame from B. In Bell’s case it equals γL once the ships coast; during the acceleration it is somewhat larger, because in that frame the front ship is ahead in its program. The gap at the snap is taken along B's line of simultaneity through the break, which meets B's path earlier for a midpoint break, or at the break itself for a rear-end break.</li>
+    <li>In Bell’s case the break is drawn at the middle, since every part reaches the limit together. Otherwise it is drawn at the rear end, where the limit is reached first. Recoil after breaking is schematic.</li>
   </ul>
 </section>
 
@@ -187,6 +191,6 @@
   </ol>
 </section>
 </main>
-<script type="module" src="js/app.js?v=0.6.3"></script>
+<script type="module" src="js/app.js?v=0.6.4"></script>
 </body>
 </html>

@@ -1,5 +1,12 @@
 # Bell's Spaceships — changelog
 
+## 0.6.4 (2026-11-07)
+- Limit the front-engine slider at high speed to prevent crossing ships or material worldlines; shared links use the same limit.
+- Break when the most stretched piece reaches the limit. Intermediate settings fail at the rear end; Bell's uniform case still breaks at 0.553 c for a 20% limit.
+- Distinguish keeping the thread intact from keeping it exactly unstretched. Accept surviving challenge runs and offer the unstretched challenge separately.
+- Identify Born-rigid motion by k = 1, not by a small displayed stretch; retain precision for small nonzero stretch.
+- Keep the explanation short and state that the snap time follows a prescribed-motion model, with elastic dynamics and recoil outside its scope.
+
 ## 0.6.3 (2026-11-07)
 - Spacetime diagram: the "same time for A / for B" labels sat on the worldlines and on each other. They are replaced by a legend beside the plot (in the lower-right corner when the panel is narrow), which also explains the hollow dot (C at the same time for B).
 
