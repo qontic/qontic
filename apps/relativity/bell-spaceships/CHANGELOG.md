@@ -1,5 +1,16 @@
 # Bell's Spaceships — changelog
 
+## 0.5.0 (2026-11-07)
+After three expert reviews (project doc 2026-11-07-bell-spaceships-expert-review).
+- Thread elongation now exact: proper length summed over a family of element worldlines (1/a(x0) = 1/a + k·x0), γ(v)·dx per piece. k = 0 gives γ − 1, k = 1 gives 0 at every moment and any acceleration (the old mean-speed estimate showed a Born-rigid thread as slack for large aL). Taut tolerance 0.5% (was 3%). New test.
+- "Relaxed length" replaces "natural length" (rest length stays L); relaxed = gap / (1 + strain).
+- Ships'-frame panel: distance scale in B's frame from B (was A's moving ruler marks labelled in L); caption notes B's frame is not the thread's rest frame while accelerating.
+- Results show "Mean speed of the ships" with B and C values when they differ.
+- Challenge: Born-rigid preset and the "k = 1 only" hint stay hidden until the thread holds at k = 1 or the student asks; "Show me the setting that works" appears after a first attempt; prompt asks which way to move the slider.
+- Setup "as A sees it" → "in A's frame".
+- Text: atom orbit "contracted by the factor √(1 − v²/c²)"; strong thread gives "approximately" Born-rigid motion; "only k = 1" limited to this family; Bell's pedagogy needs no ether; Brown & Pooley presented as defenders of the dynamical view, with the geometrical view stated; model assumptions describe the exact measure.
+- Home-page section text (shared with Michelson–Morley): "differ on how to explain it. A similar situation to…" (was "disagree on what is happening. The same situation as…").
+
 ## 0.4.2 (2026-11-07)
 - Published to production (qonticlab.rice.edu), Relativity: Two Accounts section.
 - Links to the Bell's atom notebook removed until the notebook is reviewed and published.

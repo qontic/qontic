@@ -2,8 +2,8 @@ import '../../../../shared/qontic-controls.js?v=3.2';
 import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=3.7';
 import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=3.0';
 import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
-import { APP_RELEASE } from './release.js?v=0.4.2';
-import { makeModel, finalStrain, shipState, rearFrameView, strainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf } from './kinematics.js?v=0.3.0';
+import { APP_RELEASE } from './release.js?v=0.5.0';
+import { makeModel, finalStrain, shipState, rearFrameView, strainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf } from './kinematics.js?v=0.5.0';
 
 mountQonticShell({
   title: "Bell's Spaceships",
@@ -83,19 +83,19 @@ function updateHints() {
   $('#modeHint').textContent = kk === 0
     ? `Same engines: in A\u2019s frame the gap stays L while the moving thread gets shorter. Final stretch γ − 1 = ${fsTxt}.`
     : Math.abs(fs) < 0.005
-      ? 'Born-rigid: the gap shrinks with the thread, which stays at its natural length. Any other setting stretches it or leaves it slack.'
-      : fs > 0 ? `Final stretch (γ − 1)(1 − k) = ${fsTxt}. Still stretched; k = 1 is the only setting that avoids it.`
-        : `The ships end closer than the thread's natural length: it goes slack by ${fsTxt}.`;
+      ? 'Born-rigid: the gap shrinks with the thread, which stays at its relaxed length. Any other setting stretches it or leaves it slack.'
+      : fs > 0 ? `Final stretch (γ − 1)(1 − k) = ${fsTxt}. Still stretched.${state.rigidShown ? ' k = 1 is the only setting that avoids it.' : ''}`
+        : `The ships end closer than the thread's relaxed length: it goes slack by ${fsTxt}.`;
   $('#frontAccelHint').textContent = `Front ship: a/(1 + k·aL/c²) = ${fmt(model.ships[1].a, 3)} c²/L.`;
   const v = `${fmt(state.beta)} c`, pct = `${Math.round(state.breakStrain * 100)}%`;
   const engines0 = kk === 0
-    ? `When it arrives, B and C fire <b>identical engines running the same program</b> and stop at ${v}. So, as A sees it, the ships always have the same speed and <b>stay L apart</b>.`
+    ? `When it arrives, B and C fire <b>identical engines running the same program</b> and stop at ${v}. So, in A\u2019s frame, the ships always have the same speed and <b>stay L apart</b>.`
     : `When it arrives, B and C fire their engines and stop at ${v}. This time <b>C's engine is turned down</b> (k = ${fmt(kk)}).`;
   const engines = engines0;
   $('#setupList').innerHTML = [
     'Spaceships <b>B</b> (rear) and <b>C</b> (front) float at rest a distance <b>L</b> apart. <b>A</b>, halfway between them, stays at rest.',
     `A fragile <b>thread</b>, just long enough, joins B to C. It is far too weak to pull on the ships, and snaps if it is stretched by more than <b>${pct}</b>.`,
-    'A sends a <b>light flash</b>, which reaches B and C at the same moment, as A sees it. A\u2019s clock reads <b>t = 0</b> when it arrives.',
+    'A sends a <b>light flash</b>, which reaches B and C at the same moment in A\u2019s frame. A\u2019s clock reads <b>t = 0</b> when it arrives.',
     engines,
   ].map((x) => `<li>${x}</li>`).join('');
   $('#predictionText').textContent = `When the ships reach ${v}, will the thread have snapped?`;
@@ -141,6 +141,11 @@ document.querySelectorAll('[data-predict]').forEach((b) => b.addEventListener('c
 $('#beta').addEventListener('input', (e) => { state.beta = +e.target.value; rebuild(); resetRun(); });
 $('#breakStrain').addEventListener('input', (e) => { state.breakStrain = +e.target.value / 100; rebuild(); resetRun(); });
 $('#accel').addEventListener('input', (e) => { state.accel = +e.target.value; rebuild(); resetRun(); });
+function revealRigid() {
+  state.rigidShown = true;
+  $('#rigidPreset').classList.remove('hidden');
+  updateHints();
+}
 function revealExplore(flash = false) {
   state.explore = true;
   $('#explore').classList.remove('hidden');
@@ -292,9 +297,8 @@ function drawThreadSegment(xa, xb, y, color, sag = 0, slack = 0) {
   else ctx.lineTo(xb, y);
   ctx.stroke();
 }
-// Sag (px) for a thread whose ends are closer than its natural length.
-// Below 3% the launch-frame estimate is not reliable during the push (mean-speed approximation), so treat it as taut.
-const SLACK_MIN = 0.03;
+// Sag (px) for a thread whose ends are closer than its relaxed length.
+const SLACK_MIN = 0.005; // the strain is exact (kinematics.js); below 0.5% shown as taut
 const slackPx = (strain, len) => (strain < -SLACK_MIN ? Math.min(60, len * Math.sqrt(-strain - SLACK_MIN) * 0.7) : 0);
 
 // Atoms of the thread with their electric fields flattened by 1/gamma.
@@ -396,13 +400,12 @@ function drawLaunchPanel(r, s, P) {
     let note;
     if (breakEvent && t >= breakEvent.t) {
       const b = snapState();
-      note = `snapped at ${fmt(b.v)} c: gap ${fmt(b.gap)} L, thread's natural length ${fmt(b.nat)} L`;
+      note = `snapped at ${fmt(b.v)} c: gap ${fmt(b.gap)} L, relaxed length of the thread ${fmt(b.nat)} L`;
     } else {
-      const gap = C.x - B.x, nat = 1 / gammaOf(0.5 * (B.v + C.v));
-      const st = gap / nat - 1;
+      const gap = C.x - B.x, st = strainAt(model, t), nat = gap / (1 + st);
       note = state.k === 0
-        ? `gap held at ${fmt(gap)} L · thread's natural length ${fmt(nat)} L`
-        : `gap ${fmt(gap)} L · thread's natural length ${fmt(nat)} L · ${st > 0.005 ? 'stretched' : st < -SLACK_MIN ? 'slack' : 'matching'}`;
+        ? `gap held at ${fmt(gap)} L · relaxed length of the thread at this speed ${fmt(nat)} L`
+        : `gap ${fmt(gap)} L · relaxed length of the thread ${fmt(nat)} L · ${st > SLACK_MIN ? 'stretched' : st < -SLACK_MIN ? 'slack' : 'matching'}`;
     }
     caption(note, r, X(0.5 * (B.x + C.x)), y, hPx, P);
   }
@@ -416,12 +419,13 @@ function drawThreadLaunch(X, y, s, t, B, C, P) {
   const tb = breakEvent ? breakEvent.t : Infinity;
   if (t < tb) {
     const strain = strainAt(model, t);
-    if (state.show.ghost) bracket(xa, xa + s / g, bracketY(y, s), `natural length ${fmt(1 / g)} L`, P);
+    const relaxed = (B.x === C.x ? 1 : (C.x - B.x) / (1 + strain));
+    if (state.show.ghost) bracket(xa, xa + s * relaxed, bracketY(y, s), `relaxed length ${fmt(relaxed)} L`, P);
     drawThreadSegment(xa, xb, y, strainColor(strain, P), 0, slackPx(strain, xb - xa));
     if (state.show.atoms) drawAtoms(xa, xb, y, g, P, s);
     return;
   }
-  // broken: each half recoils toward its natural (contracted) length
+  // broken: each half recoils toward its relaxed (contracted) length
   const u = Math.min(1, (t - tb) / SNAP), ease = 1 - (1 - u) ** 3;
   const gB = gammaOf(B.v), gC = gammaOf(C.v);
   const half = 0.5 * (xb - xa);
@@ -445,20 +449,19 @@ function drawShipPanel(r, s, P) {
   ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y + 26, r.w, r.h - 26); ctx.clip();
 
   if (state.show.marks) {
-    // marks at rest in the launch frame: in B's frame they are contracted and move backwards
+    // distance scale at rest in B's frame, measured from B's end of the thread
     const ry = r.y + r.h - 22;
     const xB = pre ? 0 : v.xB;
     ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(r.x, ry); ctx.lineTo(r.x + r.w, ry); ctx.stroke();
-    const span = (r.w / s) * gB;
-    const lo = Math.floor((xB - span) * 4), hi = Math.ceil((xB + span) * 4);
+    const lo = Math.floor(((r.x - X(0)) / s) * 4), hi = Math.ceil(((r.x + r.w - X(0)) / s) * 4);
     for (let k = lo; k <= hi; k++) {
-      const x = X((k / 4 - xB) / gB), major = k % 4 === 0;
-      if (x < r.x - 20 || x > r.x + r.w + 20) continue;
+      const x = X(k / 4), major = k % 4 === 0;
       ctx.strokeStyle = major ? P.muted : P.grid;
       ctx.beginPath(); ctx.moveTo(x, ry - (major ? 7 : 4)); ctx.lineTo(x, ry); ctx.stroke();
-      if (major && (gB < 2.5 || k % 8 === 0)) label(`${k / 4} L`, x, ry + 13, { color: P.muted, size: 10, align: 'center' });
+      if (major) label(`${k / 4} L`, x, ry + 13, { color: P.muted, size: 10, align: 'center' });
     }
+    label('distance in B\u2019s frame, from B', r.x + r.w - 12, ry - 10, { color: P.muted, size: 10, align: 'right' });
     drawStationA(X((0.5 - xB) / gB), y + Math.min(r.h * 0.26, 46), Math.min(16, s * 0.06), 1 / gB, P);
   }
   if (state.show.signal && pre) drawSignal(X, y, state.t, P);
@@ -488,7 +491,7 @@ function drawShipPanel(r, s, P) {
   if (!pre) {
     const note = breakEvent && tB >= breakEvent.tRear
       ? `thread snapped · gap in B's frame now ${fmt(v.D)} L`
-      : v.D > 1.005 ? `C fired first in B's frame and pulls ahead: gap ${fmt(v.D)} L, thread's rest length 1.00 L`
+      : v.D > 1.005 ? `C fired first in B's frame and pulls ahead: gap ${fmt(v.D)} L, thread's rest length 1.00 L${tB < Math.max(model.ships[0].t1, model.ships[1].t1) ? ' (while accelerating, B\u2019s frame is not the thread\u2019s rest frame)' : ''}`
         : `gap ${fmt(v.D)} L · thread's rest length 1.00 L`;
     caption(note, r, 0.5 * (xa + xb), y, hPx, P);
   }
@@ -684,18 +687,22 @@ function render() {
   if (rects.st) { drawSpacetime(rects.st, P); if (!rects.lab) drawGauge(rects.st, strain, P, broken); }
 
   const B = shipState(model, 0, t), C = shipState(model, 1, t);
-  const vMean = 0.5 * (B.v + C.v), natural = 1 / gammaOf(vMean);
+  const vMean = 0.5 * (B.v + C.v), natural = t > 0 ? (C.x - B.x) / (1 + strain) : 1;
+  const vLabel = $('#vLabel');
+  const differ = state.k !== 0 && Math.abs(B.v - C.v) > 0.004;
+  const vText = differ ? 'Mean speed of the ships' : 'Speed of the ships';
+  if (vLabel.textContent !== vText) vLabel.textContent = vText;
   if (broken) {
     // freeze the readout at the moment of the snap
     const b = snapState();
-    setResult('v', `${fmt(b.v)} c`);
+    setResult('v', state.k !== 0 && Math.abs(b.vB - b.vC) > 0.004 ? `${fmt(b.v)} c (B ${fmt(b.vB)}, C ${fmt(b.vC)})` : `${fmt(b.v)} c`);
     setResult('sepLab', `${fmt(b.gap)} L`);
     setResult('natural', `${fmt(b.nat)} L`);
     setResult('strain', `${Math.round(b.strain * 100)}% (limit)`);
     setResult('sepShip', `${fmt(b.sepShip)} L`);
     setResult('status', 'snapped');
   } else {
-    setResult('v', `${fmt(vMean)} c`);
+    setResult('v', differ ? `${fmt(vMean)} c (B ${fmt(B.v)}, C ${fmt(C.v)})` : `${fmt(vMean)} c`);
     setResult('sepLab', `${fmt(C.x - B.x)} L`);
     setResult('natural', `${fmt(natural)} L`);
     setResult('strain', strain < -SLACK_MIN ? `slack ${Math.round(-strain * 100)}%` : `${Math.round(Math.max(0, strain) * 100)}%`);
@@ -709,7 +716,8 @@ function render() {
 }
 function snapState() {
   const B = shipState(model, 0, breakEvent.t), C = shipState(model, 1, breakEvent.t);
-  return { v: breakEvent.v, gap: C.x - B.x, nat: 1 / gammaOf(breakEvent.v), strain: breakEvent.strain, sepShip: rearFrameView(model, breakEvent.tRear).D };
+  const gap = C.x - B.x;
+  return { v: breakEvent.v, vB: B.v, vC: C.v, gap, nat: gap / (1 + breakEvent.strain), strain: breakEvent.strain, sepShip: rearFrameView(model, breakEvent.tRear).D };
 }
 function setResult(name, value) { const o = document.querySelector(`[data-result="${name}"]`); if (o && o.value !== value) o.value = value; }
 
@@ -718,8 +726,8 @@ function updateLiveLine(t, v, gap, natural, strain, broken) {
   let text;
   if (t <= T0 && !state.running) text = 'Press Start to run.';
   else if (t < 0) text = 'A\u2019s light flash is on its way to B and C.';
-  else if (broken) { const b = snapState(); text = `Snapped at ${fmt(b.v)} c: the gap was ${fmt(b.gap)} L, the thread\u2019s natural length only ${fmt(b.nat)} L.`; }
-  else text = `Speed ${fmt(v)} c · gap between ships ${fmt(gap)} L · thread\u2019s natural length ${fmt(natural)} L · stretch ${Math.round(Math.max(0, strain) * 100)}% (snaps at ${Math.round(state.breakStrain * 100)}%)`;
+  else if (broken) { const b = snapState(); text = `Snapped at ${fmt(b.v)} c: the gap was ${fmt(b.gap)} L, the relaxed length of the thread only ${fmt(b.nat)} L.`; }
+  else text = `Speed ${fmt(v)} c · gap between ships ${fmt(gap)} L · relaxed length of the thread ${fmt(natural)} L · stretch ${Math.round(Math.max(0, strain) * 100)}% (snaps at ${Math.round(state.breakStrain * 100)}%)`;
   const el = $('#liveLine');
   if (el.textContent !== text) el.textContent = text;
 }
@@ -741,14 +749,19 @@ function finish() {
     why = `Contraction alone breaks nothing: the ships got shorter too. ${gapNote} The tension is real: a strain gauge on the thread would show it, whichever frame you describe it from.`;
   } else if (Math.abs(fs) < 0.005) {
     outcome = `The thread held, unstretched: the gap shrank to ${fmt(1 / g)} L together with it.`;
-    why = 'Only this setting (k = 1, Born-rigid motion) does that. It is what a strong thread would force on light ships by pulling them together.';
-  } else if (fs > 0) outcome = `The thread held, stretched by ${Math.round(fs * 100)}%, below its ${lim}% limit: the gap ended at ${fmt(gapEnd)} L, its natural length ${fmt(1 / g)} L.`;
-  else outcome = `The thread held but went slack: the gap ended at ${fmt(gapEnd)} L, shorter than its natural length ${fmt(1 / g)} L.`;
+    why = 'Only this setting (k = 1, Born-rigid motion) does that. A strong thread tied to light ships would pull them into approximately this motion.';
+  } else if (fs > 0) outcome = `The thread held, stretched by ${Math.round(fs * 100)}%, below its ${lim}% limit: the gap ended at ${fmt(gapEnd)} L, its relaxed length ${fmt(1 / g)} L.`;
+  else outcome = `The thread held but went slack: the gap ended at ${fmt(gapEnd)} L, shorter than its relaxed length ${fmt(1 / g)} L.`;
   let lead = '';
   if (state.prediction) lead = `<strong>${(state.prediction === 'snaps') === snapped ? 'Your prediction was right.' : 'Not what you predicted.'}</strong> `;
   $('#verdict').innerHTML = lead + outcome + (why ? ` <span class="feedback">${why}</span>` : '');
   const next = [];
-  if (snapped && state.k < 1) next.push(['challenge', 'Can you make it hold?']);
+  if (state.challenge) {
+    state.tries += 1;
+    if (Math.abs(fs) < 0.005 && !snapped) { state.challenge = false; revealRigid(); }
+    else if (state.tries >= 1) next.push(['k1', 'Show me the setting that works']);
+  }
+  if (snapped && state.k < 1 && !state.challenge) next.push(['challenge', 'Can you make it hold?']);
   if (state.k !== 0) next.push(['k0', 'Back to the same engines']);
   if (state.layout === 'lab') next.push(['frames', 'See it from the ships\u2019 frame']);
   next.push(['again', 'Run again']);
@@ -761,11 +774,13 @@ $('#nextSteps').addEventListener('click', (e) => {
   if (!k) return;
   if (k === 'challenge') {
     revealExplore(true);
-    $('#verdict').innerHTML = 'Try to keep the thread intact by holding the front ship back with the Front engine slider in the controls, then press Start. The ships must still reach the same final speed.';
-    $('#nextSteps').innerHTML = '<button type="button" class="qontic-app-toggle" data-next="k1">Show me the setting that works</button>';
+    state.challenge = true; state.tries = 0;
+    $('#verdict').innerHTML = 'Keep the thread intact by holding the front ship back with the Front engine slider in the controls, then press Start. The ships must still reach the same final speed. First think: if the thread snapped because the gap stayed too wide, should the front ship pull away faster or slower than the rear one?';
+    $('#nextSteps').innerHTML = '';
     $('#kSlider').focus();
     return;
   }
+  if (k === 'k1') { state.challenge = false; revealRigid(); }
   if (k === 'k1' || k === 'k0') { setK(k === 'k1' ? 1 : 0); start(); }
   else if (k === 'frames') { setLayout('frames'); state.t = T0; state.finished = false; start(); }
   else { state.t = T0; state.finished = false; start(); }
@@ -807,6 +822,7 @@ mountQonticShortcuts({
 
 rebuild();
 syncControls();
+if (state.k !== 0) revealRigid();
 setLayout(state.layout);
 if (state.explore) revealExplore(false);
 resetRun();

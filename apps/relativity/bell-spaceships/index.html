@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="../../../shared/favicon.svg">
 <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=3.7">
 <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.5">
-<link rel="stylesheet" href="css/spaceships.css?v=0.4.2">
+<link rel="stylesheet" href="css/spaceships.css?v=0.5.0">
 </head>
 <body class="spaceship-app">
 <main class="shell">
@@ -32,10 +32,10 @@
           <div class="qontic-control-section-title">Front engine</div>
           <div class="qontic-app-toggle-group k-group" role="group" aria-label="Front engine presets">
             <button class="qontic-app-toggle active" type="button" data-k="0" aria-pressed="true" title="Both ships run the same acceleration program. This is Bell's question.">Same as rear (Bell)</button>
-            <button class="qontic-app-toggle" type="button" data-k="1" aria-pressed="false" title="The one setting that keeps the thread at its natural length: Born-rigid motion, the motion a strong thread would force on light ships.">Born-rigid (no stress)</button>
+            <button class="qontic-app-toggle hidden" id="rigidPreset" type="button" data-k="1" aria-pressed="false" title="The one setting in this family that keeps the thread at its relaxed length: Born-rigid motion.">Born-rigid (no stress)</button>
           </div>
         </div>
-        <label class="control-row k-row" title="0: same engines. 1: the front ship's proper acceleration is a/(1 + aL/c²), the one setting that keeps the thread at its natural length.">
+        <label class="control-row k-row" title="0: same engines. 1: the front ship's proper acceleration is a/(1 + aL/c²), the one setting that keeps the thread at its relaxed length.">
           <span>Hold the front ship back</span><input id="kSlider" type="range" min="0" max="1.5" step="0.05" value="0" aria-label="How much the front engine is turned down, k"><output id="kOut">0.00</output>
         </label>
         <p class="core-hint" id="modeHint"></p>
@@ -81,9 +81,9 @@
     <section class="results-panel qontic-panel" data-results-panel aria-label="Results">
       <div class="results-head"><strong>Results</strong><button type="button" data-results-collapse aria-label="Collapse results">−</button></div>
       <div class="results-body">
-        <span>Speed of the ships</span><output data-result="v">—</output>
+        <span id="vLabel">Speed of the ships</span><output data-result="v">—</output>
         <span>Gap between ships</span><output data-result="sepLab">—</output>
-        <span>Thread's natural length</span><output data-result="natural">—</output>
+        <span>Thread's relaxed length</span><output data-result="natural">—</output>
         <span>Stretch</span><output data-result="strain">—</output>
         <span class="ship-only hidden">Gap, ships' frame</span><output class="ship-only hidden" data-result="sepShip">—</output>
         <span>Thread</span><output data-result="status">—</output>
@@ -127,13 +127,13 @@
   <p>Three spaceships A, B and C float at rest. B and C are a distance L apart, and A sits halfway between them. A fragile thread is tied from B to C. A sends a light signal; when it arrives, B and C fire identical engines and run identical acceleration programs. Seen from A, the two ships have the same speed at every moment and stay a distance L apart. Does the thread break?</p>
 
   <h2>The short answer, in one frame</h2>
-  <p>Stay in A's frame, the frame the ships start from. The gap between the ships stays L. The thread does not: a thread moving at speed v is in equilibrium at a shorter length, L/γ, where γ = 1/√(1 − v²/c²). Held at L, it is stretched by a fraction γ − 1. At 0.9 c, γ = 2.29, so the thread would have to stretch by 129%. A thread that snaps at elongation ε breaks when the ships reach</p>
+  <p>Stay in A's frame, the frame the ships start from. The gap between the ships stays L. The thread does not: a thread moving at speed v is in equilibrium at a shorter length, L/γ, where γ = 1/√(1 − v²/c²). Call this its relaxed length at that speed; its rest length is still L. Held at L, it is stretched by a fraction γ − 1. At 0.9 c, γ = 2.29, so the thread would have to stretch by 129%. A thread that snaps at elongation ε breaks when the ships reach</p>
   <p class="formula">v<sub>c</sub> = c √(1 − 1/(1 + ε)²)</p>
   <p>(0.55 c for ε = 20%). The ships themselves are shorter too, by the same factor. Only the gap is not, because nothing ties the two engines together except the agreed program.</p>
   <p>This is not a matter of how anyone measures the thread. The thread is under tension that a strain gauge on it would record, whoever looks at it.</p>
 
   <h2>Why a moving thread is shorter</h2>
-  <p>This is Bell's own explanation, and it also works in A's frame. The thread is held together by electric forces between charges. The field of a charge moving at speed v is flattened along the motion by 1/γ. Bell followed one electron orbiting a nucleus that is pushed gently to speed v. Using Maxwell's field equations, the Lorentz force and Lorentz's relativistic relation between momentum and velocity, he found that the orbit becomes an ellipse shorter by 1/γ along the motion, and that it goes round more slowly by the factor γ. Matter held together by such forces settles at a shorter length when it moves.</p>
+  <p>This is Bell's own explanation, and it also works in A's frame. The thread is held together by electric forces between charges. The field of a charge moving at speed v is flattened along the motion by 1/γ. Bell followed one electron orbiting a nucleus that is pushed gently to speed v. Using Maxwell's field equations, the Lorentz force and Lorentz's relativistic relation between momentum and velocity, he showed that the orbit becomes an ellipse contracted along the motion by the factor √(1 − v²/c²), and that it goes round more slowly, its period longer by the factor γ. Matter held together by such forces settles at a shorter length when it moves.</p>
   <p>The <em>Atoms of the thread</em> option under Display is only a schematic of this.</p>
   <p>Bell adds a proviso: the contraction is what happens to a bound object accelerated gently, so that its internal forces keep it near equilibrium. A strong thread tied to light ships would instead pull the ships together, and nothing would break. Here the ships are taken to be far too massive for the thread to move them.</p>
 
@@ -148,15 +148,15 @@
   <p>Contraction by itself breaks nothing: the ships contract too, and nobody expects them to break. The thread breaks because the gap between its ends does not shrink with it.</p>
   <p>The slider <em>Hold the front ship back</em> (k) sets the front ship's proper acceleration to a/(1 + k·aL/c²). With a gentler front engine C gains speed a little more slowly, and B closes in. Once both coast at speed v, the gap in A's frame is L − kL(1 − 1/γ), and the thread is stretched by</p>
   <p class="formula">(γ − 1)(1 − k).</p>
-  <p>Only k = 1 leaves the thread exactly at its natural length L/γ: the gap shrinks with it, and in the ships' frame the distance stays L. This is Born-rigid motion (Nikolić, Ref. 4 under Rationale). It is a special tuning, not something that happens by itself: below k = 1 the thread is still stretched and can snap; above it the ships end closer than the thread's natural length and it goes slack.</p>
-  <p>What k = 1 does with engines, a strong thread would do on its own if the ships were light: pull them into exactly this motion. That is Bell's proviso.</p>
+  <p>Only k = 1 leaves the thread exactly at its relaxed length L/γ: the gap shrinks with it, and in the ships' frame the distance stays L. This is Born-rigid motion (Nikolić, Ref. 4 under Rationale). It is a special tuning, not something that happens by itself: below k = 1 the thread is still stretched and can snap; above it the ships end closer than the thread's relaxed length and it goes slack. ("Only" refers to this family of engine programs; other programs, such as a delayed start for C, can also end with no stretch.)</p>
+  <p>What k = 1 does with engines, a strong thread would do on its own if the ships were light: pull them into approximately this motion, after some elastic jostling. That is Bell's proviso.</p>
 
   <h2>What the model assumes</h2>
   <ul>
     <li>Units with c = 1. Lengths in units of L, times in units of L/c.</li>
     <li>Each ship has a constant proper acceleration until it reaches the final speed, then coasts. The default acceleration is gentle (aL = 0.2 c²).</li>
-    <li>The thread has no mass and does not pull on the ships. Its elongation is computed as in Bell's argument: in A's frame, the gap divided by the natural length L/γ at the ships' speed. In Bell's case this is exactly γ − 1 at every moment. With a gentler front engine the two ships briefly have different speeds and the mean speed is used; the error is below 2.5%, so differences under 3% are shown as taut.</li>
-    <li>The ships' frame and the spacetime diagram show the distance in the rear ship's momentary rest frame. It equals γL once the ships coast; during the acceleration it is somewhat larger, because in that frame the front ship is ahead in its program.</li>
+    <li>The thread has no mass and does not pull on the ships. Its elongation is its proper length divided by its rest length L, minus 1. Each piece of the thread is taken to follow a worldline of the same family as the ships (front proper acceleration a/(1 + k·aL/c²), interpolated along the thread), and a piece moving at speed v that spans dx in A's frame has proper length γ dx. In Bell's case (k = 0) this gives exactly γ − 1 at every moment, the gap divided by the relaxed length L/γ. For k = 1 it gives zero at every moment. When the two ships have different speeds, the Results show the mean speed and both values.</li>
+    <li>The ships' frame and the spacetime diagram show the distance in the rear ship's momentary rest frame; its scale is in L, measured in that frame from B. It equals γL once the ships coast; during the acceleration it is somewhat larger, because in that frame the front ship is ahead in its program.</li>
     <li>The break is drawn at the middle of the thread. The recoil of the two halves is schematic.</li>
   </ul>
 </section>
@@ -166,8 +166,8 @@
   <p>John Bell described this problem in 1976, in an essay on how to teach special relativity. He put it to a distinguished experimental physicist, who refused to accept that the thread breaks and thought Bell had misread relativity. They took it to the CERN Theory Division. An informal canvass there produced, by Bell's account, a clear consensus that the thread would not break. Bell added that many who first answer wrongly reach the right answer with some thought, often by working out how things look to B or C.<sup><a href="#ref-1">1</a></sup> The same effect had been analysed earlier by Dewan and Beran.<sup><a href="#ref-2">2</a>,<a href="#ref-3">3</a></sup></p>
 
   <h2>Why it belongs here</h2>
-  <p>Bell remarked that people with a classical education, who know the work of Larmor, Lorentz and Poincaré, tend to have better instincts here.<sup><a href="#ref-1">1</a></sup> Einstein's route starts from the principle that the laws look the same to every uniformly moving observer, and gets contraction and time dilation from it quickly and in full generality. The older route, which Bell called the longer road, works in one frame and asks how the forces inside moving matter change its shape and its rhythms. Bell judged that the facts of physics do not force either philosophy, and that the longer road gives students a feel for the subject that the shorter one can skip.<sup><a href="#ref-1">1</a></sup> The thread question is a case in point: it is asked in one frame, about one object, and that frame answers it directly.</p>
-  <p>The dynamical account has its own limits. Brown and Pooley point out that Bell's argument shows contraction follows if the laws that hold matter together have Lorentz symmetry; it does not explain why they do, and the stability of matter needs more than classical electromagnetism.<sup><a href="#ref-5">5</a></sup> Which account counts as the explanation is still debated by philosophers of physics.</p>
+  <p>Bell remarked that people with a classical education, who know the work of Larmor, Lorentz and Poincaré, tend to have better instincts here.<sup><a href="#ref-1">1</a></sup> Einstein's route starts from the principle that the laws look the same to every uniformly moving observer, and gets contraction and time dilation from it quickly and in full generality. The older route, which Bell called the longer road, works in one frame and asks how the forces inside moving matter change its shape and its rhythms. Bell judged that the facts of physics do not force either philosophy, and that the longer road gives students a feel for the subject that the shorter one can skip.<sup><a href="#ref-1">1</a></sup> The thread question is a case in point: it is asked in one frame, about one object, and that frame answers it directly. Bell's pedagogy needs no ether: A's frame is used only because the question is asked there, and the same reasoning works in any inertial frame.</p>
+  <p>Brown and Pooley, who defend this dynamical view, stress what it assumes: that all the laws holding matter together share the Lorentz symmetry of Maxwell's equations, and that stable rods and clocks need a quantum theory of matter, not classical electromagnetism.<sup><a href="#ref-5">5</a></sup> The rival, geometrical view takes the structure of spacetime itself, as described by Minkowski, to be what explains why rods and clocks behave this way. Which account counts as the explanation is still debated by philosophers of physics.</p>
 
   <h2>Why it belongs on Q-Ontic</h2>
   <p>Here two accounts agree on every prediction and tell different stories about what is happening, each making some questions easy and others hard. The formulations of quantum mechanics are in a similar position, with one difference: there, some proposals, such as spontaneous-collapse models, do predict different results and are being tested.</p>
@@ -182,6 +182,6 @@
   </ol>
 </section>
 </main>
-<script type="module" src="js/app.js?v=0.4.2"></script>
+<script type="module" src="js/app.js?v=0.5.0"></script>
 </body>
 </html>
