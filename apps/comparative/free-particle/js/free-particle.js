@@ -60,11 +60,15 @@ let fp = {
   interpMode      : 'pilotwave',// 'copenhagen' | 'pilotwave' | 'manyworlds'
   displayMode     : 'prob',     // 'prob' | 'real' | 'imag' | 'phase'
   showPilotWave   : true,       // visual preference only; guidance stays active
+  wavePalette     : 'Q-Ontic',  // shared across all interpretations
+  waveOpacity     : 1,
+  detectorColor   : '#648cff',
+  hitColor        : '#50f050',
 
   // ── physical parameters ───────────────────────────────────────────────────
   energy_eV       : 1.0,        // kinetic energy in eV  → sets k, omega
   sigma0_nm       : 2.0,        // initial spatial width of Gaussian (packet mode)
-  sigmaY0_nm      : 33.0,       // initial vertical spread of 2D packet
+  sigmaY0_nm      : 11.0,       // initial vertical spread of 2D packet
   x0_nm           : -20.0,      // initial centre of packet
   detectorX_nm    : 30.0,       // position of detector (nm)
   detectorW_nm    : 4.0,        // half-width of detector window (nm)
@@ -141,41 +145,8 @@ let fp = {
   prob            : null,       // |ψ|²
 };
 
-// ---------------------------------------------------------------------------
-// Palette  (reuses the project palette mechanism if available, else built-in)
-// ---------------------------------------------------------------------------
-function fpColor(t) {
-  // "Inferno"-like palette from black → purple → orange → yellow
-  t = Math.max(0, Math.min(1, t));
-  const stops = [
-    [0,   [0,   0,   0  ]],
-    [0.25,[72,  0,  101  ]],
-    [0.5, [179, 58,  30  ]],
-    [0.75,[237, 149, 32  ]],
-    [1.0, [252, 255, 164 ]],
-  ];
-  for (let i = 1; i < stops.length; i++) {
-    if (t <= stops[i][0]) {
-      const lo = stops[i-1], hi = stops[i];
-      const f  = (t - lo[0]) / (hi[0] - lo[0]);
-      const r  = Math.round(lo[1][0] + f*(hi[1][0] - lo[1][0]));
-      const g  = Math.round(lo[1][1] + f*(hi[1][1] - lo[1][1]));
-      const b  = Math.round(lo[1][2] + f*(hi[1][2] - lo[1][2]));
-      return `rgb(${r},${g},${b})`;
-    }
-  }
-  return 'rgb(252,255,164)';
-}
-
-// Phase palette: maps [0, 2π] → hue wheel
-function fpPhaseColor(phase) {
-  const h = ((phase / (2*Math.PI)) % 1 + 1) % 1 * 360;
-  return `hsl(${h.toFixed(1)},90%,55%)`;
-}
-
 // DoubleSlit2.0/shaders/wave_render.frag and its ungrouped yellow particles.
-// Keep the legacy palettes above for Many-Worlds. Lookup tables avoid per-pixel
-// trigonometry in the Canvas renderer.
+// Lookup tables avoid per-pixel trigonometry in the Canvas renderer.
 const FP_WAVE_AMPLITUDE_CUTOFF = 0.001;
 const FP_PHASE_AMOUNT = 0.77905591;
 const FP_PALETTE_STEPS = 1024;
@@ -184,14 +155,35 @@ const FP_COLLAPSE_SPEED = 4;
 const FP_COLLAPSE_DURATION_MS = 950 / FP_COLLAPSE_SPEED;
 const FP_COLLAPSE_HOLD_MS = 450 / FP_COLLAPSE_SPEED;
 
-// Density uses the full relative-density range, without the phase view's
-// high exposure. Deep magenta is reserved for values nearest the peak.
-// Adjust the wave and both profiles here: [relative density, [red, green, blue]],
-// all values 0..1. Keep densities increasing; move a stop to change where its
-// color appears. Tones sampled from the supplied DoubleSlit reference: dark
-// teal, green, a subdued transition into red, then deep magenta. Keep the
-// transition dark to avoid introducing a bright yellow band.
+// |ψ|²: a temperature scale, low density blue and high density red, through
+// violet. Built in OKLCH with lightness rising steadily from black, so brighter
+// always means denser and the 2D view and the 1D profile show the same extent.
+// [relative density, [red, green, blue]], all values 0..1.
 const FP_DENSITY_STOPS = [
+  [0.00, [0.000, 0.000, 0.000]],
+  [0.10, [0.010, 0.036, 0.162]],
+  [0.20, [0.054, 0.135, 0.389]],
+  [0.30, [0.091, 0.217, 0.567]],
+  [0.40, [0.179, 0.284, 0.731]],
+  [0.50, [0.385, 0.260, 0.770]],
+  [0.60, [0.574, 0.225, 0.734]],
+  [0.70, [0.791, 0.168, 0.506]],
+  [0.80, [0.899, 0.223, 0.218]],
+  [0.90, [0.955, 0.316, 0.188]],
+  [1.00, [1.000, 0.403, 0.158]],
+];
+// Black through deep blue and cyan to near-white (single hue), kept as 'Ice'.
+const FP_ICE_STOPS = [
+  [0.00, [0.000, 0.000, 0.000]],
+  [0.12, [0.031, 0.055, 0.157]],
+  [0.35, [0.078, 0.200, 0.455]],
+  [0.60, [0.110, 0.455, 0.698]],
+  [0.80, [0.290, 0.737, 0.839]],
+  [0.93, [0.651, 0.910, 0.945]],
+  [1.00, [0.910, 0.984, 1.000]],
+];
+// The previous house palette (teal, green, red, magenta), kept as an option.
+const FP_CLASSIC_STOPS = [
   [0.00, [0.000, 0.000, 0.000]],
   [0.08, [0.040, 0.065, 0.100]],
   [0.32, [0.080, 0.235, 0.240]],
@@ -203,27 +195,77 @@ const FP_DENSITY_STOPS = [
   [0.97, [0.549, 0.043, 0.239]],
   [1.00, [0.506, 0.039, 0.314]],
 ];
-const FP_DENSITY_PALETTE = Array.from({ length: FP_PALETTE_STEPS + 1 }, (_, i) => {
-  const density = i / FP_PALETTE_STEPS;
-  const hi = FP_DENSITY_STOPS.findIndex((stop, index) => index > 0 && density <= stop[0]);
-  const [loValue, loColor] = FP_DENSITY_STOPS[hi - 1];
-  const [hiValue, hiColor] = FP_DENSITY_STOPS[hi];
-  const blend = (density - loValue) / (hiValue - loValue);
-  return loColor.map((channel, c) => channel + (hiColor[c] - channel) * blend);
+// Same named choices exposed by the analytical double-slit display controls.
+// Q-Ontic preserves this app's current house palette as the default.
+const FP_WAVE_PALETTES = {
+  Gray: ['#717171','#8d8d8d','#aaaaaa','#c6c6c6','#e2e2e2'],
+  Green: ['#5aa664','#a6dba0','#d9f0d3'],
+  Blue: ['#4292c6','#6baed6','#c6dbef'],
+  Red: ['#67000d','#a50f15','#cb181d','#ef3b2c','#fcbba1'],
+  Yellow: ['#8c510a','#d8b365','#f6e8c3','#fee08b','#ffffbf'],
+  Inferno: ['#000004','#420a68','#932667','#dd513a','#fca50a'],
+  Spectral: ['#9e0142','#f46d43','#fdae61','#fee08b','#e6f598','#abdda4','#66c2a5','#3288bd','#5e4fa2'],
+  RdYlBu: ['#d73027','#fc8d59','#fee090','#e0f3f8','#91bfdb','#4575b4'],
+};
+const FP_WAVE_PALETTE_RGB = Object.fromEntries(Object.entries(FP_WAVE_PALETTES).map(([name, colors]) => [name,
+  colors.map(hex => {
+    const value = parseInt(hex.slice(1), 16);
+    return [value >> 16, (value >> 8) & 255, value & 255].map(channel => channel / 255);
+  })
+]));
+function fpStopsPalette(stops) {
+  return Array.from({ length: FP_PALETTE_STEPS + 1 }, (_, i) => {
+    const density = i / FP_PALETTE_STEPS;
+    const hi = Math.max(1, stops.findIndex((stop, index) => index > 0 && density <= stop[0]));
+    const [loValue, loColor] = stops[hi - 1];
+    const [hiValue, hiColor] = stops[hi];
+    const blend = (density - loValue) / (hiValue - loValue);
+    return loColor.map((channel, c) => channel + (hiColor[c] - channel) * blend);
+  });
+}
+const FP_DENSITY_PALETTE = fpStopsPalette(FP_DENSITY_STOPS);
+const FP_CLASSIC_PALETTE = fpStopsPalette(FP_CLASSIC_STOPS);
+const FP_ICE_PALETTE = fpStopsPalette(FP_ICE_STOPS);
+
+// Thermal: the familiar heat-map order, blue (low) -> cyan -> green -> yellow ->
+// red (high), from the Turbo colormap's polynomial fit (Mikhailov, Google AI,
+// 2019). The lowest densities fade in from black so empty space stays dark.
+function fpTurbo(t) {
+  const r = 0.13572138 + t * (4.61539260 + t * (-42.66032258 + t * (132.13108234 + t * (-152.94239396 + t * 59.28637943))));
+  const g = 0.09140261 + t * (2.19418839 + t * (4.84296658 + t * (-14.18503333 + t * (4.27729857 + t * 2.82956604))));
+  const b = 0.10667330 + t * (12.64194608 + t * (-60.58204836 + t * (110.36276771 + t * (-89.90310912 + t * 27.34824973))));
+  return [r, g, b].map(v => Math.max(0, Math.min(1, v)));
+}
+const FP_THERMAL_PALETTE = Array.from({ length: FP_PALETTE_STEPS + 1 }, (_, i) => {
+  const d = i / FP_PALETTE_STEPS, fadeEnd = 0.08, t0 = 0.06, t1 = 0.86;
+  if (d < fadeEnd) return fpTurbo(t0).map(v => v * d / fadeEnd);
+  return fpTurbo(t0 + (d - fadeEnd) / (1 - fadeEnd) * (t1 - t0));
 });
-const FP_PHASE_DENSITY_PALETTE = Array.from({ length: FP_PALETTE_STEPS + 1 }, (_, i) => {
-  const I = i / FP_PALETTE_STEPS;
-  return [0.26, 0.13, 0.49].map((lo, c) =>
-    (lo + ([0.72, 0.50, 0.99][c] - lo) * Math.pow(I, 0.7)) * I);
-});
+
+// Phase: a colour wheel of constant perceived lightness (OKLCH, L = 0.72,
+// C = 0.15), so every phase looks equally bright and brightness can carry the
+// amplitude. Phase 0 is cyan; going round the wheel passes blue, magenta,
+// orange and yellow-green.
+function fpOklchToRgb(L, C, h) {
+  const a = C * Math.cos(h), b = C * Math.sin(h);
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
+  const lin = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+  ];
+  return lin.map(v => {
+    const x = Math.max(0, Math.min(1, v));
+    return x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
+  });
+}
+const FP_PHASE_HUE0 = 3.4; // radians in OKLCH: phase 0 sits at cyan
 const FP_PHASE_PALETTE = Array.from({ length: FP_PALETTE_STEPS + 1 }, (_, i) => {
   const phase = (i / FP_PALETTE_STEPS * 2 - 1) * Math.PI;
-  const magnitude = Math.abs(phase);
-  const blend = Math.max(0, (magnitude - Math.PI / 2) / (Math.PI / 2));
-  const u = Math.min(1, magnitude / 1.05);
-  const visibility = u * u * u * (u * (u * 6 - 15) + 10);
-  const branch = phase >= 0 ? [0.08, 0.25, 1] : [1, 0.08, 0.02];
-  return branch.map((v, c) => (v + ([0.72, 0.04, 0.88][c] - v) * blend) * visibility);
+  return fpOklchToRgb(0.72, 0.15, FP_PHASE_HUE0 + phase);
 });
 
 function fpWaveIntensity(rho) {
@@ -231,13 +273,50 @@ function fpWaveIntensity(rho) {
 }
 
 function fpDensityRGB(relativeDensity) {
-  return FP_DENSITY_PALETTE[Math.round(Math.max(0, Math.min(1, relativeDensity)) * FP_PALETTE_STEPS)];
+  const t = Math.max(0, Math.min(1, relativeDensity));
+  if (fp.wavePalette === 'Q-Ontic') return FP_DENSITY_PALETTE[Math.round(t * FP_PALETTE_STEPS)];
+  if (fp.wavePalette === 'Classic') return FP_CLASSIC_PALETTE[Math.round(t * FP_PALETTE_STEPS)];
+  if (fp.wavePalette === 'Ice') return FP_ICE_PALETTE[Math.round(t * FP_PALETTE_STEPS)];
+  if (fp.wavePalette === 'Thermal') return FP_THERMAL_PALETTE[Math.round(t * FP_PALETTE_STEPS)];
+  const palette = FP_WAVE_PALETTE_RGB[fp.wavePalette] || FP_WAVE_PALETTE_RGB.Inferno;
+  const scaled = t * (palette.length - 1);
+  const index = Math.floor(scaled);
+  const blend = scaled - index;
+  const lo = palette[index], hi = palette[Math.min(index + 1, palette.length - 1)];
+  return lo.map((channel, c) => channel + (hi[c] - channel) * blend);
 }
 
 function fpDensityColor(relativeDensity) {
   const rgb = fpDensityRGB(relativeDensity);
-  return `rgb(${rgb.map(v => Math.round(255 * v)).join(',')})`;
+  return `rgba(${rgb.map(v => Math.round(255 * v)).join(',')},${fp.waveOpacity})`;
 }
+
+window.fpWavePaletteNames = ['Q-Ontic', 'Thermal', 'Ice', 'Classic', ...Object.keys(FP_WAVE_PALETTES)];
+window.fpSetWavePalette = name => {
+  if (!window.fpWavePaletteNames.includes(name)) return;
+  fp.wavePalette = name;
+  fp._collapseVisual = null;
+  fpRender();
+};
+window.fpSetWaveOpacity = value => {
+  fp.waveOpacity = Math.max(0, Math.min(1, Number(value)));
+  fpRender();
+};
+function fpSafeHexColor(value, fallback) {
+  return /^#[0-9a-f]{6}$/i.test(String(value)) ? String(value).toLowerCase() : fallback;
+}
+function fpColorWithAlpha(hex, alpha) {
+  const value = parseInt(fpSafeHexColor(hex, '#000000').slice(1), 16);
+  return `rgba(${value >> 16},${(value >> 8) & 255},${value & 255},${alpha})`;
+}
+window.fpSetDetectorColor = value => {
+  fp.detectorColor = fpSafeHexColor(value, fp.detectorColor);
+  fpRender();
+};
+window.fpSetHitColor = value => {
+  fp.hitColor = fpSafeHexColor(value, fp.hitColor);
+  fpRender();
+};
 
 function fpClearCollapse() {
   fp.collapseElapsed_ms = 0;
@@ -286,7 +365,7 @@ function fpBuildGrid() {
 
 function fpSigmaY0() {
   // User-controlled y spread with sane floor for numerical stability.
-  return Math.max(2, fp.sigmaY0_nm || 0);
+  return Math.max(1, fp.sigmaY0_nm || 0);
 }
 
 // Section probabilities from |psi|^2 inside detector window at time t.
@@ -882,59 +961,38 @@ function fpRenderWave() {
     for (let i = 0; i < off.width; i++) {
       const v = vals[j * off.width + i];
       let r = 0, g = 0, b = 0, a = 255;
-      if (fp.interpMode !== 'manyworlds' && (mode === 'phase' || mode === 'prob')) {
+      if (mode === 'phase' || mode === 'prob') {
         const rho = probs[j * off.width + i];
         const fade = Math.max(0, Math.min(1, (Math.sqrt(rho) - FP_WAVE_AMPLITUDE_CUTOFF) / FP_WAVE_AMPLITUDE_CUTOFF));
         const visibility = fade * fade * (3 - 2 * fade);
         if (mode === 'phase') {
-          const I = fpWaveIntensity(rho);
-          const colorIndex = Math.round(I * FP_PALETTE_STEPS);
+          // Hue = phase; brightness = relative density, as in the |ψ|² view, so the
+          // packet shows the same extent in every view.
+          const I = Math.min(1, rho / maxP2D);
           const phaseIndex = Math.max(0, Math.min(FP_PALETTE_STEPS,
             Math.round((v / Math.PI + 1) * 0.5 * FP_PALETTE_STEPS)));
           const phase = FP_PHASE_PALETTE[phaseIndex];
-          const density = FP_PHASE_DENSITY_PALETTE[colorIndex];
-          r = ((1 - FP_PHASE_AMOUNT) * density[0] + FP_PHASE_AMOUNT * phase[0] * I) * 255 * visibility;
-          g = ((1 - FP_PHASE_AMOUNT) * density[1] + FP_PHASE_AMOUNT * phase[1] * I) * 255 * visibility;
-          b = ((1 - FP_PHASE_AMOUNT) * density[2] + FP_PHASE_AMOUNT * phase[2] * I) * 255 * visibility;
+          r = phase[0] * I * 255 * visibility;
+          g = phase[1] * I * 255 * visibility;
+          b = phase[2] * I * 255 * visibility;
         } else {
           const rgb = fpDensityRGB(rho / maxP2D);
           r = rgb[0] * 255 * visibility; g = rgb[1] * 255 * visibility; b = rgb[2] * 255 * visibility;
         }
-      } else if (mode === 'phase') {
-        // Modulate hue brightness by local amplitude so near-zero regions
-        // appear dark rather than showing noisy colour at the packet edges.
-        const ampWeight = Math.min(1, Math.sqrt(probs[j * off.width + i] / maxP2D));
-        const h = (((v / (2 * Math.PI)) % 1 + 1) % 1) * 6;
-        const xh = 1 - Math.abs((h % 2) - 1);
-        let rr = 0, gg = 0, bb = 0;
-        if (h < 1) { rr = 1; gg = xh; }
-        else if (h < 2) { rr = xh; gg = 1; }
-        else if (h < 3) { gg = 1; bb = xh; }
-        else if (h < 4) { gg = xh; bb = 1; }
-        else if (h < 5) { rr = xh; bb = 1; }
-        else { rr = 1; bb = xh; }
-        r = Math.round(255 * rr * ampWeight);
-        g = Math.round(255 * gg * ampWeight);
-        b = Math.round(255 * bb * ampWeight);
       } else if (mode === 'real' || mode === 'imag') {
-        const t = (v - vmin) / Math.max(1e-12, vmax - vmin);
-        const dv = t - 0.5;
-        r = Math.round(Math.max(0, dv * 2) * 220 + 20);
-        b = Math.round(Math.max(0, -dv * 2) * 220 + 20);
-        g = Math.round(35 * (1 - 4 * dv * dv));
-      } else {
-        const t = Math.max(0, Math.min(1, v / Math.max(1e-12, maxP2D)));
-        // Inferno-like palette
-        const rr = Math.round(252 * t);
-        const gg = Math.round(255 * Math.pow(t, 1.6));
-        const bb = Math.round(164 * Math.pow(t, 0.6));
-        r = rr; g = gg; b = bb;
+        // Negative values blue, positive orange; brightness proportional to |value|.
+        // (Re ψ and Im ψ follow |ψ|, which is √2 wider than |ψ|² for a Gaussian.)
+        const u = Math.max(-1, Math.min(1, v / Math.max(1e-12, vmax)));
+        const m = Math.abs(u);
+        const c = u >= 0 ? [1.00, 0.62, 0.20] : [0.25, 0.60, 1.00];
+        r = Math.round(c[0] * m * 255); g = Math.round(c[1] * m * 255); b = Math.round(c[2] * m * 255);
       }
       // In light mode, let empty space reveal the light canvas. Keep the
       // existing RGB palette; alpha follows the packet, including signed views.
       if (fpLightCanvas) {
         a = Math.round(255 * Math.min(1, Math.sqrt(probs[j * off.width + i] / maxP2D) * 4));
       }
+      a = Math.round(a * fp.waveOpacity);
       data[p++] = r; data[p++] = g; data[p++] = b; data[p++] = a;
     }
   }
@@ -1092,17 +1150,18 @@ function fpRenderDetector() {
     ctx.fillStyle = fpCanvasColor('rgba(20,30,50,0.55)', 'rgba(226,232,240,0.85)');
     ctx.fillRect(histL + 1, secY + 1, Math.max(1, histW - 2), Math.max(1, secH - 2));
     if (cnt > 0) {
-      ctx.fillStyle = 'rgba(250,204,21,0.40)';
+      ctx.fillStyle = fpColorWithAlpha(fp.hitColor, 0.40);
       ctx.fillRect(histL + 1, secY + 1, barW, Math.max(1, secH - 2));
     }
 
     // Detector zone (left): only event-highlight information.
     const secFired = anyFired && (mwUnchosen || fp.bDetectedSection === i);
-    ctx.fillStyle  = secFired ? 'rgba(80,240,80,0.74)' : 'rgba(100,140,255,0.28)';
-    if (collapse && secFired) ctx.fillStyle = 'rgba(255,223,150,0.10)';
+    ctx.fillStyle = secFired
+      ? fpColorWithAlpha(fp.hitColor, 0.74)
+      : fpColorWithAlpha(fp.detectorColor, 0.28);
     ctx.fillRect(detL, secY, Math.max(1, detR - detL), secH);
     if (collapse && secFired) {
-      ctx.strokeStyle = 'rgba(255,232,163,0.95)';
+      ctx.strokeStyle = fpColorWithAlpha(fp.hitColor, 0.95);
       ctx.lineWidth = 1.5;
       ctx.strokeRect(detL + 1, secY + 1, Math.max(1, detR - detL - 2), Math.max(1, secH - 2));
     }
@@ -1125,21 +1184,19 @@ function fpRenderDetector() {
   }
 
   // Zone borders
-  ctx.strokeStyle = anyFired ? '#50f050' : '#6688ff';
-  if (collapse) ctx.strokeStyle = '#9d88cb';
+  ctx.strokeStyle = anyFired ? fp.hitColor : fp.detectorColor;
   ctx.lineWidth   = 2;
   ctx.strokeRect(detL, 0, Math.max(1, detR - detL), H);
-  ctx.strokeStyle = 'rgba(250,204,21,0.65)';
+  ctx.strokeStyle = fpColorWithAlpha(fp.hitColor, 0.65);
   ctx.lineWidth   = 1;
   ctx.strokeRect(histL, 0, Math.max(1, histR - histL), H);
 
   // Labels
-  ctx.fillStyle = anyFired ? '#50f050' : fpCanvasColor('rgba(180,200,255,0.9)', '#4159a0');
-  if (collapse) ctx.fillStyle = '#ffe8a3';
+  ctx.fillStyle = anyFired ? fp.hitColor : fp.detectorColor;
   ctx.font      = 'bold 12px Inter, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('D', Math.round((detL + detR) * 0.5), 16);
-  ctx.fillStyle = fpCanvasColor('rgba(250,204,21,0.9)', '#806300');
+  ctx.fillStyle = fpColorWithAlpha(fp.hitColor, 0.9);
   ctx.fillText('H', Math.round((histL + histR) * 0.5), 16);
 }
 
@@ -1180,16 +1237,7 @@ function fpRenderYProjection() {
     if (accum > maxRho) maxRho = accum;
   }
 
-  if (fp.interpMode !== 'manyworlds') {
-    fpDrawDensityProfile(ctx, W, H, rhoY, maxRho, 'y');
-  } else {
-    for (let j = 0; j < H; j++) {
-      const t = Math.max(0, Math.min(1, rhoY[j] / maxRho));
-      const barW = Math.max(1, Math.round((W - 12) * t));
-      ctx.fillStyle = fpColor(t);
-      ctx.fillRect(W - barW - 1, j, barW, 1);
-    }
-  }
+  fpDrawDensityProfile(ctx, W, H, rhoY, maxRho, 'y');
 
   // Detector section guides to compare y-density against detector pixels.
   ctx.strokeStyle = fpCanvasColor('rgba(255,255,255,0.18)', 'rgba(51,65,85,0.22)');
@@ -1238,83 +1286,38 @@ function fpDrawObserver(ctx, cx, cy, r, color, label) {
 }
 
 function fpRenderMWBranch(ctx, W, H, sectionIdx) {
+  ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = fpCanvasColor('#000', '#ffffff');
   ctx.fillRect(0, 0, W, H);
-  if (!fp.prob) return;
+  if (!fpWaveCanvas || !fpPartCanvas || !fpDetCanvas) return;
 
-  // |\u03c8|² background
-  // Use frozen snapshot so the waveform stays fixed at the branching moment
-  const snapProb = fp._mwSnapProb || fp.prob;
-  const maxP = fp._mwSnapMaxP || fp._maxProb || 1e-12;
-  const N = fp.NX, dxP = W / N;
-  for (let i = 0; i < N; i++) {
-    const t = Math.max(0, Math.min(1, snapProb[i] / maxP));
-    ctx.fillStyle = fpColor(t);
-    ctx.fillRect(Math.round(i * dxP), 0, Math.max(1, Math.ceil(dxP)), H);
-  }
+  // A branch is the real main scene at the split, not a second simplified
+  // visualization. Reuse the exact wave and particle layers, then render the
+  // shared detector layer with this branch's one definite pixel outcome.
+  const previousSection = fp.bDetectedSection;
+  fp.bDetectedSection = sectionIdx;
+  fpRenderDetector();
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(fpWaveCanvas, 0, 0, W, H);
+  ctx.drawImage(fpPartCanvas, 0, 0, W, H);
+  ctx.drawImage(fpDetCanvas, 0, 0, W, H);
+  ctx.restore();
+  fp.bDetectedSection = previousSection;
+  fpRenderDetector();
+}
 
-  // Detector bands
-  const xd_ = (fp.detectorX_nm - fp.xMin_nm) / (fp.xMax_nm - fp.xMin_nm) * W;
-  const hw_ = fp.detectorW_nm / (fp.xMax_nm - fp.xMin_nm) * W;
-  const xL  = Math.round(xd_ - hw_), xR = Math.round(xd_ + hw_);
-  const xAbsorb = Math.max(0, Math.min(W, xL));
-  // Which branch is the "winning" one (our observer's world this run)?
-  const isWinner = fp.bDetectedSection >= 0 && fp.bDetectedSection === sectionIdx;
-  const NS  = fp.nSections;
-  const branchY = Math.round(H * sectionIdx / NS);
-  const branchH = Math.max(1, Math.round(H * (sectionIdx + 1) / NS) - branchY);
-
-  // Branch-specific absorbing detector view:
-  // keep only this section on incident side; remove transmitted side for all branches.
-  ctx.fillStyle = fpCanvasColor('rgba(0,0,0,0.88)', 'rgba(241,245,249,0.88)');
-  ctx.fillRect(0, 0, xAbsorb, branchY);
-  ctx.fillRect(0, branchY + branchH, xAbsorb, Math.max(0, H - (branchY + branchH)));
-  ctx.fillStyle = fpCanvasColor('rgba(0,0,0,0.94)', 'rgba(241,245,249,0.94)');
-  ctx.fillRect(xAbsorb, 0, W - xAbsorb, H);
-
-  for (let si = 0; si < NS; si++) {
-    const sY = Math.round(H * si / NS), sH = Math.round(H * (si + 1) / NS) - sY;
-    const isThis = (si === sectionIdx);
-    ctx.fillStyle = isWinner && isThis ? 'rgba(251,191,36,0.70)'
-                  : isThis             ? 'rgba(80,240,80,0.50)'
-                  :                      'rgba(80,100,200,0.22)';
-    ctx.fillRect(xL, sY, xR - xL, sH);
-  }
-  ctx.strokeStyle = fpCanvasColor('rgba(255,255,255,0.20)', 'rgba(51,65,85,0.25)'); ctx.lineWidth = 0.5;
-  for (let si = 1; si < NS; si++) {
-    const sy = Math.round(H * si / NS);
-    ctx.beginPath(); ctx.moveTo(xL, sy); ctx.lineTo(xR, sy); ctx.stroke();
-  }
-  ctx.strokeStyle = isWinner ? '#fbbf24' : '#50f050'; ctx.lineWidth = 1.5;
-  ctx.strokeRect(xL, 0, xR - xL, H);
-
-  // Section label
-  const fs = Math.max(9, Math.round(H * 0.17));
-  ctx.fillStyle = isWinner ? '#fbbf24' : fpCanvasColor('rgba(200,200,200,0.9)', '#334155');
-  ctx.font = `bold ${fs}px Inter,sans-serif`;
-  ctx.textAlign = 'left'; ctx.fillText('S' + (sectionIdx + 1), 4, fs + 1);
-
-  // Observer — positioned at vertical centre of THIS section, in definite post-measurement state
-  const obsr  = Math.max(4, Math.round(H * 0.09));
-  const sSecY = (sectionIdx + 0.5) / fp.nSections * H;
-  const obsx  = Math.round(W * 0.88);
-  const obsy  = Math.round(Math.max(obsr + 2, Math.min(H - obsr * 6 - 4, sSecY - obsr)));
-  // Gold observer = our world; green = other valid branch
-  fpDrawObserver(ctx, obsx, obsy, obsr,
-    isWinner ? 'rgba(251,191,36,0.95)' : 'rgba(120,255,170,0.92)', '');
-
-  // Hit count bottom-right
-  const cnt = (fp.sectionHits && fp.sectionHits[sectionIdx]) || 0;
-  ctx.fillStyle = isWinner ? '#fbbf24' : (cnt > 0 ? '#34d399' : '#475569');
-  ctx.font = `bold ${fs}px Inter,sans-serif`; ctx.textAlign = 'right';
-  ctx.fillText(cnt, W - 4, H - 3);
-
-  // Gold outer border marks the branch our observer inhabits
-  if (isWinner) {
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth   = 3;
-    ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
-  }
+function fpCaptureMainScene() {
+  if (!fpWaveCanvas || !fpPartCanvas || !fpDetCanvas) return null;
+  const scene = document.createElement('canvas');
+  scene.width = fpWaveCanvas.width;
+  scene.height = fpWaveCanvas.height;
+  const ctx = scene.getContext('2d');
+  ctx.drawImage(fpWaveCanvas, 0, 0);
+  ctx.drawImage(fpPartCanvas, 0, 0);
+  ctx.drawImage(fpDetCanvas, 0, 0);
+  return scene;
 }
 
 function fpSampleMWBranch() {
@@ -1330,14 +1333,13 @@ function fpSampleMWBranch() {
 
 function fpPrepareMWZoom(sectionIdx) {
   const grid = document.getElementById('fp-mw-grid');
-  const tile = _fpMWCanvases[sectionIdx]?.parentElement;
+  const tile = _fpMWCanvases[sectionIdx];
   if (!grid || !tile || !_fpMWZoomCanvas) return;
 
-  const inset = 6;
   const gridRect = grid.getBoundingClientRect();
   const tileRect = tile.getBoundingClientRect();
-  const width = Math.max(1, Math.round(grid.clientWidth - 2 * inset));
-  const height = Math.max(1, Math.round(grid.clientHeight - 2 * inset));
+  const width = Math.max(1, Math.round(grid.clientWidth));
+  const height = Math.max(1, Math.round(grid.clientHeight));
   _fpMWZoomCanvas.width = width;
   _fpMWZoomCanvas.height = height;
   _fpMWZoomCanvas.hidden = false;
@@ -1354,8 +1356,8 @@ function fpPrepareMWZoom(sectionIdx) {
     complete: false,
     source,
     from: {
-      x: tileRect.left - gridRect.left - inset,
-      y: tileRect.top - gridRect.top - inset,
+      x: tileRect.left - gridRect.left,
+      y: tileRect.top - gridRect.top,
       width: tileRect.width,
       height: tileRect.height,
     },
@@ -1368,6 +1370,19 @@ function fpRenderMWZoom() {
   const ctx = _fpMWZoomCanvas.getContext('2d');
   const W = _fpMWZoomCanvas.width;
   const H = _fpMWZoomCanvas.height;
+  if (zoom.phase === 'restart') {
+    const mix = Math.max(0, Math.min(1, zoom.restartElapsed_ms / zoom.restartDuration_ms));
+    const ease = mix * mix * (3 - 2 * mix);
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(zoom.source, 0, 0, W, H);
+    if (zoom.nextSource) {
+      ctx.globalAlpha = ease;
+      ctx.drawImage(zoom.nextSource, 0, 0, W, H);
+    }
+    ctx.globalAlpha = 1;
+    return;
+  }
   const progress = zoom.complete ? 1 : Math.max(0, Math.min(1, zoom.elapsed_ms / zoom.duration_ms));
   const ease = progress * progress * (3 - 2 * progress);
   const x = zoom.from.x * (1 - ease);
@@ -1381,18 +1396,49 @@ function fpRenderMWZoom() {
   ctx.strokeRect(x + 1, y + 1, Math.max(0, width - 2), Math.max(0, height - 2));
 }
 
+function fpBeginMWRestartTransition() {
+  const zoom = fp.mwZoom;
+  if (!zoom) return;
+  if (fp.animId) cancelAnimationFrame(fp.animId);
+  fp.animId = null;
+  fp.mwWaitingForChoice = false;
+  fpRunReset({deferAnimation:true, preserveMWZoom:true});
+  zoom.phase = 'restart';
+  zoom.restartElapsed_ms = 0;
+  zoom.restartDuration_ms = 650;
+  zoom.nextSource = fpCaptureMainScene();
+  fp.mwZoom = zoom;
+  const grid = document.getElementById('fp-mw-grid');
+  if (grid) grid.style.display = '';
+  if (_fpMWZoomCanvas) _fpMWZoomCanvas.hidden = false;
+  fpRenderMWZoom();
+}
+
 function fpStartMWZoomLoop() {
   if (_fpMWZoomTimer) clearTimeout(_fpMWZoomTimer);
   let last = performance.now();
   const tick = () => {
-    if (!fp.mwWaitingForChoice || !fp.mwZoom) {
+    if (!fp.mwZoom || (!fp.mwWaitingForChoice && fp.mwZoom.phase !== 'restart')) {
       _fpMWZoomTimer = null;
       return;
     }
     const now = performance.now();
     const dt = Math.max(0, now - last);
     last = now;
-    if (fp.running && !fp.mwZoom.complete) {
+    if (fp.running && fp.mwZoom.phase === 'restart') {
+      fp.mwZoom.restartElapsed_ms += dt;
+      fpRenderMWZoom();
+      if (fp.mwZoom.restartElapsed_ms >= fp.mwZoom.restartDuration_ms) {
+        fp.mwZoom = null;
+        if (_fpMWZoomCanvas) _fpMWZoomCanvas.hidden = true;
+        _fpMWZoomTimer = null;
+        fpManageMWView();
+        fpRender();
+        fp._lastFrameTime_ms = null;
+        fp.animId = requestAnimationFrame(fpStep);
+        return;
+      }
+    } else if (fp.running && !fp.mwZoom.complete) {
       fp.mwZoom.elapsed_ms += dt;
       fpRenderMWZoom();
       fpUpdateMWStatus();
@@ -1400,20 +1446,18 @@ function fpStartMWZoomLoop() {
         fp.mwZoom.complete = true;
         fpRenderMWZoom();
         fpUpdateMWStatus();
-        _fpMWZoomTimer = null;
         if (fp.autoNextCycle) {
-          if (fp.animId) cancelAnimationFrame(fp.animId);
-          fp.animId = null;
-          fp.mwWaitingForChoice = false;
-          fpRunReset();
+          fpBeginMWRestartTransition();
+          last = performance.now();
+        } else {
+          _fpMWZoomTimer = null;
+          fp.running = false;
+          const btnStart = document.getElementById('fp-btn-start');
+          const btnStop = document.getElementById('fp-btn-stop');
+          if (btnStart) btnStart.disabled = false;
+          if (btnStop) btnStop.disabled = true;
           return;
         }
-        fp.running = false;
-        const btnStart = document.getElementById('fp-btn-start');
-        const btnStop = document.getElementById('fp-btn-stop');
-        if (btnStart) btnStart.disabled = false;
-        if (btnStop) btnStop.disabled = true;
-        return;
       }
     }
     _fpMWZoomTimer = setTimeout(tick, 16);
@@ -1529,11 +1573,22 @@ function fpResizeMWCanvases() {
   const gH   = grid.clientHeight || Math.round(gW * 0.45);
   const cellW = Math.max(1, Math.floor((gW - pad * 2 - gap * (cols - 1)) / cols));
   const cellH = Math.max(1, Math.floor((gH - pad * 2 - gap * (rows - 1)) / rows));
+  const mainW = fpWaveCanvas?.clientWidth || fpWaveCanvas?.width || 20;
+  const mainH = fpWaveCanvas?.clientHeight || fpWaveCanvas?.height || 9;
+  const aspect = mainW / Math.max(1, mainH);
 
   _fpMWCanvases.forEach(cnv => {
     const wrap = cnv.parentElement;
-    cnv.width  = cellW;
-    cnv.height = cellH;
+    let renderW = cellW;
+    let renderH = Math.max(1, Math.round(renderW / aspect));
+    if (renderH > cellH) {
+      renderH = cellH;
+      renderW = Math.max(1, Math.round(renderH * aspect));
+    }
+    cnv.width  = renderW;
+    cnv.height = renderH;
+    cnv.style.width = renderW + 'px';
+    cnv.style.height = renderH + 'px';
     if (wrap) {
       wrap.style.width  = cellW + 'px';
       wrap.style.height = cellH + 'px';
@@ -1564,8 +1619,11 @@ function fpManageMWView() {
   const mwgrid = document.getElementById('fp-mw-grid');
   const mwstat = document.getElementById('fp-mw-status');
 
-  if (mainWrap) mainWrap.style.display = postSplit ? 'none' : '';
-  if (probw)  probw.style.display  = postSplit ? 'none' : '';
+  // The branch grid overlays only the main canvas. Keeping the surrounding
+  // projection and probability panels in place prevents a layout jump at the
+  // split and gives the zoom exactly the same footprint as the full canvas.
+  if (mainWrap) mainWrap.style.display = '';
+  if (probw)  probw.style.display  = '';
   if (mwgrid) mwgrid.style.display = postSplit ? ''     : 'none';
   if (mwstat) mwstat.style.display = isMW ? '' : 'none';
   if (mwgrid) mwgrid.classList.toggle('mw-choosing', postSplit && fp.mwWaitingForChoice
@@ -1603,20 +1661,9 @@ function fpRenderProbPanel() {
   if ((fp.interpMode === 'collapse' || fp.interpMode === 'pilotwave') && fp.bDetected) return;
 
   // Draw the continuous density profile; retain the Many-Worlds rendering.
-  const N     = fp.NX;
   const maxP  = fp._maxProb || 1e-12;
-  const dxPix = W / N;
 
-  if (fp.interpMode !== 'manyworlds') {
-    fpDrawDensityProfile(ctx, W, H, fp.prob, maxP, 'x');
-  } else {
-    for (let i = 0; i < N; i++) {
-      const t = fp.prob[i] / maxP;
-      const bH = Math.round(t * (H - 20));
-      ctx.fillStyle = fpColor(t);
-      ctx.fillRect(Math.round(i * dxPix), H - bH, Math.max(1, Math.ceil(dxPix)), bH);
-    }
-  }
+  fpDrawDensityProfile(ctx, W, H, fp.prob, maxP, 'x');
 
   // detector window marker (map using this panel's own width)
   const xToProbPx = (x_nm) => ((x_nm - fp.xMin_nm) / (fp.xMax_nm - fp.xMin_nm)) * W;
@@ -1666,9 +1713,6 @@ function fpRenderSectionHist() {
   const maxH = Math.max(1, ...( hits.length ? hits : [0] ));
   const padL = 6, padR = 6, padB = 18, padT = 4;
   const barW = Math.max(4, Math.floor((W - padL - padR) / nS));
-  const COLORS = ['#3b82f6','#6366f1','#8b5cf6','#a855f7','#ec4899','#ef4444',
-                  '#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#0ea5e9'];
-
   for (let i = 0; i < nS; i++) {
     const x   = padL + i * barW;
     const cnt = (hits[i] || 0);
@@ -1682,7 +1726,7 @@ function fpRenderSectionHist() {
     // Filled bar
     if (cnt > 0) {
       ctx.globalAlpha = 0.6 + 0.4 * t;
-      ctx.fillStyle   = COLORS[i % COLORS.length];
+      ctx.fillStyle   = fp.hitColor;
       ctx.fillRect(x + 1, H - padB - bH, barW - 2, bH);
       ctx.globalAlpha = 1;
       const labelY = Math.max(padT + 10, H - padB - bH - 2);
@@ -1701,7 +1745,7 @@ function fpRenderSectionHist() {
 
   // Wave-model expected counts per section (gold ticks), accumulated run-by-run.
   if (fp.nHits >= 4 && expHits.length === nS) {
-    ctx.strokeStyle = 'rgba(250,204,21,0.95)';
+    ctx.strokeStyle = fpColorWithAlpha(fp.hitColor, 0.95);
     ctx.lineWidth = 2;
     for (let i = 0; i < nS; i++) {
       const x = padL + i * barW;
@@ -1918,7 +1962,7 @@ function fpResetParticle() {
 // ---------------------------------------------------------------------------
 // Run reset — starts a new run, keeping accumulated detection stats
 // ---------------------------------------------------------------------------
-function fpRunReset() {
+function fpRunReset(options = {}) {
   fpClearCollapse();
   const shouldTally = !fp.eventCommitted;
   if (shouldTally) fp.nTrials++;
@@ -1953,11 +1997,13 @@ function fpRunReset() {
   fp.mwWaitingForChoice = false;
   fp.mwChoiceCommitted  = false;
   fp.mwChoiceElapsed_ms = 0;
-  fp.mwZoom              = null;
+  if (!options.preserveMWZoom) fp.mwZoom = null;
   fp.eventCommitted     = false;
-  if (_fpMWZoomTimer) clearTimeout(_fpMWZoomTimer);
-  _fpMWZoomTimer = null;
-  if (_fpMWZoomCanvas) _fpMWZoomCanvas.hidden = true;
+  if (!options.preserveMWZoom) {
+    if (_fpMWZoomTimer) clearTimeout(_fpMWZoomTimer);
+    _fpMWZoomTimer = null;
+    if (_fpMWZoomCanvas) _fpMWZoomCanvas.hidden = true;
+  }
 
   fpUpdatePhysics();
   fpBuildGrid();
@@ -1977,7 +2023,7 @@ function fpRunReset() {
   fpRender();
 
   // Keep the animation running without requiring a button press
-  if (fp.running) {
+  if (fp.running && !options.deferAnimation) {
     fp.animId = requestAnimationFrame(fpStep);
   }
 }
@@ -2175,7 +2221,7 @@ function fpWireUI() {
   const sySlider = document.getElementById('fp-sigmay-slider');
   const syInput  = document.getElementById('fp-sigmay-input');
   function setSigmaY(val) {
-    val = Math.max(8, Math.min(60, parseFloat(val)));
+    val = Math.max(1, Math.min(60, parseFloat(val)));
     fp.sigmaY0_nm = val;
     if (sySlider) sySlider.value = val;
     if (syInput)  syInput.value  = val.toFixed(0);

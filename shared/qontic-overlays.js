@@ -5,17 +5,23 @@ function styles() {
   link.href=new URL('./qontic-overlays.css?v=5',import.meta.url);
   link.dataset.qonticOverlays='';document.head.append(link);
 }
-export function mountDistanceScale({host,getUnitsPerPixel,format=v=>String(v),storageKey,onVisibilityChange=()=>{}}) {
+export function mountDistanceScale({host,getUnitsPerPixel,format=v=>String(v),storageKey,defaultPosition={x:8,y:8},onVisibilityChange=()=>{}}) {
   styles();
   const element=document.createElement('div');element.className='qontic-distance-scale';
   element.tabIndex=0;element.setAttribute('role','button');
   element.setAttribute('aria-label','Move distance scale');
   element.title='Drag to move scale · arrow keys to move · Home to reset';
   const canvas=document.createElement('canvas');canvas.style.zIndex='30';element.append(canvas);host.append(element);
-  let position={x:8,y:8},visible=true,opacity=1,drag;
-  if(storageKey)try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Number.isFinite(saved?.x)&&Number.isFinite(saved?.y))position=saved;}catch(_){}
-  const place=()=>{position.x=Math.max(0,Math.min(position.x,host.clientWidth-element.offsetWidth));position.y=Math.max(0,Math.min(position.y,host.clientHeight-element.offsetHeight));element.style.left=position.x+'px';element.style.top=position.y+'px';};
-  const save=()=>{if(storageKey)try{localStorage.setItem(storageKey,JSON.stringify(position));}catch(_){}};
+  let position={x:8,y:8},usingDefault=true,visible=true,opacity=1,drag;
+  if(storageKey)try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Number.isFinite(saved?.x)&&Number.isFinite(saved?.y)){position=saved;usingDefault=false;}}catch(_){}
+  const resolvedDefault=()=>{
+    const value=typeof defaultPosition==='function'
+      ? defaultPosition({hostWidth:host.clientWidth,hostHeight:host.clientHeight,width:element.offsetWidth,height:element.offsetHeight})
+      : defaultPosition;
+    return Number.isFinite(value?.x)&&Number.isFinite(value?.y)?{x:value.x,y:value.y}:{x:8,y:8};
+  };
+  const place=()=>{if(usingDefault)position=resolvedDefault();position.x=Math.max(0,Math.min(position.x,host.clientWidth-element.offsetWidth));position.y=Math.max(0,Math.min(position.y,host.clientHeight-element.offsetHeight));element.style.left=position.x+'px';element.style.top=position.y+'px';};
+  const save=()=>{if(storageKey)try{if(usingDefault)localStorage.removeItem(storageKey);else localStorage.setItem(storageKey,JSON.stringify(position));}catch(_){}};
   const nice=v=>{const p=10**Math.floor(Math.log10(v));return ([5,2,1].find(n=>n*p<=v)||1)*p;};
   const update=()=>{
     element.hidden=!visible || opacity<=0;if(element.hidden)return;
@@ -34,10 +40,10 @@ export function mountDistanceScale({host,getUnitsPerPixel,format=v=>String(v),st
     ctx.globalAlpha=1;
   };
   element.addEventListener('pointerdown',event=>{if(event.button!==0)return;event.preventDefault();element.focus();drag={x:event.clientX,y:event.clientY,px:position.x,py:position.y};element.setPointerCapture(event.pointerId);});
-  element.addEventListener('pointermove',event=>{if(!drag)return;position={x:drag.px+event.clientX-drag.x,y:drag.py+event.clientY-drag.y};place();});
+  element.addEventListener('pointermove',event=>{if(!drag)return;usingDefault=false;position={x:drag.px+event.clientX-drag.x,y:drag.py+event.clientY-drag.y};place();});
   element.addEventListener('pointerup',()=>{drag=null;save();});
   element.addEventListener('pointercancel',()=>{drag=null;});
-  element.addEventListener('keydown',event=>{const delta={ArrowLeft:[-10,0],ArrowRight:[10,0],ArrowUp:[0,-10],ArrowDown:[0,10]}[event.key];if(!delta&&event.key!=='Home')return;event.preventDefault();event.stopPropagation();position=delta?{x:position.x+delta[0],y:position.y+delta[1]}:{x:8,y:8};place();save();});
+  element.addEventListener('keydown',event=>{const delta={ArrowLeft:[-10,0],ArrowRight:[10,0],ArrowUp:[0,-10],ArrowDown:[0,10]}[event.key];if(!delta&&event.key!=='Home')return;event.preventDefault();event.stopPropagation();if(delta){usingDefault=false;position={x:position.x+delta[0],y:position.y+delta[1]};}else usingDefault=true;place();save();});
   const observer=new ResizeObserver(update);observer.observe(host);update();
   return {canvas,update,getVisible:()=>visible&&opacity>0,setVisible(value){visible=!!value;update();onVisibilityChange(visible);},setOpacity(value){opacity=Math.max(0,Math.min(1,value));update();},destroy(){observer.disconnect();element.remove();}};
 }

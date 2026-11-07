@@ -657,33 +657,44 @@
 
     /* ── MW branch grid ───────────────────────────────────────────── */
     .mw-grid {
-      position: relative;
+      position: absolute;
+      inset: 0;
+      z-index: 5;
       display: grid;
       gap: 8px;
       width: 100%;
-      max-width: 860px;
-      aspect-ratio: 20 / 9;
-      border: 2px solid var(--canvas-border);
-      border-radius: var(--radius-md);
+      height: 100%;
+      max-width: none;
+      border: 0;
+      border-radius: 0;
       background: var(--canvas-bg);
-      box-shadow: var(--shadow-lg);
       padding: 6px;
       box-sizing: border-box;
     }
     .mw-mini-wrap {
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: #000;
       border: 1px solid var(--border-color);
       border-radius: var(--radius-sm);
       overflow: hidden;
     }
-    .mw-mini-wrap canvas { display: block; }
+    .canvas-wrap .mw-mini-wrap canvas {
+      position: static;
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+    }
     .mw-zoom-canvas {
       position: absolute;
-      inset: 6px;
+      inset: 0;
       z-index: 4;
-      width: calc(100% - 12px);
-      height: calc(100% - 12px);
+      width: 100%;
+      height: 100%;
       pointer-events: none;
     }
     .mw-zoom-canvas[hidden] { display: none; }
@@ -715,8 +726,8 @@
     }
   </style>
   <link rel="stylesheet" href="../../../shared/qontic-shell.css">
-  <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.0">
-  <link rel="stylesheet" href="template-adapter.css?v=7">
+  <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.1">
+  <link rel="stylesheet" href="template-adapter.css?v=10">
 </head>
 <body>
 
@@ -801,8 +812,8 @@
       </div>
       <div class="slider-row" id="fp-sigma-y-row">
         <label title="Initial vertical spread σy of the 2D packet">Spread σy:</label>
-        <input type="range" id="fp-sigmay-slider" min="8" max="60" step="1" value="33" />
-        <input type="number" id="fp-sigmay-input" min="8" max="60" step="1" value="33" />
+        <input type="range" id="fp-sigmay-slider" min="1" max="60" step="1" value="11" />
+        <input type="number" id="fp-sigmay-input" min="1" max="60" step="1" value="11" />
         <span class="unit">nm</span>
       </div>
     </div>
@@ -927,11 +938,12 @@
           <canvas id="fpWaveCanvas"></canvas>
           <canvas id="fpPartCanvas"></canvas>
           <canvas id="fpDetCanvas"></canvas>
+          <!-- Many-worlds branches overlay the exact main-canvas footprint. -->
+          <div id="fp-mw-grid" class="mw-grid" style="display:none"></div>
         </div>
       </div>
 
-      <!-- Many-worlds branch grid (shown only in many-worlds view) -->
-      <div id="fp-mw-grid" class="mw-grid" style="display:none"></div>
+      <!-- Many-worlds branch status -->
       <div id="fp-mw-status" style="display:none"></div>
 
       <!-- Probability density strip -->
@@ -1159,7 +1171,7 @@
      also updated by JS.
 ================================================================ -->
 
-<script src="js/free-particle.js?v=20260924-mw-zoom4"></script>
+<script src="js/free-particle.js?v=20261106-thermal"></script>
 <script src="js/recorder-ui.js?v=20260914-1"></script>
 <script>
 // ================================================================
@@ -1367,6 +1379,6 @@
 })();
 </script>
 
-<script type="module" src="js/template-adapter.js?v=9"></script>
+<script type="module" src="js/template-adapter.js?v=17"></script>
 </body>
 </html>
