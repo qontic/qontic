@@ -11,8 +11,7 @@
   ],
   "interpretations": [
     "orthodox",
-    "pilot-wave",
-    "many-worlds"
+    "pilot-wave"
   ],
   "level": "intermediate",
   "description": "Interactive Bell-pair simulation with angle-dependent correlations and contrasting representational views.",
