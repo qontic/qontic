@@ -2,8 +2,8 @@ import '../../../../shared/qontic-controls.js?v=3.2';
 import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=3.7';
 import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=3.0';
 import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
-import { APP_RELEASE } from './release.js?v=0.6.1';
-import { makeModel, finalStrain, shipState, rearFrameView, strainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf } from './kinematics.js?v=0.6.1';
+import { APP_RELEASE } from './release.js?v=0.6.2';
+import { makeModel, finalStrain, shipState, rearFrameView, strainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf } from './kinematics.js?v=0.6.2';
 
 mountQonticShell({
   title: "Bell's Spaceships",
@@ -135,6 +135,7 @@ $('#showSetup').addEventListener('click', () => {
 document.querySelectorAll('[data-predict]').forEach((b) => b.addEventListener('click', () => {
   const p = b.dataset.predict;
   state.prediction = p === 'skip' ? null : p;
+  state.lastPrediction = state.prediction && { p: state.prediction, beta: state.beta, eps: state.breakStrain, k: state.k };
   start();
 }));
 
@@ -770,6 +771,15 @@ function finish() {
     const both = state.layout === 'lab' ? ` In A\u2019s frame the moving thread is shorter than the gap; in the ships\u2019 frame the thread\u2019s relaxed length is its rest length L, ${state.k < 1 ? 'and the gap grows past it' : 'and so is the gap'}.` : '';
     why = `${ev} Frames can disagree about lengths and about which ship started first, but not about whether ${snapped ? 'the thread broke' : 'it broke'}.${both}` + (why ? ' ' + why : '');
   } else if (state.prediction) lead = `<strong>${(state.prediction === 'snaps') === snapped ? 'Your prediction was right.' : 'Not what you predicted.'}</strong> `;
+  else if (state.lastPrediction) {
+    // A rerun of the setup the student predicted for (e.g. in another view): tie it back.
+    const lp = state.lastPrediction;
+    if (lp.beta === state.beta && lp.eps === state.breakStrain && lp.k === state.k) {
+      const said = { snaps: 'It snaps', holds: 'It holds', depends: 'It depends on the frame' }[lp.p];
+      const verdict = lp.p === 'depends' ? 'it does not' : (lp.p === 'snaps') === snapped ? 'right' : 'not what happened';
+      lead = `<strong>${state.layout === 'lab' ? 'Same setup' : 'Same run, another view'}. You predicted \u201c${said}\u201d: ${verdict}.</strong> `;
+    }
+  }
   if (snapped && state.k === 0 && ['frames', 'all'].includes(state.layout)) {
     const gf = model.gammaF;
     why += ` In the ships\u2019 frame (lower panel), C fired first. It pulled ahead, and the gap grew past the thread\u2019s rest length L. Once both coast, the gap is γL = ${fmt(gf)} L. Same break, told in another frame.`;

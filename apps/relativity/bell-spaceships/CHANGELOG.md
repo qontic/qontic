@@ -1,5 +1,8 @@
 # Bell's Spaceships — changelog
 
+## 0.6.2 (2026-11-07)
+- Reruns of the setup the student predicted for (same speed, limit and front engine, e.g. in the ships' frame) open the verdict with a tie-back: "Same run, another view. You predicted “It holds”: not what happened." (PER suggestion.)
+
 ## 0.6.1 (2026-11-07)
 After the third review by the same three experts (project doc 2026-11-07-bell-spaceships-0.6-review).
 - Framing: the app's two frames are no longer presented as Lorentz's and Einstein's accounts. Home card: "Answered in one frame by the dynamics of moving matter, as Bell taught, then checked in the ships' frame." Rationale says both frames belong to one theory and the quantum parallel is Lorentz vs Einstein. Lorentz "as completed by Poincaré"; "interpretations" of quantum mechanics, collapse models as distinct theories.
