@@ -351,6 +351,7 @@
         <h2 id="participants-title">Participants</h2>
         <p class="consent">Registered participants who have agreed to have their names listed on this page. The list grows as registrations come in; participants who preferred not to be listed are not shown.</p>
         <ul class="committee" id="participant-list">
+          <li><strong>Jean Bricmont</strong><span class="affiliation">UCLouvain</span></li>
           <li><strong>Maria Bondani</strong><span class="affiliation">CNR – Istituto di Fotonica e Nanotecnologie</span></li>
           <li><strong>Kim Krijtenburg-Lewerissa</strong><span class="affiliation">Utrecht University, Freudenthal Institute</span></li>
           <li><strong>Anssi Kuha</strong><span class="affiliation">Metropolia University of Applied Sciences</span></li>
@@ -363,7 +364,7 @@
           <li><strong>A. Shadi Tahvildar-Zadeh</strong><span class="affiliation">Rutgers University</span></li>
           <li><strong>Pablo Yepes</strong><span class="affiliation">Rice University</span></li>
         </ul>
-        <p class="small" id="participant-count">11 listed · updated November 3, 2026</p>
+        <p class="small" id="participant-count">12 listed · updated November 7, 2026</p>
       </section>
     </div>
   </main>
@@ -405,9 +406,24 @@
     (function () {
       var list = document.getElementById('participant-list'), count = document.getElementById('participant-count');
       if (!list || !window.fetch) return;
-      fetch('participants.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
-        if (!d || !d.participants || !d.participants.length) return;
-        var rows = d.participants.slice().sort(function (a, b) {
+      // Live list: the "Public list" tab of the registration sheet, published as CSV (names and affiliations only).
+      var SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQzQ0zRA8GGUESbPO9eYkACplFobxlV6ieSS1FpiKx8ZUJDQUDdleFK_cLLQz0oms7UDvbPHmwII4A2/pub?gid=734262138&single=true&output=csv';
+      function parseCSV(t) {
+        var rows = [], row = [], f = '', q = false, i, c;
+        for (i = 0; i < t.length; i++) {
+          c = t[i];
+          if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+          else if (c === '"') q = true;
+          else if (c === ',') { row.push(f); f = ''; }
+          else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+          else f += c;
+        }
+        if (f !== '' || row.length) { row.push(f); rows.push(row); }
+        return rows;
+      }
+      function render(people, updated) {
+        if (!people || !people.length) return false;
+        var rows = people.slice().sort(function (a, b) {
           var ka = (a.name || '').split(' ').pop(), kb = (b.name || '').split(' ').pop();
           return ka.localeCompare(kb) || (a.name || '').localeCompare(b.name || '');
         });
@@ -417,9 +433,22 @@
           n.textContent = p.name || ''; a.className = 'affiliation'; a.textContent = p.affiliation || '';
           li.appendChild(n); li.appendChild(a); list.appendChild(li);
         });
-        var when = d.updated ? new Date(d.updated + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+        var when = updated ? new Date(updated + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
         count.textContent = rows.length + ' listed' + (when ? ' · updated ' + when : '');
-      }).catch(function () {});
+        return true;
+      }
+      function fromJSON() {
+        return fetch('participants.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+          if (d) render(d.participants, d.updated);
+        });
+      }
+      fetch(SHEET_CSV).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(function (t) {
+        var rows = parseCSV(t), people = [];
+        if (!rows.length || (rows[0][0] || '').trim().toLowerCase() !== 'name') throw 0;
+        rows.slice(1).forEach(function (r) { var n = (r[0] || '').trim(); if (n) people.push({ name: n, affiliation: (r[1] || '').trim() }); });
+        var t2 = new Date(), today = t2.getFullYear() + '-' + ('0' + (t2.getMonth() + 1)).slice(-2) + '-' + ('0' + t2.getDate()).slice(-2);
+        if (!render(people, today)) throw 0;
+      }).catch(function () { return fromJSON(); }).catch(function () {});
     })();
   </script>
   <script>

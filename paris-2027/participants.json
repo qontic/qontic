@@ -1,10 +1,14 @@
 {
-  "updated": "2026-11-03",
+  "updated": "2026-11-07",
   "note": "Registered participants who agreed to be listed. Generated from the registration form responses; do not edit by hand.",
   "participants": [
     {
       "name": "Maria Bondani",
       "affiliation": "CNR – Istituto di Fotonica e Nanotecnologie"
+    },
+    {
+      "name": "Jean Bricmont",
+      "affiliation": "UCLouvain"
     },
     {
       "name": "Kim Krijtenburg-Lewerissa",
