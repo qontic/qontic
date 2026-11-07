@@ -48,32 +48,53 @@ function sigmaAt(z, sig0, zR) {
 // The wavefunction arms are Gaussians with continuously growing σ and
 // centres moving at ±v_kick (proportional to accumulated time in field).
 // kick_total = KICK * (L / MAG_L_DEFAULT) — scales with magnet length
+// Arm-centre offset along n̂ in the finite model. Constant force inside the magnet:
+// the offset grows quadratically there, then linearly after the exit with the
+// final slope. Post-magnet slope matches the delta model for magL = 1.
+function finiteSep(z, magL) {
+  const slope = KICK * magL / (Z_DET - Z_MAG);   // d(sep)/dz after the magnet
+  const zLo = Z_MAG - magL / 2, zHi = Z_MAG + magL / 2;
+  if (z <= zLo) return 0;
+  if (z < zHi) return slope * (z - zLo) ** 2 / (2 * magL);
+  return slope * (z - Z_MAG);
+}
+
+// Guidance for two Gaussian arms (centres ±sep along n̂, common width sig), from
+// the velocity field of each arm, v± = ċ± + (r − c±)·σ̇/σ, averaged with weights
+// ρ±. Arms are treated as incoherent (no interference cross terms): adequate here
+// because the arms separate in a direction perpendicular to their overlap fringes.
+// This field carries ρ+ + ρ− exactly, so |Ψ|²-distributed starts stay distributed.
+function guide(tx, ty, nn, pP, pM, sep, dSep, sig, dSig) {
+  const nP = (tx - nn.x * sep) * nn.x + (ty - nn.y * sep) * nn.y;   // n̂-distance from + arm
+  const nM = (tx + nn.x * sep) * nn.x + (ty + nn.y * sep) * nn.y;   // n̂-distance from − arm
+  const perp2 = (tx * nn.y - ty * nn.x) ** 2;
+  const rhoP = pP * Math.exp(-(nP * nP + perp2) / sig ** 2);
+  const rhoM = pM * Math.exp(-(nM * nM + perp2) / sig ** 2);
+  const w = (rhoP - rhoM) / (rhoP + rhoM + 1e-300);
+  const growth = dSig / sig;
+  // Along n̂: arm drift ±dSep plus spreading about each centre.
+  const vn = w * dSep + growth * (((rhoP * nP + rhoM * nM) / (rhoP + rhoM + 1e-300)));
+  // Transverse: spreading only (both arms share the same transverse profile).
+  const tPerp = tx * nn.y - ty * nn.x;
+  const vp = growth * tPerp;
+  return { dx: nn.x * vn + nn.y * vp, dy: nn.y * vn - nn.x * vp };
+}
+
 function integrateFinite(x0, y0, theta, phi, magL) {
   const { pP, pM } = getProbs(theta, phi);
   const nn = nHat(phi);
   const pts = [];
   let tx = x0, ty = y0;
-  const kickTotal = KICK * magL;          // total momentum kick ∝ magnet length
-  const zMagLo = Z_MAG - magL / 2;
-  const zMagHi = Z_MAG + magL / 2;
-
+  // Positions are sampled with std SIG·0.7 ≈ SIG/√2, i.e. ρ ∝ exp(−r²/SIG²) at the source.
   for (let i = 0; i <= STEPS; i++) {
     const z = lerp(Z_SRC, Z_DET, i / STEPS);
     pts.push(new THREE.Vector3(tx, ty, z));
-
-    // Post-magnet-entry: arms have separated; compute Bohmian guidance
-    if (z > zMagLo) {
-      // Fraction of kick accumulated so far
-      const kickFrac = clamp((z - zMagLo) / (zMagHi - zMagLo + 0.001), 0, 1);
-      const sep = kickFrac * kickTotal;
-      // Spreading σ at this z
-      const sig = sigmaAt(z, SIG, Z_RAYLEIGH);
-      const rp2 = ((tx - nn.x * sep) ** 2 + (ty - nn.y * sep) ** 2) / sig ** 2;
-      const rm2 = ((tx + nn.x * sep) ** 2 + (ty + nn.y * sep) ** 2) / sig ** 2;
-      const rhoP = pP * Math.exp(-rp2), rhoM = pM * Math.exp(-rm2);
-      const vn = (rhoP - rhoM) / (rhoP + rhoM + 1e-12) * kickTotal / STEPS;
-      tx += nn.x * vn; ty += nn.y * vn;
-    }
+    if (i === STEPS) break;
+    const z1 = lerp(Z_SRC, Z_DET, (i + 1) / STEPS);
+    const sep = finiteSep(z, magL), sep1 = finiteSep(z1, magL);
+    const sig = sigmaAt(z, SIG, Z_RAYLEIGH), sig1 = sigmaAt(z1, SIG, Z_RAYLEIGH);
+    const d = guide(tx, ty, nn, pP, pM, sep, sep1 - sep, sig, sig1 - sig);
+    tx += d.dx; ty += d.dy;
   }
   return pts;
 }
@@ -100,14 +121,14 @@ function integrate(x0, y0, theta, phi) {
   for (let i = 0; i <= STEPS; i++) {
     const ph = i / STEPS;
     pts.push(new THREE.Vector3(tx, ty, lerp(Z_SRC, Z_DET, ph)));
-    if (ph >= 0.5) {
-      const pp  = (ph - 0.5) / 0.5;
-      const sep = pp * KICK, sig = SIG * (1 + pp * 0.5);
-      const rp2 = ((tx - nn.x * sep) ** 2 + (ty - nn.y * sep) ** 2) / sig ** 2;
-      const rm2 = ((tx + nn.x * sep) ** 2 + (ty + nn.y * sep) ** 2) / sig ** 2;
-      const rhoP = pP * Math.exp(-rp2), rhoM = pM * Math.exp(-rm2);
-      const vn = (rhoP - rhoM) / (rhoP + rhoM + 1e-12) * KICK / STEPS;
-      tx += nn.x * vn; ty += nn.y * vn;
+    // After the impulsive kick at z = 0 (ph = 0.5) the arm centres move apart at a
+    // constant rate and the arms widen (schematically) by 50% up to the detector.
+    if (ph >= 0.5 && i < STEPS) {
+      const pp = (ph - 0.5) / 0.5, pp1 = (i + 1) / STEPS * 2 - 1;
+      const sep = pp * KICK, sep1 = pp1 * KICK;
+      const sig = SIG * (1 + pp * 0.5), sig1 = SIG * (1 + pp1 * 0.5);
+      const d = guide(tx, ty, nn, pP, pM, sep, sep1 - sep, sig, sig1 - sig);
+      tx += d.dx; ty += d.dy;
     }
   }
   return pts;
@@ -1027,11 +1048,10 @@ export default function App() {
     const wPoints = new THREE.Points(wGeo, wMat);
     // Don't add wPoints to scene — we use slabs instead
 
-    // Critical ring at z=0
-    const cRingPts = Array.from({ length: 65 }, (_, i) => {
-      const a = i / 64 * Math.PI * 2;
-      return new THREE.Vector3(Math.cos(a) * 0.9, Math.sin(a) * 0.9, 0);
-    });
+    // Dividing line at z=0: the trace of the Bohmian dividing plane n̂·Q = n_c.
+    // Drawn in magnet-local coordinates (local +Y → n̂ after rotation); its offset
+    // along local Y is set in rebuild() from the critical trajectory.
+    const cRingPts = [new THREE.Vector3(-1.1, 0, 0), new THREE.Vector3(1.1, 0, 0)];
     const cRing = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(cRingPts),
       new THREE.LineBasicMaterial({ color: 0xffee44, transparent: true, opacity: 0 })
@@ -1078,6 +1098,14 @@ export default function App() {
         : integrate(x, y, s.theta, s.phi);
       const { pP: pPr } = getProbs(s.theta, s.phi);
       const critN = findCritNInitial(s.theta, s.phi, integrateFn);
+      // Where the critical trajectory crosses z = 0, along n̂.
+      {
+        const p = s.phi * Math.PI / 180, cx = Math.sin(p), cy = Math.cos(p);
+        const cp = integrateFn(critN * cx, critN * cy);
+        const i0 = clamp(Math.round((Z_MAG - Z_SRC) / (Z_DET - Z_SRC) * STEPS), 0, STEPS);
+        cRing.position.set(0, 0, 0);
+        cRing.userData.nAtMag = cp[i0].x * cx + cp[i0].y * cy;
+      }
       const xy = makeInitXY(s.nPart, s.phi, pPr, critN);
       trajs = xy.map(({ x, y, isUp }) => ({ pts: integrateFn(x, y), isUp }));
       const mid = Math.round(STEPS * 0.5);
@@ -1269,19 +1297,11 @@ export default function App() {
         const sigZP  = wSig_ * 1.6 * spreadFactor;
         // No phAdv — phase purely spatial: cos(k*(slabZ-wZ)) in shader
 
-        // Arm centres from actual trajectory means
-        const td = Tr.trajs();
-        let cPx=0,cPy=0,cMx=0,cMy=0,nP=0,nM=0;
-        td.forEach(({ pts, isUp }) => {
-          const oc = isUp ? 1 : -1;
-          const pt = pts[tIdx];
-          if(oc>0){ cPx+=pt.x; cPy+=pt.y; nP++; }
-          else    { cMx+=pt.x; cMy+=pt.y; nM++; }
-        });
-        const mPx = nP>0 ? cPx/nP : nn.x*pp*KICK;
-        const mPy = nP>0 ? cPy/nP : nn.y*pp*KICK;
-        const mMx = nM>0 ? cMx/nM : -nn.x*pp*KICK;
-        const mMy = nM>0 ? cMy/nM : -nn.y*pp*KICK;
+        // Arm centres from the wave model itself (the same centres that guide the
+        // particles), not from the particles: the wave guides, it does not follow.
+        const armSep = isFinite_ ? finiteSep(wZ, s.magL || MAG_L_DEFAULT) : pp * KICK;
+        const mPx = nn.x * armSep, mPy = nn.y * armSep;
+        const mMx = -nn.x * armSep, mMy = -nn.y * armSep;
 
         // Per-slab opacity budget spread over all slabs
         const slabOpacity = 1.0;
@@ -1320,8 +1340,10 @@ export default function App() {
       // Critical ring at z=0, rotated so it's ⊥ to n̂ in XY
       const nr = Math.max(0, 0.8 - Math.abs(frac - 0.5) * 13);
       Tr.cRing.material.opacity = sw ? nr * 0.65 : 0;
-      // Ring lives in XY plane at z=0 — rotate around Z to align gap with n̂
+      // Line lives in the XY plane at z=0, perpendicular to n̂, at n̂·r = n_c
       Tr.cRing.rotation.z = -phiRad;
+      const nC = Tr.cRing.userData.nAtMag || 0;
+      Tr.cRing.position.set(nn.x * nC, nn.y * nC, 0);
 
       // ── Featured particles ─────────────────────────────────────────────────
       const td   = Tr.trajs();
@@ -1460,9 +1482,11 @@ MathJax = {
 <div class="ref">Based on Norsen (2014), <em>Am. J. Phys.</em> 82, 337</div>
 
 <h2>1. The Quantum State</h2>
-<p>A spin-&frac12; particle entering the magnet is prepared in a superposition of spin
-eigenstates along the measurement axis $\\hat{n}(\\varphi) = (\\sin\\varphi, \\cos\\varphi, 0)$:</p>
-<div class="eq">$$|\\Psi\\rangle = \\cos\\tfrac{\\theta}{2}\\,|{+}\\hat{n}\\rangle + \\sin\\tfrac{\\theta}{2}\\,|{-}\\hat{n}\\rangle$$</div>
+<p>The spin-&frac12; particle is prepared with its spin along $\\hat{m}(\\theta) = (\\sin\\theta, \\cos\\theta, 0)$: in the
+reference basis, $\\cos\\tfrac{\\theta}{2}|{+}\\rangle + \\sin\\tfrac{\\theta}{2}|{-}\\rangle$. The magnet measures along
+$\\hat{n}(\\varphi) = (\\sin\\varphi, \\cos\\varphi, 0)$. Both axes lie in the same plane, so in the basis of the measurement axis
+the state is (up to an overall phase)</p>
+<div class="eq">$$|\\Psi\\rangle = \\cos\\tfrac{\\theta-\\varphi}{2}\\,|{+}\\hat{n}\\rangle + \\sin\\tfrac{\\theta-\\varphi}{2}\\,|{-}\\hat{n}\\rangle$$</div>
 
 <h3>Initial wave packet</h3>
 <div class="model-box delta-box">
@@ -1473,46 +1497,55 @@ eigenstates along the measurement axis $\\hat{n}(\\varphi) = (\\sin\\varphi, \\c
 
 <div class="model-box finite-box">
 <div class="model-label finite-label">&#x25AC; Finite field model</div>
-<p style="margin:0">The packet spreads freely during propagation. With waist $\\sigma_0$ at the source $z_0$ and Rayleigh length $z_R = m\\sigma_0^2/\\hbar$, the transverse width grows as:</p>
+<p style="margin:0">The packet spreads freely during propagation. With waist $\\sigma_0$ at the source $z_0$, $k = mv/\\hbar$ and Rayleigh length $z_R = 2k\\sigma_0^2$, the transverse width grows as:</p>
 <div class="eq">$$\\sigma(z) = \\sigma_0\\,\\sqrt{1 + \\left(\\frac{z - z_0}{z_R}\\right)^{\\!2}}$$</div>
-<p style="margin:4px 0 0">So the full pre-magnet wavefunction is:</p>
-<div class="eq">$$\\psi(\\mathbf{r},t) \\propto \\frac{1}{\\sigma(z)}\\exp\\!\\left[-\\frac{x^2+y^2}{4\\sigma(z)^2} - \\frac{(z-vt)^2}{4\\sigma_z^2}\\right] e^{ikz}$$</div>
+<p style="margin:4px 0 0">So the transverse profile of the pre-magnet wavefunction is (phase factors omitted):</p>
+<div class="eq">$$|\\psi(\\mathbf{r},t)| \\propto \\frac{1}{\\sigma(z)}\\exp\\!\\left[-\\frac{x^2+y^2}{4\\sigma(z)^2} - \\frac{(z-vt)^2}{4\\sigma_z^2}\\right]$$</div>
 </div>
 
 <h2>2. The Magnetic Field</h2>
 
 <div class="model-box delta-box">
 <div class="model-label delta-label">&#x03B4; Delta model</div>
-<p style="margin:0">Following Norsen (2014), the field is an impulsive delta function at $z=0$:</p>
-<div class="eq">$$\\mathbf{B}(\\mathbf{r}) = B_0\\,\\delta(z)\\,\\hat{n}$$</div>
-<p style="margin:4px 0 0">This imparts an <em>instantaneous</em> momentum kick to each spin component:</p>
-<div class="eq">$$\\Delta p_{\\hat{n}} = \\begin{cases} +\\hbar\\kappa & |{+}\\hat{n}\\rangle \\ -\\hbar\\kappa & |{-}\\hat{n}\\rangle \\end{cases}$$</div>
+<p style="margin:0">Following Norsen (2014), the field gradient acts only in the plane $z=0$:</p>
+<div class="eq">$$\\mathbf{B}(\\mathbf{r}) = b\\,(\\hat{n}\\cdot\\mathbf{r}_\\perp)\\,\\delta(z)\\,\\hat{n}$$</div>
+<p style="margin:4px 0 0">The interaction $-\\mu\\,\\boldsymbol{\\sigma}\\cdot\\mathbf{B}$ gives each spin component an <em>instantaneous</em> transverse kick,
+with $\\hbar\\kappa = \\mu b/v$ for a particle of speed $v$:</p>
+<div class="eq">$$\\Delta p_{\\hat{n}} = \\begin{cases} +\\hbar\\kappa & |{+}\\hat{n}\\rangle \\\\ -\\hbar\\kappa & |{-}\\hat{n}\\rangle \\end{cases}$$</div>
 </div>
 
 <div class="model-box finite-box">
 <div class="model-label finite-label">&#x25AC; Finite field model</div>
 <p style="margin:0">The field has a constant gradient $\\alpha$ over a finite length $L$ centred at $z=0$:</p>
-<div class="eq">$$\\mathbf{B}(\\mathbf{r}) = \\alpha\\,(\\hat{n}\\cdot\\mathbf{r}_\\perp)\\,\\hat{n}\\cdot\\mathbf{1}_{|z| \\leq L/2}$$</div>
-<p style="margin:4px 0 0">The transverse momentum kick accumulates <em>continuously</em> as the particle traverses the field. The total kick after full traversal equals $\\hbar\\kappa$ (same as delta model), but is spread over length $L$:</p>
-<div class="eq">$$\\frac{dp_{\\hat{n}}}{dz} = \\pm\\frac{\\hbar\\kappa}{L}, \\quad |z| \\leq \\tfrac{L}{2}$$</div>
+<div class="eq">$$\\mathbf{B}(\\mathbf{r}) = \\alpha\\,(\\hat{n}\\cdot\\mathbf{r}_\\perp)\\,\\hat{n}\\,\\mathbf{1}_{|z| \\leq L/2}$$</div>
+<p style="margin:4px 0 0">The transverse kick accumulates <em>continuously</em> as the particle traverses the field. At the default magnet length the total
+kick equals the delta model&rsquo;s $\\hbar\\kappa$; it grows in proportion to $L$:</p>
+<div class="eq">$$\\frac{dp_{\\hat{n}}}{dz} = \\pm\\frac{\\hbar\\kappa}{L_0}, \\quad |z| \\leq \\tfrac{L}{2}$$</div>
 <p style="margin:4px 0 0">The packet width $\\sigma(z)$ continues to grow through and beyond the magnet,
 so the two arms emerge broadened and with a smooth continuous separation.</p>
 </div>
 
+<p>Both field forms are idealisations: a field $\\propto (\\hat{n}\\cdot\\mathbf{r})\\,\\hat{n}$ has $\\nabla\\cdot\\mathbf{B} \\neq 0$. A real magnet&rsquo;s field
+also varies along a perpendicular direction. As usual (and in Norsen 2014) that part is neglected, which is justified when a strong
+uniform field along $\\hat{n}$ makes the spin precess quickly about $\\hat{n}$.</p>
+
 <h2>3. Post-Magnet Wavefunction</h2>
 <p>In both models, after the magnet the state is a superposition of two separating arms:</p>
-<div class="eq">$$\\Psi(\\mathbf{r},t) = \\cos\\tfrac{\\theta}{2}\\;\\psi_+(\\mathbf{r},t)\\,|{+}\\hat{n}\\rangle + \\sin\\tfrac{\\theta}{2}\\;\\psi_-(\\mathbf{r},t)\\,|{-}\\hat{n}\\rangle$$</div>
+<div class="eq">$$\\Psi(\\mathbf{r},t) = \\cos\\tfrac{\\theta-\\varphi}{2}\\;\\psi_+(\\mathbf{r},t)\\,|{+}\\hat{n}\\rangle + \\sin\\tfrac{\\theta-\\varphi}{2}\\;\\psi_-(\\mathbf{r},t)\\,|{-}\\hat{n}\\rangle$$</div>
+<p>Below, $c_\\pm$ is the position of each arm&rsquo;s centre along $\\hat{n}$, and $z$ is measured from the centre of the magnet.</p>
 
 <div class="model-box delta-box">
 <div class="model-label delta-label">&#x03B4; Delta model &mdash; arm centres</div>
-<div class="eq">$$\\langle\\hat{n}\\rangle_\\pm(t) = \\pm\\frac{\\hbar\\kappa}{m}\\,(t - t_{\\rm mag})$$</div>
-<p style="margin:4px 0 0">Width $\\sigma$ remains constant (no free spreading).</p>
+<div class="eq">$$c_\\pm = \\pm\\frac{\\hbar\\kappa}{m}\\,(t - t_{\\rm mag}) = \\pm\\frac{\\kappa}{k}\\,z, \\qquad z > 0$$</div>
+<p style="margin:4px 0 0">There is no spreading before the magnet. After it, the simulation lets each arm widen by 50% up to the detector, a
+schematic stand-in for free spreading.</p>
 </div>
 
 <div class="model-box finite-box">
 <div class="model-label finite-label">&#x25AC; Finite model &mdash; arm centres</div>
-<div class="eq">$$\\langle\\hat{n}\\rangle_\\pm(z) = \\pm\\kappa\\,\\frac{\\min(z,\\,L/2)}{1}\\cdot\\frac{z - z_{\\rm entry}}{L}$$</div>
-<p style="margin:4px 0 0">Width $\\sigma(z)$ keeps growing after the magnet via free evolution.</p>
+<div class="eq">$$c_\\pm(z) = \\pm\\frac{\\kappa}{k}\\,\\frac{L}{L_0}\\begin{cases} \\dfrac{(z + L/2)^2}{2L} & |z| \\le L/2 \\\\[4pt] z & z > L/2 \\end{cases}$$</div>
+<p style="margin:4px 0 0">A constant force inside the magnet gives a parabola; after the exit the arms move apart in straight lines, as in the
+delta model. Width $\\sigma(z)$ keeps growing by free evolution.</p>
 </div>
 
 <h2>4. Born Rule Probabilities</h2>
@@ -1524,30 +1557,32 @@ depends only on the initial spin state and measurement axis, not on field detail
 <p>In the de Broglie&ndash;Bohm interpretation each particle has a definite position
 $\\mathbf{Q}(t)$ at all times, evolving under the <em>guidance equation</em>:</p>
 <div class="eq">$$\\dot{\\mathbf{Q}} = \\frac{\\hbar}{m}\\,\\operatorname{Im}\\!\\left[\\frac{\\Psi^*\\nabla\\Psi}{|\\Psi|^2}\\right]_{\\mathbf{r}=\\mathbf{Q}}$$</div>
-<p>For the two-component state this reduces along $\\hat{n}$ to:</p>
-<div class="eq">$$\\dot{Q}_{\\hat{n}} = \\frac{\\rho_+\\, v_+ + \\rho_-\\, v_-}{\\rho_+ + \\rho_-}$$</div>
-<p>where $\\rho_\\pm(\\mathbf{Q},t) = |\\psi_\\pm(\\mathbf{Q},t)|^2$.</p>
+<p>For the two-component state, neglecting the interference term between the arms (as the simulation does), this becomes the
+density-weighted average of the two arms&rsquo; velocity fields:</p>
+<div class="eq">$$\\dot{\\mathbf{Q}} = \\frac{\\rho_+\\,\\mathbf{v}_+ + \\rho_-\\,\\mathbf{v}_-}{\\rho_+ + \\rho_-}, \\qquad \\mathbf{v}_\\pm = \\dot{c}_\\pm\\,\\hat{n} + (\\mathbf{Q} - c_\\pm\\hat{n})\\,\\frac{\\dot{\\sigma}}{\\sigma}$$</div>
+<p>where $\\rho_\\pm(\\mathbf{Q},t) = P_\\pm\\,|\\psi_\\pm(\\mathbf{Q},t)|^2$. This field carries $\\rho_+ + \\rho_-$ along exactly, so particles that start
+$|\\Psi|^2$-distributed stay so, and each lands inside one of the two arms.</p>
 
 <div class="model-box delta-box">
 <div class="model-label delta-label">&#x03B4; Delta model</div>
-<p style="margin:0">Guidance begins at $z=0$. Before the magnet trajectories are straight lines.
-The critical boundary is a sharp ring in the $z=0$ plane.</p>
+<p style="margin:0">Before the magnet the trajectories are straight lines. At $z=0$ the arms start to separate and each particle is carried
+toward one of them.</p>
 </div>
 
 <div class="model-box finite-box">
 <div class="model-label finite-label">&#x25AC; Finite model</div>
-<p style="margin:0">Guidance begins at $z = -L/2$ (magnet entry). Because $\\sigma(z)$ grows
-continuously and the separation builds gradually, trajectories curve more gently.
-The spreading arms overlap for longer, so the critical boundary is a <em>fuzzy zone</em>
-rather than a sharp ring.</p>
+<p style="margin:0">The trajectories fan out from the source as the packet spreads and bend gradually inside the magnet. The arms overlap for
+longer, but the boundary between the two outcomes is still sharp: trajectories cannot cross.</p>
 </div>
 
-<h2>6. The Critical Boundary</h2>
-<p>The yellow ring marks where $\\rho_+ = \\rho_-$:</p>
-<div class="eq">$$P_+\\,|\\psi_+(\\mathbf{Q})|^2 = P_-\\,|\\psi_-(\\mathbf{Q})|^2$$</div>
-<p>Particles on the $+\\hat{n}$ side reach the $+\\hat{n}$ detector. Because initial positions
-are $|\\Psi|^2$-distributed (quantum equilibrium), the Born rule is reproduced exactly
-in both models.</p>
+<h2>6. The Dividing Plane</h2>
+<p>Here the guidance along $\\hat{n}$ does not depend on the transverse position, and trajectories cannot cross, so particles keep their
+order along $\\hat{n}$. Those starting with $\\hat{n}\\cdot\\mathbf{Q}_0 > n_c$ reach the $+\\hat{n}$ detector, where $n_c$ leaves a fraction
+$P_+$ of the initial distribution above it:</p>
+<div class="eq">$$\\int_{n_c}^{\\infty} \\rho_0(n)\\,dn = P_+$$</div>
+<p>For $P_+ = P_- = \\tfrac12$ the plane passes through the centre of the packet; for $P_+ > \\tfrac12$ it lies on the $-\\hat{n}$ side. The
+yellow line at $z=0$ marks where this plane crosses the magnet. Because initial positions are $|\\Psi|^2$-distributed (quantum equilibrium),
+the fraction reaching each detector is exactly $P_\\pm$, in both models.</p>
 
 <h2>7. The Three Interpretations</h2>
 <p><b class="collapse">Collapse (Copenhagen):</b> Wavefunction collapses on measurement.
@@ -1556,8 +1591,8 @@ but not its probability.</p>
 <p><b class="pilot">Pilot Wave (de Broglie&ndash;Bohm):</b> Both arms evolve; the particle
 follows one trajectory. In the finite model the trajectory curves gradually through the
 magnet rather than kinking sharply at $z=0$.</p>
-<p><b class="manyworlds">Many Worlds (Everett):</b> Both branches are real. After $n$ particles:</p>
-<div class="eq">$$N_{\\rm worlds} = 2^n$$</div>
+<p><b class="manyworlds">Many Worlds (Everett):</b> Both branches are real. Each particle splits every branch in two, with weights $P_+$ and $P_-$;
+the Born rule appears as the weight of branches whose records show each frequency.</p>
 
 <p style="font-size:12px; color:#445566; border-top:1px solid rgba(40,70,140,0.25);
   padding-top:12px; margin-top:16px;">
@@ -1568,7 +1603,8 @@ magnet rather than kinking sharply at $z=0$.</p>
   &nbsp;&mdash;&nbsp;
   J. D&iacute;az Bulnes &amp; I.S. Oliveira,
   &ldquo;Construction of exact solutions for the Stern-Gerlach effect,&rdquo;
-  <em>Braz. J. Phys.</em> <strong>31</strong>, 4 (2001).
+  <em>Braz. J. Phys.</em> <strong>31</strong> (3), 488&ndash;495 (2001).
+  <a href="https://doi.org/10.1590/S0103-97332001000300023" target="_blank">doi:10.1590/S0103-97332001000300023</a>
 </p>
 </body>
 </html>`

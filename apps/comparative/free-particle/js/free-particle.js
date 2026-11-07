@@ -361,8 +361,8 @@ function fpPsi2D(x_nm, y_nm, t_fs) {
 
   const xbar = fp.x0_nm + fp.vGroupX_nm_fs * t_fs;
   const ybar = fp.vGroupY_nm_fs * t_fs;
-  const tauX = hb * t_fs / (m * sigX0 * sigX0);
-  const tauY = hb * t_fs / (m * sigY0 * sigY0);
+  const tauX = hb * t_fs / (2 * m * sigX0 * sigX0); // τ = ħt/(2mσ0²) for |ψ|² of width σ0
+  const tauY = hb * t_fs / (2 * m * sigY0 * sigY0);
   const sigX = sigX0 * Math.sqrt(1 + tauX * tauX);
   const sigY = sigY0 * Math.sqrt(1 + tauY * tauY);
 
@@ -371,10 +371,10 @@ function fpPsi2D(x_nm, y_nm, t_fs) {
 
   // Relative normalization is sufficient for visualization and guidance ratios.
   const amp   = Math.sqrt((sigX0 * sigY0) / (sigX * sigY));
-  const gauss = Math.exp(-((dx * dx) / (4 * sigX0 * sigX) + (dy * dy) / (4 * sigY0 * sigY)));
+  const gauss = Math.exp(-((dx * dx) / (4 * sigX * sigX) + (dy * dy) / (4 * sigY * sigY)));
 
   const carrier = fp.kx_nm * x_nm + fp.ky_nm * y_nm - fp.omega_fs * t_fs;
-  const chirp   = (tauX * dx * dx) / (4 * sigX0 * sigX) + (tauY * dy * dy) / (4 * sigY0 * sigY);
+  const chirp   = (tauX * dx * dx) / (4 * sigX * sigX) + (tauY * dy * dy) / (4 * sigY * sigY);
   const phase   = carrier + chirp - 0.5 * (Math.atan(tauX) + Math.atan(tauY));
   // Effective absorbing detector: local amplitude damping in detector window.
   // This is a pedagogical approximation to an imaginary potential region.
@@ -427,8 +427,8 @@ function fpBohmianVelocity2D(x_nm, y_nm, t_fs) {
   const sigX0 = fp.sigma0_nm;
   const sigY0 = fpSigmaY0();
 
-  const tauX = hb * t_fs / (m * sigX0 * sigX0);
-  const tauY = hb * t_fs / (m * sigY0 * sigY0);
+  const tauX = hb * t_fs / (2 * m * sigX0 * sigX0); // τ = ħt/(2mσ0²) for |ψ|² of width σ0
+  const tauY = hb * t_fs / (2 * m * sigY0 * sigY0);
   const sigX = sigX0 * Math.sqrt(1 + tauX * tauX);
   const sigY = sigY0 * Math.sqrt(1 + tauY * tauY);
 
@@ -777,8 +777,8 @@ let fpWaveBuffers = null;
 // once, then combine them on the unchanged 800 x 140 display grid.
 function fpRenderFactors(nx, ny, t) {
   const sx0 = fp.sigma0_nm, sy0 = fpSigmaY0();
-  const tx = FP_HBAR_EV_FS * t / (FP_MASS_EV * sx0 * sx0);
-  const ty = FP_HBAR_EV_FS * t / (FP_MASS_EV * sy0 * sy0);
+  const tx = FP_HBAR_EV_FS * t / (2 * FP_MASS_EV * sx0 * sx0);
+  const ty = FP_HBAR_EV_FS * t / (2 * FP_MASS_EV * sy0 * sy0);
   const sx = sx0 * Math.sqrt(1 + tx * tx), sy = sy0 * Math.sqrt(1 + ty * ty);
   const amp = Math.sqrt((sx0 * sy0) / (sx * sy));
   const phase0 = -fp.omega_fs * t - 0.5 * (Math.atan(tx) + Math.atan(ty));
@@ -787,14 +787,14 @@ function fpRenderFactors(nx, ny, t) {
   for (let i = 0; i < nx; i++) {
     const x = fp.xMin_nm + i / Math.max(1, nx - 1) * (fp.xMax_nm - fp.xMin_nm);
     const dx = x - (fp.x0_nm + fp.vGroupX_nm_fs * t);
-    const q = dx * dx / (4 * sx0 * sx);
+    const q = dx * dx / (4 * sx * sx); // 1/(1 + iτ) = (1 − iτ)/(1 + τ²): width σ(t), chirp τ·q
     xAmp[i] = amp * Math.exp(-q) * Math.exp(-Math.max(0, fp.absorbGamma_fs) * Math.max(0, t) * fpDetectorProfileX(x));
     xPhase[i] = fp.kx_nm * x + tx * q + phase0;
   }
   for (let j = 0; j < ny; j++) {
     const y = fp.yMin_nm + j / Math.max(1, ny - 1) * (fp.yMax_nm - fp.yMin_nm);
     const dy = y - fp.vGroupY_nm_fs * t;
-    const q = dy * dy / (4 * sy0 * sy);
+    const q = dy * dy / (4 * sy * sy);
     yAmp[j] = Math.exp(-q);
     yPhase[j] = fp.ky_nm * y + ty * q;
   }
@@ -1754,7 +1754,7 @@ function fpUpdateInfoPanel() {
   setTxt('fp-vgroup',   fp.vGroup_nm_fs.toFixed(4) + ' nm/fs');
   setTxt('fp-vphase',   fp.vPhase_nm_fs.toFixed(4) + ' nm/fs');
   setTxt('fp-sigma',
-    (fp.sigma0_nm * Math.sqrt(1 + Math.pow(FP_HBAR_EV_FS * fp.time_fs / (FP_MASS_EV * fp.sigma0_nm * fp.sigma0_nm), 2))).toFixed(3) + ' nm');
+    (fp.sigma0_nm * Math.sqrt(1 + Math.pow(FP_HBAR_EV_FS * fp.time_fs / (2 * FP_MASS_EV * fp.sigma0_nm * fp.sigma0_nm), 2))).toFixed(3) + ' nm');
   setTxt('fp-bpos',     fp.interpMode === 'pilotwave' ?
     (fp.bDetected ? '— detected' : `(${fp.bPos_nm.toFixed(3)}, ${fp.bPosY_nm.toFixed(3)}) nm`) : '—');
   setTxt('fp-ntrials',  fp.nTrials.toString());
