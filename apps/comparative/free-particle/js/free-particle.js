@@ -60,7 +60,7 @@ let fp = {
   interpMode      : 'pilotwave',// 'copenhagen' | 'pilotwave' | 'manyworlds'
   displayMode     : 'prob',     // 'prob' | 'real' | 'imag' | 'phase'
   showPilotWave   : true,       // visual preference only; guidance stays active
-  wavePalette     : 'Q-Ontic',  // shared across all interpretations
+  wavePalette     : 'Thermal',  // default palette; shared across all interpretations
   waveOpacity     : 1,
   detectorColor   : '#648cff',
   hitColor        : '#50f050',
@@ -291,7 +291,7 @@ function fpDensityColor(relativeDensity) {
   return `rgba(${rgb.map(v => Math.round(255 * v)).join(',')},${fp.waveOpacity})`;
 }
 
-window.fpWavePaletteNames = ['Q-Ontic', 'Thermal', 'Ice', 'Classic', ...Object.keys(FP_WAVE_PALETTES)];
+window.fpWavePaletteNames = ['Thermal', 'Q-Ontic', 'Ice', 'Classic', ...Object.keys(FP_WAVE_PALETTES)];
 window.fpSetWavePalette = name => {
   if (!window.fpWavePaletteNames.includes(name)) return;
   fp.wavePalette = name;

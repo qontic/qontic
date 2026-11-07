@@ -114,7 +114,7 @@ function mountFreeParticleTemplate() {
     Spectral:['#9e0142','#f46d43','#fdae61','#fee08b','#e6f598','#abdda4','#66c2a5','#3288bd','#5e4fa2'],
     RdYlBu:['#d73027','#fc8d59','#fee090','#e0f3f8','#91bfdb','#4575b4']
   };
-  let selectedPalette = 'Q-Ontic';
+  let selectedPalette = 'Thermal';
   const palettePopup = document.createElement('div');
   palettePopup.className = 'fp-palette-popup';
   palettePopup.hidden = true;
@@ -145,9 +145,9 @@ function mountFreeParticleTemplate() {
       option.setAttribute('aria-pressed', String(selected));
     });
     window.fpSetWavePalette?.(name);
-    try { localStorage.setItem('qontic-free-particle-palette-v2', name); } catch (_) {}
+    try { localStorage.setItem('qontic-free-particle-palette-v3', name); } catch (_) {}
   };
-  for (const name of window.fpWavePaletteNames || ['Q-Ontic']) {
+  for (const name of window.fpWavePaletteNames || ['Thermal']) {
     const option = document.createElement('button');
     option.type = 'button'; option.className = 'fp-palette-option'; option.dataset.palette = name;
     const label = document.createElement('span'); label.className = 'fp-palette-option-label'; label.textContent = name;
@@ -210,7 +210,7 @@ function mountFreeParticleTemplate() {
   displayLayers.append(paletteRow, opacityRow, detectorColor.row, hitColor.row);
   displayPane.append(displayLayers);
   try {
-    const savedPalette = localStorage.getItem('qontic-free-particle-palette-v2');
+    const savedPalette = localStorage.getItem('qontic-free-particle-palette-v3');
     if (savedPalette && paletteGradients[savedPalette]) selectedPalette = savedPalette;
     const savedOpacityRaw = localStorage.getItem('qontic-free-particle-wave-opacity');
     if (savedOpacityRaw !== null) {
@@ -339,7 +339,7 @@ function mountFreeParticleTemplate() {
   controlPanel.after(results);
 
   mountQonticShell({title:'Free Particle', purpose:'Explore wave-packet spreading and detector outcomes in three quantum interpretations.',
-    version:'Free Particle · Version 1.12 · 2026-11-06', homeHref:'../../../index.html'});
+    version:'Free Particle · Version 1.13 · 2026-11-07', homeHref:'../../../index.html'});
   document.body.classList.add('fp-template');
   sync(); syncPage();
   // Existing resize handler refreshes all canvases after the layout changes.
