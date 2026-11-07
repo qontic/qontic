@@ -1,5 +1,12 @@
 # Bell's Spaceships — changelog
 
+## 0.5.1 (2026-11-07)
+After the re-review of 0.5.0 by the same three experts.
+- Results at the snap say "Mean speed of the ships (B …, C …)" when the ships' speeds differed (the label used the speeds after the snap).
+- When the two ships move at different speeds (front engine held back, during the push) there is no single relaxed length: captions, live line, verdict and Results show the stretch only ("none (speeds differ)"); the relaxed-length marker is hidden. Physics tab says so.
+- Born-rigid verdict: "Within this family of engine settings, only this one…".
+- Challenge prompt names the slider as labelled ("Hold the front ship back").
+
 ## 0.5.0 (2026-11-07)
 After three expert reviews (project doc 2026-11-07-bell-spaceships-expert-review).
 - Thread elongation now exact: proper length summed over a family of element worldlines (1/a(x0) = 1/a + k·x0), γ(v)·dx per piece. k = 0 gives γ − 1, k = 1 gives 0 at every moment and any acceleration (the old mean-speed estimate showed a Born-rigid thread as slack for large aL). Taut tolerance 0.5% (was 3%). New test.

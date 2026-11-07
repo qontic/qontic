@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="../../../shared/favicon.svg">
 <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=3.7">
 <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.5">
-<link rel="stylesheet" href="css/spaceships.css?v=0.5.0">
+<link rel="stylesheet" href="css/spaceships.css?v=0.5.1">
 </head>
 <body class="spaceship-app">
 <main class="shell">
@@ -155,7 +155,7 @@
   <ul>
     <li>Units with c = 1. Lengths in units of L, times in units of L/c.</li>
     <li>Each ship has a constant proper acceleration until it reaches the final speed, then coasts. The default acceleration is gentle (aL = 0.2 c²).</li>
-    <li>The thread has no mass and does not pull on the ships. Its elongation is its proper length divided by its rest length L, minus 1. Each piece of the thread is taken to follow a worldline of the same family as the ships (front proper acceleration a/(1 + k·aL/c²), interpolated along the thread), and a piece moving at speed v that spans dx in A's frame has proper length γ dx. In Bell's case (k = 0) this gives exactly γ − 1 at every moment, the gap divided by the relaxed length L/γ. For k = 1 it gives zero at every moment. When the two ships have different speeds, the Results show the mean speed and both values.</li>
+    <li>The thread has no mass and does not pull on the ships. Its elongation is its proper length divided by its rest length L, minus 1. Each piece of the thread is taken to follow a worldline of the same family as the ships (front proper acceleration a/(1 + k·aL/c²), interpolated along the thread), and a piece moving at speed v that spans dx in A's frame has proper length γ dx. In Bell's case (k = 0) this gives exactly γ − 1 at every moment, the gap divided by the relaxed length L/γ. For k = 1 it gives zero at every moment. When the two ships have different speeds, the pieces of the thread also move at different speeds, so there is no single relaxed length: the app then shows the stretch only, and the Results show the mean speed with both values.</li>
     <li>The ships' frame and the spacetime diagram show the distance in the rear ship's momentary rest frame; its scale is in L, measured in that frame from B. It equals γL once the ships coast; during the acceleration it is somewhat larger, because in that frame the front ship is ahead in its program.</li>
     <li>The break is drawn at the middle of the thread. The recoil of the two halves is schematic.</li>
   </ul>
@@ -182,6 +182,6 @@
   </ol>
 </section>
 </main>
-<script type="module" src="js/app.js?v=0.5.0"></script>
+<script type="module" src="js/app.js?v=0.5.1"></script>
 </body>
 </html>
