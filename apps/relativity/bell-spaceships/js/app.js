@@ -2,8 +2,8 @@ import '../../../../shared/qontic-controls.js?v=3.2';
 import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=3.7';
 import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=3.0';
 import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
-import { APP_RELEASE } from './release.js?v=0.6.2';
-import { makeModel, finalStrain, shipState, rearFrameView, strainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf } from './kinematics.js?v=0.6.2';
+import { APP_RELEASE } from './release.js?v=0.6.3';
+import { makeModel, finalStrain, shipState, rearFrameView, strainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf } from './kinematics.js?v=0.6.3';
 
 mountQonticShell({
   title: "Bell's Spaceships",
@@ -247,11 +247,12 @@ function strainColor(strain, P) {
 }
 function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
 
-function label(text, x, y, { color, size = 12, align = 'left', base = 'alphabetic', weight = 400 } = {}) {
+function label(text, x, y, { color, size = 12, align = 'left', base = 'alphabetic', weight = 400, halo = null } = {}) {
   ctx.font = `${weight} ${size}px Inter, Arial, sans-serif`;
   ctx.fillStyle = color;
   ctx.textAlign = align;
   ctx.textBaseline = base;
+  if (halo) { ctx.save(); ctx.setLineDash([]); ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = halo; ctx.strokeText(text, x, y); ctx.restore(); }
   ctx.fillText(text, x, y);
 }
 
@@ -632,14 +633,10 @@ function drawSpacetime(r, P) {
     ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
     ctx.strokeStyle = P.simA;
     ctx.beginPath(); ctx.moveTo(SX(xmin), SY(t)); ctx.lineTo(SX(xmax), SY(t)); ctx.stroke();
-    label('same time for A', SX(xmin) + 4, SY(t) - 5 < r.y + 42 ? SY(t) + 13 : SY(t) - 5, { color: P.simA, size: 10.5 });
     if (t > 0 && B.v > 0.002) {
       const tAt = (x) => t + B.v * (x - B.x);
       ctx.strokeStyle = P.B;
       ctx.beginPath(); ctx.moveTo(SX(xmin), SY(tAt(xmin))); ctx.lineTo(SX(xmax), SY(tAt(xmax))); ctx.stroke();
-      // label at the left end, below the line, clear of the worldline labels at the top
-      const ly = Math.min(SY(tAt(xmin)) + 13, r.y + r.h - 8);
-      label('same time for B', SX(xmin) + 4, ly, { color: P.B, size: 10.5, align: 'left' });
     }
     ctx.setLineDash([]);
   }
@@ -648,6 +645,23 @@ function drawSpacetime(r, P) {
     if (t > 0) { const v = rearFrameView(model, t); dot(SX(v.xC), SY(v.tC), P.C, false); }
   }
   if (breakEvent && t >= breakEvent.t) star(SX(breakEvent.x), SY(breakEvent.t), P.bad);
+  // Legend for the simultaneity lines.
+  if (state.show.simul && t > tmin) {
+    const rows = [['dash', P.simA, 'same time for A'], ['dash', P.B, 'same time for B'], ['ring', P.C, 'C at the same time for B']];
+    ctx.font = '400 10.5px Inter, Arial, sans-serif';
+    const w = 34 + Math.max(...rows.map(([, , s]) => ctx.measureText(s).width)), h = 16 * rows.length + 8;
+    // Beside the plot when the panel has room (it usually does); else in the corner.
+    const outside = r.x + r.w - SX(xmax) > w + 24;
+    const x0 = outside ? SX(xmax) + 16 : SX(xmax) - w - 4, y0 = outside ? SY(tmax) + 24 : SY(tmin) - h - 4;
+    ctx.fillStyle = P.panel; ctx.globalAlpha = 0.92; ctx.fillRect(x0, y0, w, h); ctx.globalAlpha = 1;
+    ctx.strokeStyle = P.frame; ctx.lineWidth = 1; ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
+    rows.forEach(([kind, color, text], i) => {
+      const y = y0 + 14 + 16 * i;
+      if (kind === 'dash') { ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(x0 + 6, y - 4); ctx.lineTo(x0 + 26, y - 4); ctx.stroke(); ctx.setLineDash([]); }
+      else dot(x0 + 16, y - 4, color, false);
+      label(text, x0 + 30, y, { color, size: 10.5 });
+    });
+  }
   ctx.restore();
 }
 

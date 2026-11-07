@@ -1,5 +1,8 @@
 # Bell's Spaceships — changelog
 
+## 0.6.3 (2026-11-07)
+- Spacetime diagram: the "same time for A / for B" labels sat on the worldlines and on each other. They are replaced by a legend beside the plot (in the lower-right corner when the panel is narrow), which also explains the hollow dot (C at the same time for B).
+
 ## 0.6.2 (2026-11-07)
 - Reruns of the setup the student predicted for (same speed, limit and front engine, e.g. in the ships' frame) open the verdict with a tie-back: "Same run, another view. You predicted “It holds”: not what happened." (PER suggestion.)
 
