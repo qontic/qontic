@@ -1,5 +1,13 @@
 # Bell's Spaceships — changelog
 
+## 0.6.0 (2026-11-07)
+Bell quotes checked against *Speakable and Unspeakable in Quantum Mechanics* (Cambridge, 1987), ch. 9.
+- Third prediction: "It depends on the frame". The verdict answers it: breaking is a fact every frame agrees on; A's frame and the ships' frame describe the same break differently.
+- With the ships' frame shown (k = 0, snapped), the verdict adds the ships'-frame account: C fired first, the coasting gap is γL, C's clock is γvL/c² ahead, the rest length stays L.
+- Ships'-frame caption after the snap gives the gap at the snap (matches Results), not the current gap.
+- Physics: Bell's atom described as he did it (computer integration of the orbit, then Lorentz invariance for any system set gently in motion); Bell's proviso on strong threads and massive rockets quoted (p. 75).
+- Rationale: verified quotes from pp. 68 and 77 (the CERN poll, "classical education… as well as that of Einstein", philosophy vs. style, "the longer road…"). New references: Born 1909 (Born rigidity), Janssen 2009 (geometrical vs. dynamical views).
+
 ## 0.5.1 (2026-11-07)
 After the re-review of 0.5.0 by the same three experts.
 - Results at the snap say "Mean speed of the ships (B …, C …)" when the ships' speeds differed (the label used the speeds after the snap).

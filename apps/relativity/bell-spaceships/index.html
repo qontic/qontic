@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="../../../shared/favicon.svg">
 <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=3.7">
 <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.5">
-<link rel="stylesheet" href="css/spaceships.css?v=0.5.1">
+<link rel="stylesheet" href="css/spaceships.css?v=0.6.0">
 </head>
 <body class="spaceship-app">
 <main class="shell">
@@ -107,6 +107,7 @@
         <div class="story-buttons">
           <button type="button" class="qontic-app-toggle" data-predict="snaps">It snaps</button>
           <button type="button" class="qontic-app-toggle" data-predict="holds">It holds</button>
+          <button type="button" class="qontic-app-toggle" data-predict="depends">It depends on the frame</button>
         </div>
         <p class="story-links"><button type="button" class="link-button" id="setupBack">Back to the setup</button> · <button type="button" class="link-button" data-predict="skip">Skip and just run it</button></p>
       </div>
@@ -133,7 +134,7 @@
   <p>This is not a matter of how anyone measures the thread. The thread is under tension that a strain gauge on it would record, whoever looks at it.</p>
 
   <h2>Why a moving thread is shorter</h2>
-  <p>This is Bell's own explanation, and it also works in A's frame. The thread is held together by electric forces between charges. The field of a charge moving at speed v is flattened along the motion by 1/γ. Bell followed one electron orbiting a nucleus that is pushed gently to speed v. Using Maxwell's field equations, the Lorentz force and Lorentz's relativistic relation between momentum and velocity, he showed that the orbit becomes an ellipse contracted along the motion by the factor √(1 − v²/c²), and that it goes round more slowly, its period longer by the factor γ. Matter held together by such forces settles at a shorter length when it moves.</p>
+  <p>This is Bell's own explanation, and it also works in A's frame. The thread is held together by electric forces between charges. The field of a charge moving at speed v is flattened along the motion by 1/γ. Bell followed one electron orbiting a nucleus that is pushed gently to speed v. He took Maxwell's field equations, the Lorentz force and Lorentz's relativistic relation between momentum and velocity, and described what a computer integration of them gives: the orbit becomes an ellipse contracted along the motion by the factor √(1 − v²/c²), and it goes round more slowly, its period longer by the factor γ. He then used the Lorentz invariance of these equations to show that the same holds for any system of charges set gently in motion. Matter held together by such forces settles at a shorter length when it moves.</p>
   <p>The <em>Atoms of the thread</em> option under Display is only a schematic of this.</p>
   <p>Bell adds a proviso: the contraction is what happens to a bound object accelerated gently, so that its internal forces keep it near equilibrium. A strong thread tied to light ships would instead pull the ships together, and nothing would break. Here the ships are taken to be far too massive for the thread to move them.</p>
 
@@ -148,8 +149,8 @@
   <p>Contraction by itself breaks nothing: the ships contract too, and nobody expects them to break. The thread breaks because the gap between its ends does not shrink with it.</p>
   <p>The slider <em>Hold the front ship back</em> (k) sets the front ship's proper acceleration to a/(1 + k·aL/c²). With a gentler front engine C gains speed a little more slowly, and B closes in. Once both coast at speed v, the gap in A's frame is L − kL(1 − 1/γ), and the thread is stretched by</p>
   <p class="formula">(γ − 1)(1 − k).</p>
-  <p>Only k = 1 leaves the thread exactly at its relaxed length L/γ: the gap shrinks with it, and in the ships' frame the distance stays L. This is Born-rigid motion (Nikolić, Ref. 4 under Rationale). It is a special tuning, not something that happens by itself: below k = 1 the thread is still stretched and can snap; above it the ships end closer than the thread's relaxed length and it goes slack. ("Only" refers to this family of engine programs; other programs, such as a delayed start for C, can also end with no stretch.)</p>
-  <p>What k = 1 does with engines, a strong thread would do on its own if the ships were light: pull them into approximately this motion, after some elastic jostling. That is Bell's proviso.</p>
+  <p>Only k = 1 leaves the thread exactly at its relaxed length L/γ: the gap shrinks with it, and in the ships' frame the distance stays L. This is Born-rigid motion (Born, Ref. 7; Nikolić, Ref. 4; both under Rationale). It is a special tuning, not something that happens by itself: below k = 1 the thread is still stretched and can snap; above it the ships end closer than the thread's relaxed length and it goes slack. ("Only" refers to this family of engine programs; other programs, such as a delayed start for C, can also end with no stretch.)</p>
+  <p>What k = 1 does with engines, a strong thread would do on its own if the ships were light: pull them into approximately this motion, after some elastic jostling. That is Bell's proviso: “A sufficiently strong thread would pull the rockets together… But if the rockets are too massive to be appreciably accelerated by the fragile thread, the latter has to break” (Ref. 1, p. 75).</p>
 
   <h2>What the model assumes</h2>
   <ul>
@@ -163,11 +164,13 @@
 
 <section class="details-panel qontic-panel qontic-reading-panel hidden" data-panel="rationale">
   <h2>Bell's question at CERN</h2>
-  <p>John Bell described this problem in 1976, in an essay on how to teach special relativity. He put it to a distinguished experimental physicist, who refused to accept that the thread breaks and thought Bell had misread relativity. They took it to the CERN Theory Division. An informal canvass there produced, by Bell's account, a clear consensus that the thread would not break. Bell added that many who first answer wrongly reach the right answer with some thought, often by working out how things look to B or C.<sup><a href="#ref-1">1</a></sup> The same effect had been analysed earlier by Dewan and Beran.<sup><a href="#ref-2">2</a>,<a href="#ref-3">3</a></sup></p>
+  <p>John Bell described this problem in 1976, in an essay on how to teach special relativity. He put it to a distinguished experimental physicist, who refused to accept that the thread breaks and thought Bell had misread relativity. They took it to the CERN Theory Division. An informal canvass there produced, by Bell's account, a clear consensus that the thread would not break. Bell added that many who first answer wrongly reach the right answer on further reflection, usually by working out how things look to B or C, and accept it “perhaps only with a residual feeling of unease”, although the conclusion is “perfectly trivial in terms of A's account of things, including the Fitzgerald contraction” (p. 68).<sup><a href="#ref-1">1</a></sup> The same effect had been analysed earlier by Dewan and Beran.<sup><a href="#ref-2">2</a>,<a href="#ref-3">3</a></sup></p>
 
   <h2>Why it belongs here</h2>
-  <p>Bell remarked that people with a classical education, who know the work of Larmor, Lorentz and Poincaré, tend to have better instincts here.<sup><a href="#ref-1">1</a></sup> Einstein's route starts from the principle that the laws look the same to every uniformly moving observer, and gets contraction and time dilation from it quickly and in full generality. The older route, which Bell called the longer road, works in one frame and asks how the forces inside moving matter change its shape and its rhythms. Bell judged that the facts of physics do not force either philosophy, and that the longer road gives students a feel for the subject that the shorter one can skip.<sup><a href="#ref-1">1</a></sup> The thread question is a case in point: it is asked in one frame, about one object, and that frame answers it directly. Bell's pedagogy needs no ether: A's frame is used only because the question is asked there, and the same reasoning works in any inertial frame.</p>
-  <p>Brown and Pooley, who defend this dynamical view, stress what it assumes: that all the laws holding matter together share the Lorentz symmetry of Maxwell's equations, and that stable rods and clocks need a quantum theory of matter, not classical electromagnetism.<sup><a href="#ref-5">5</a></sup> The rival, geometrical view takes the structure of spacetime itself, as described by Minkowski, to be what explains why rods and clocks behave this way. Which account counts as the explanation is still debated by philosophers of physics.</p>
+  <p>Bell's impression was that “those with a more classical education, knowing something of the reasoning of Larmor, Lorentz, and Poincaré, as well as that of Einstein, have stronger and sounder instincts” (p. 68).<sup><a href="#ref-1">1</a></sup></p>
+  <p>He saw two differences between Lorentz's approach and Einstein's. One is philosophy. Lorentz held that there is a real state of rest, defined by the aether, which the laws of physics hide from experiment; Einstein declared “really resting” and “really moving” meaningless. In Bell's words, “The facts of physics do not oblige us to accept one philosophy rather than the other. And we need not accept Lorentz's philosophy to accept a Lorentzian pedagogy.” The other is style. Einstein starts from the hypothesis that the laws look the same to all observers in uniform motion, which gives “a very concise and elegant formulation”; the older route starts from the laws in one frame and works out what happens to moving matter and moving observers. Bell made “no reservation whatever about the power and precision of Einstein's approach”, but added: “The longer road sometimes gives more familiarity with the country” (p. 77).<sup><a href="#ref-1">1</a></sup></p>
+  <p>The thread question is a case in point: it is asked in one frame, about one object, and that frame answers it directly. Bell's pedagogy needs no aether: A's frame is used only because the question is asked there, and the same reasoning works in any inertial frame.</p>
+  <p>Brown and Pooley, who defend this dynamical view, stress what it assumes: that all the laws holding matter together share the Lorentz symmetry of Maxwell's equations, and that stable rods and clocks need a quantum theory of matter, not classical electromagnetism.<sup><a href="#ref-5">5</a></sup> The rival, geometrical view takes the structure of spacetime itself, as described by Minkowski, to be what explains why rods and clocks behave this way; Janssen gives a careful statement of it and a critique of the dynamical account.<sup><a href="#ref-6">6</a></sup> Which account counts as the explanation is still debated by philosophers of physics.</p>
 
   <h2>Why it belongs on Q-Ontic</h2>
   <p>Here two accounts agree on every prediction and tell different stories about what is happening, each making some questions easy and others hard. The formulations of quantum mechanics are in a similar position, with one difference: there, some proposals, such as spontaneous-collapse models, do predict different results and are being tested.</p>
@@ -179,9 +182,11 @@
     <li id="ref-3">E. M. Dewan, “Stress effects due to Lorentz contraction,” <em>American Journal of Physics</em> <strong>31</strong>, 383–386 (1963).</li>
     <li id="ref-4">H. Nikolić, “Relativistic contraction of an accelerated rod,” <em>American Journal of Physics</em> <strong>67</strong>, 1007–1012 (1999).</li>
     <li id="ref-5">H. R. Brown and O. Pooley, “The origin of the spacetime metric: Bell's ‘Lorentzian pedagogy’ and its significance in general relativity,” in <em>Physics Meets Philosophy at the Planck Scale</em>, edited by C. Callender and N. Huggett (Cambridge University Press, 2001), pp. 256–272.</li>
+    <li id="ref-6">M. Janssen, “Drawing the line between kinematics and dynamics in special relativity,” <em>Studies in History and Philosophy of Modern Physics</em> <strong>40</strong>, 26–52 (2009).</li>
+    <li id="ref-7">M. Born, “Die Theorie des starren Elektrons in der Kinematik des Relativitätsprinzips,” <em>Annalen der Physik</em> <strong>335</strong> (4th series, vol. 30), 1–56 (1909).</li>
   </ol>
 </section>
 </main>
-<script type="module" src="js/app.js?v=0.5.1"></script>
+<script type="module" src="js/app.js?v=0.6.0"></script>
 </body>
 </html>
