@@ -1,5 +1,14 @@
 # Bell's Spaceships — changelog
 
+## 0.6.1 (2026-11-07)
+After the third review by the same three experts (project doc 2026-11-07-bell-spaceships-0.6-review).
+- Framing: the app's two frames are no longer presented as Lorentz's and Einstein's accounts. Home card: "Answered in one frame by the dynamics of moving matter, as Bell taught, then checked in the ships' frame." Rationale says both frames belong to one theory and the quantum parallel is Lorentz vs Einstein. Lorentz "as completed by Poincaré"; "interpretations" of quantum mechanics, collapse models as distinct theories.
+- Physics tab: "Bell's dynamical explanation, given in A's frame", with a pointer to the debate; note on where the ships'-frame gap at the snap is measured.
+- Rationale: Brown and Pooley's thesis stated (geometry codifies the Lorentz covariance of matter's laws), not only its assumptions.
+- "It depends on the frame" reply gives the reason: a break is one event; frames disagree about lengths and order, not about whether it happened. No duplicate when the ships' frame is open.
+- Ships'-frame verdict split into short sentences; clock offset dropped (clocks are hidden by default). Caption: "gap … was 1.20 L; it is now 2.29 L".
+- k ≠ 0 snap verdict reworded so it cannot be read backwards.
+
 ## 0.6.0 (2026-11-07)
 Bell quotes checked against *Speakable and Unspeakable in Quantum Mechanics* (Cambridge, 1987), ch. 9.
 - Third prediction: "It depends on the frame". The verdict answers it: breaking is a fact every frame agrees on; A's frame and the ships' frame describe the same break differently.

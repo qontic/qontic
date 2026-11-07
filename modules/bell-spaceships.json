@@ -1,7 +1,7 @@
 {
   "id": "bell-spaceships",
   "title": "Bell's Spaceships",
-  "summary": "Two ships, one thread, identical engines: length contraction and relativity of simultaneity, told in two frames that agree on the outcome.",
+  "summary": "Two ships, one thread, identical engines. Answered in one frame by the dynamics of moving matter, as Bell taught, then checked in the ships' frame.",
   "topics": ["special-relativity", "length-contraction", "relativity-of-simultaneity"],
   "order": 75,
   "relatedModules": ["michelson-morley"]

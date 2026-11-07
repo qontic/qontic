@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="../../../shared/favicon.svg">
 <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=3.7">
 <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.5">
-<link rel="stylesheet" href="css/spaceships.css?v=0.6.0">
+<link rel="stylesheet" href="css/spaceships.css?v=0.6.1">
 </head>
 <body class="spaceship-app">
 <main class="shell">
@@ -134,7 +134,7 @@
   <p>This is not a matter of how anyone measures the thread. The thread is under tension that a strain gauge on it would record, whoever looks at it.</p>
 
   <h2>Why a moving thread is shorter</h2>
-  <p>This is Bell's own explanation, and it also works in A's frame. The thread is held together by electric forces between charges. The field of a charge moving at speed v is flattened along the motion by 1/γ. Bell followed one electron orbiting a nucleus that is pushed gently to speed v. He took Maxwell's field equations, the Lorentz force and Lorentz's relativistic relation between momentum and velocity, and described what a computer integration of them gives: the orbit becomes an ellipse contracted along the motion by the factor √(1 − v²/c²), and it goes round more slowly, its period longer by the factor γ. He then used the Lorentz invariance of these equations to show that the same holds for any system of charges set gently in motion. Matter held together by such forces settles at a shorter length when it moves.</p>
+  <p>This is Bell's dynamical explanation, given in A's frame. (Whether this or the geometry of spacetime is the deeper explanation is debated; see Rationale.) The thread is held together by electric forces between charges. The field of a charge moving at speed v is flattened along the motion by 1/γ. Bell followed one electron orbiting a nucleus that is pushed gently to speed v. He took Maxwell's field equations, the Lorentz force and Lorentz's relativistic relation between momentum and velocity, and described what a computer integration of them gives: the orbit becomes an ellipse contracted along the motion by the factor √(1 − v²/c²), and it goes round more slowly, its period longer by the factor γ. He then used the Lorentz invariance of these equations to show that the same holds for any system of charges set gently in motion. Matter held together by such forces settles at a shorter length when it moves.</p>
   <p>The <em>Atoms of the thread</em> option under Display is only a schematic of this.</p>
   <p>Bell adds a proviso: the contraction is what happens to a bound object accelerated gently, so that its internal forces keep it near equilibrium. A strong thread tied to light ships would instead pull the ships together, and nothing would break. Here the ships are taken to be far too massive for the thread to move them.</p>
 
@@ -157,7 +157,7 @@
     <li>Units with c = 1. Lengths in units of L, times in units of L/c.</li>
     <li>Each ship has a constant proper acceleration until it reaches the final speed, then coasts. The default acceleration is gentle (aL = 0.2 c²).</li>
     <li>The thread has no mass and does not pull on the ships. Its elongation is its proper length divided by its rest length L, minus 1. Each piece of the thread is taken to follow a worldline of the same family as the ships (front proper acceleration a/(1 + k·aL/c²), interpolated along the thread), and a piece moving at speed v that spans dx in A's frame has proper length γ dx. In Bell's case (k = 0) this gives exactly γ − 1 at every moment, the gap divided by the relaxed length L/γ. For k = 1 it gives zero at every moment. When the two ships have different speeds, the pieces of the thread also move at different speeds, so there is no single relaxed length: the app then shows the stretch only, and the Results show the mean speed with both values.</li>
-    <li>The ships' frame and the spacetime diagram show the distance in the rear ship's momentary rest frame; its scale is in L, measured in that frame from B. It equals γL once the ships coast; during the acceleration it is somewhat larger, because in that frame the front ship is ahead in its program.</li>
+    <li>The ships' frame and the spacetime diagram show the distance in the rear ship's momentary rest frame; its scale is in L, measured in that frame from B. It equals γL once the ships coast; during the acceleration it is somewhat larger, because in that frame the front ship is ahead in its program. The gap at the snap is taken along B's line of simultaneity through the break, which meets B's path at an earlier moment, when B was slower.</li>
     <li>The break is drawn at the middle of the thread. The recoil of the two halves is schematic.</li>
   </ul>
 </section>
@@ -170,10 +170,10 @@
   <p>Bell's impression was that “those with a more classical education, knowing something of the reasoning of Larmor, Lorentz, and Poincaré, as well as that of Einstein, have stronger and sounder instincts” (p. 68).<sup><a href="#ref-1">1</a></sup></p>
   <p>He saw two differences between Lorentz's approach and Einstein's. One is philosophy. Lorentz held that there is a real state of rest, defined by the aether, which the laws of physics hide from experiment; Einstein declared “really resting” and “really moving” meaningless. In Bell's words, “The facts of physics do not oblige us to accept one philosophy rather than the other. And we need not accept Lorentz's philosophy to accept a Lorentzian pedagogy.” The other is style. Einstein starts from the hypothesis that the laws look the same to all observers in uniform motion, which gives “a very concise and elegant formulation”; the older route starts from the laws in one frame and works out what happens to moving matter and moving observers. Bell made “no reservation whatever about the power and precision of Einstein's approach”, but added: “The longer road sometimes gives more familiarity with the country” (p. 77).<sup><a href="#ref-1">1</a></sup></p>
   <p>The thread question is a case in point: it is asked in one frame, about one object, and that frame answers it directly. Bell's pedagogy needs no aether: A's frame is used only because the question is asked there, and the same reasoning works in any inertial frame.</p>
-  <p>Brown and Pooley, who defend this dynamical view, stress what it assumes: that all the laws holding matter together share the Lorentz symmetry of Maxwell's equations, and that stable rods and clocks need a quantum theory of matter, not classical electromagnetism.<sup><a href="#ref-5">5</a></sup> The rival, geometrical view takes the structure of spacetime itself, as described by Minkowski, to be what explains why rods and clocks behave this way; Janssen gives a careful statement of it and a critique of the dynamical account.<sup><a href="#ref-6">6</a></sup> Which account counts as the explanation is still debated by philosophers of physics.</p>
+  <p>Brown and Pooley turn Bell's pedagogy into a claim about explanation: rods contract and clocks slow because the laws governing matter are Lorentz covariant, and Minkowski's geometry codifies that symmetry rather than explaining it. They also stress what this assumes: that all the laws holding matter together share the Lorentz symmetry of Maxwell's equations, and that stable rods and clocks need a quantum theory of matter, not classical electromagnetism.<sup><a href="#ref-5">5</a></sup> The rival, geometrical view takes the structure of spacetime itself, as described by Minkowski, to be what explains why rods and clocks behave this way; Janssen gives a careful statement of it and a critique of the dynamical account.<sup><a href="#ref-6">6</a></sup> Which account counts as the explanation is still debated by philosophers of physics.</p>
 
   <h2>Why it belongs on Q-Ontic</h2>
-  <p>Here two accounts agree on every prediction and tell different stories about what is happening, each making some questions easy and others hard. The formulations of quantum mechanics are in a similar position, with one difference: there, some proposals, such as spontaneous-collapse models, do predict different results and are being tested.</p>
+  <p>Lorentz's account (as completed by Poincaré) and Einstein's agree on every prediction and differ on what explains them, each making some questions easy and others hard. The app's two frames are not those two accounts: both frames belong to one theory, and either account can use either frame. Interpretations of quantum mechanics are in a similar position to Lorentz's and Einstein's accounts, with one difference: some rivals, such as spontaneous-collapse models, are distinct theories with different predictions, now being tested.</p>
 
   <h2>References</h2>
   <ol class="references">
@@ -187,6 +187,6 @@
   </ol>
 </section>
 </main>
-<script type="module" src="js/app.js?v=0.6.0"></script>
+<script type="module" src="js/app.js?v=0.6.1"></script>
 </body>
 </html>

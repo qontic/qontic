@@ -2,8 +2,8 @@ import '../../../../shared/qontic-controls.js?v=3.2';
 import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=3.7';
 import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=3.0';
 import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
-import { APP_RELEASE } from './release.js?v=0.6.0';
-import { makeModel, finalStrain, shipState, rearFrameView, strainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf } from './kinematics.js?v=0.5.0';
+import { APP_RELEASE } from './release.js?v=0.6.1';
+import { makeModel, finalStrain, shipState, rearFrameView, strainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf } from './kinematics.js?v=0.6.1';
 
 mountQonticShell({
   title: "Bell's Spaceships",
@@ -495,7 +495,7 @@ function drawShipPanel(r, s, P) {
   shipLabels(xa - SHIP_LEN * s / 2, xb + lenC / 2, y, hPx, { v: 0 }, { v: v.vRel }, v.tauB, v.tauC, P, false);
   if (!pre) {
     const note = breakEvent && tB >= breakEvent.tRear
-      ? `thread snapped when the gap in B's frame was ${fmt(snapState().sepShip)} L`
+      ? `thread snapped when the gap in B's frame was ${fmt(snapState().sepShip)} L; it is now ${fmt(v.D)} L`
       : v.D > 1.005 ? `C fired first in B's frame and pulls ahead: gap ${fmt(v.D)} L, thread's rest length 1.00 L${tB < Math.max(model.ships[0].t1, model.ships[1].t1) ? ' (while accelerating, B\u2019s frame is not the thread\u2019s rest frame)' : ''}`
         : `gap ${fmt(v.D)} L · thread's rest length 1.00 L`;
     caption(note, r, 0.5 * (xa + xb), y, hPx, P);
@@ -752,7 +752,7 @@ function finish() {
   if (snapped) {
     const b = snapState();
     outcome = uneven(b.vB, b.vC)
-      ? `The thread snapped when the ships were at ${fmt(b.vB)} c (B) and ${fmt(b.vC)} c (C). The gap had shrunk only to ${fmt(b.gap)} L, less than the moving thread shrinks, so it had been stretched past its ${lim}% limit.`
+      ? `The thread snapped when the ships were at ${fmt(b.vB)} c (B) and ${fmt(b.vC)} c (C). The gap shrank only to ${fmt(b.gap)} L; the thread, moving at these speeds, needed it to shrink further, so it had been stretched past its ${lim}% limit.`
       : `The thread snapped at ${fmt(b.v)} c. The gap between the ships was ${fmt(b.gap)} L, but a thread moving that fast is only ${fmt(b.nat)} L long when relaxed, so it had been stretched past its ${lim}% limit.`;
     const gapNote = state.k < 0.005
       ? 'What broke the thread is that the gap did not shrink with it.'
@@ -766,11 +766,13 @@ function finish() {
   let lead = '';
   if (state.prediction === 'depends') {
     lead = '<strong>It does not depend on the frame.</strong> ';
-    why = `Whether the thread breaks is a fact every frame agrees on. In A\u2019s frame the moving thread is shorter than the gap; in the ships\u2019 frame the thread keeps its rest length L ${state.k < 1 ? 'while the gap grows' : 'and so does the gap'}. Two descriptions, one ${snapped ? 'break' : 'outcome'}.` + (why ? ' ' + why : '');
+    const ev = snapped ? 'A snapped thread is one event: one thread becomes two pieces.' : 'An intact thread is a fact about one object.';
+    const both = state.layout === 'lab' ? ` In A\u2019s frame the moving thread is shorter than the gap; in the ships\u2019 frame the thread\u2019s relaxed length is its rest length L, ${state.k < 1 ? 'and the gap grows past it' : 'and so is the gap'}.` : '';
+    why = `${ev} Frames can disagree about lengths and about which ship started first, but not about whether ${snapped ? 'the thread broke' : 'it broke'}.${both}` + (why ? ' ' + why : '');
   } else if (state.prediction) lead = `<strong>${(state.prediction === 'snaps') === snapped ? 'Your prediction was right.' : 'Not what you predicted.'}</strong> `;
   if (snapped && state.k === 0 && ['frames', 'all'].includes(state.layout)) {
-    const v = state.beta, gf = model.gammaF;
-    why += ` In the ships\u2019 frame (lower panel): C fired first, so it pulled ahead and the gap grew past the thread\u2019s rest length L (once both coast it is γL = ${fmt(gf)} L, and C\u2019s clock reads γvL/c² = ${fmt(gf * v)} L/c ahead of B\u2019s). Same break, told in another frame.`;
+    const gf = model.gammaF;
+    why += ` In the ships\u2019 frame (lower panel), C fired first. It pulled ahead, and the gap grew past the thread\u2019s rest length L. Once both coast, the gap is γL = ${fmt(gf)} L. Same break, told in another frame.`;
   }
   $('#verdict').innerHTML = lead + outcome + (why ? ` <span class="feedback">${why}</span>` : '');
   const next = [];

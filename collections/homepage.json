@@ -30,7 +30,7 @@
     {
       "id": "relativity",
       "title": "Relativity: Two Accounts",
-      "description": "Special relativity told by Lorentz and by Einstein: two accounts that agree on every measurement and differ on how to explain it. A similar situation to the formulations of quantum mechanics, in a setting most students already know.",
+      "description": "Special relativity told in Lorentz's way (as completed by Poincaré) and in Einstein's: two accounts that agree on every measurement and differ on how to explain it. A similar situation to the interpretations of quantum mechanics, in a setting most students already know.",
       "items": [
         { "type": "module", "id": "michelson-morley" },
         { "type": "module", "id": "bell-spaceships" }

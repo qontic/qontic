@@ -1,5 +1,8 @@
 # Michelson–Morley: Two Accounts — changelog
 
+## 0.2.3 (2026-11-07)
+- Rationale: "Interpretations of quantum mechanics" (was "formulations"); collapse models described as distinct theories with different predictions (philosopher's review of Bell's Spaceships 0.6.0). Home-page section text changed to match.
+
 ## 0.2.2 (2026-11-06)
 After the second simulated-student review (project doc 2026-11-06-relativity-section-student-review).
 - Fix: the 1887 view's speed hint no longer says moving lengths shorten.
