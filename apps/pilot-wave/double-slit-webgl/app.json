@@ -1,6 +1,6 @@
 {
   "id": "double-slit-webgl-simulation",
-  "title": "Double Slit — Numerical (WebGL2)",
+  "title": "Double Slit — Numerical Simulation",
   "type": "app",
   "category": "pilot-wave",
   "module": "double-slit",

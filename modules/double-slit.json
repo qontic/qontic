@@ -23,9 +23,9 @@
     "double-slit-pilot-wave-notebook"
   ],
   "resourceNotes": {
-    "double-slit-analytical-simulation": "Start here: explore the experiment and compare three views.",
-    "double-slit-pilot-wave-notebook": "Numerical model: wave dynamics at the slit barrier, reflected waves and pilot-wave trajectories.",
-    "double-slit-notebook": "Analytical model: compare three accounts; forward propagation without wall reflections.",
-    "double-slit-webgl-simulation": "Standalone numerical app: open the WebGL2 simulation directly; no notebook reading required."
+    "double-slit-analytical-simulation": "1. Start with interference and compare three accounts.",
+    "double-slit-notebook": "2. Work through the analytical model and its activities.",
+    "double-slit-webgl-simulation": "3. Explore numerical wave dynamics and reflection at the barrier.",
+    "double-slit-pilot-wave-notebook": "4. Study pilot-wave trajectories and equivariance."
   }
 }

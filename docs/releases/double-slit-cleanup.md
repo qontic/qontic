@@ -32,3 +32,19 @@ published app entry opening the notebook's existing full-applet.html directly
 with standalone controls. No simulation source or shader is changed. This is
 the numerical app whose playback could not be rechecked in the WebGL2-lacking
 test browser; it is distinct from the older archived standalone implementation.
+
+## Single numerical app and teaching order
+
+The owner requested one numerical app and clearer listing titles. The numerical
+app used by the numerical notebook remains the single cataloged numerical
+simulation. Double Slit 2.0 is retained only as an unlisted development reference;
+its source and direct URL, and its classic comparison copy, remain available.
+It is an extended fork of the notebook app (histogram, illustrative which-slit
+mode, recording tools and numerical-boundary differences), not a separate
+teaching topic. Those extensions are not promoted in this consolidation.
+
+Listing titles are now Analytical Simulation, Analytical Notebook, Numerical
+Simulation and Numerical Notebook, all prefixed by Double Slit. The Double Slit
+module follows that numbered order. The weak-velocity draft remains optional
+advanced material on dev. Notebook text, simulation source and all resource IDs
+are unchanged. Next cleanup candidate remains Classical Limit.
