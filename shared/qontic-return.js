@@ -27,7 +27,7 @@
   function isBack(link) {
     if (link.id === 'qontic-context-back' || link.id === 'catalog-back' || link.id === 'qontic-back-home') return true;
     if (link.closest('.notebook-footer-nav') && link.classList.contains('footer-nav-button-main')) return true;
-    return /^(?:←\s*)?back(?:\s|$)/i.test(link.textContent.trim()) || link.matches('header.applet-toolbar a') && link.textContent.trim() === 'Notebook';
+    return link.matches('.back, .back-link') || /^(?:←\s*)?back(?:\s|$)/i.test(link.textContent.trim()) || link.matches('header.applet-toolbar a') && link.textContent.trim() === 'Notebook';
   }
   let updating = false;
   function updateBackLinks() {
@@ -38,7 +38,7 @@
       if (!isBack(link)) return;
       existing = existing || link.id !== 'qontic-context-back' && link.getClientRects().length > 0 && getComputedStyle(link).visibility !== 'hidden';
       if (link.href !== returnURL.href) link.href = returnURL.href;
-      if (link.textContent.trim() === 'Notebook' || /back to main page/i.test(link.textContent)) link.textContent = '← Back';
+      if (link.textContent.trim() === 'Notebook' || /back to main page|all modules/i.test(link.textContent)) link.textContent = '← Back';
       if (link.getAttribute('aria-label') !== 'Return to the page that opened this resource') link.setAttribute('aria-label', 'Return to the page that opened this resource');
       if (!link.dataset.qonticReturn) link.dataset.qonticReturn = 'true';
     });
