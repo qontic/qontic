@@ -18,11 +18,12 @@
   ],
   "recommendedResources": [
     "double-slit-analytical-simulation",
-    "double-slit-notebook"
+    "double-slit-notebook",
+    "double-slit-pilot-wave-notebook"
   ],
   "resourceNotes": {
     "double-slit-analytical-simulation": "Start here: explore the experiment and compare three views.",
-    "double-slit-pilot-wave-notebook": "Further study: pilot-wave dynamics and numerical trajectories.",
-    "double-slit-notebook": "Guided companion: predictions, single-electron detections, which-slit records, and three accounts."
+    "double-slit-pilot-wave-notebook": "Numerical model: wave dynamics at the slit barrier, reflected waves and pilot-wave trajectories.",
+    "double-slit-notebook": "Analytical model: compare three accounts; forward propagation without wall reflections."
   }
 }

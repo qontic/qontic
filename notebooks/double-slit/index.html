@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Double Slit Notebook — Q-Ontic Lab</title>
+<title>Double Slit: Three Accounts — Analytical Notebook — Q-Ontic Lab</title>
 <meta name="description" content="Companion notebook for the Q-Ontic analytical double-slit app: interference, single detections, which-slit records, and the Orthodox, Pilot Wave and Many Worlds accounts.">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -11,8 +11,8 @@
 <link rel="stylesheet" href="../../shared/qontic-shell.css?v=3.7"><link rel="stylesheet" href="../../shared/qontic-notebook.css?v=1.2"><link rel="stylesheet" href="notebook.css?v=20261108-teaching"><link rel="icon" type="image/svg+xml" href="../../shared/favicon.svg"></head>
 <body class="qontic-notebook">
 <main class="shell">
-<header><div><p class="eyebrow">Q-Ontic notebook</p><h1>Double-Slit Notebook</h1></div></header><div class="qn-intro"><p class="lead">Electrons sent one at a time through two slits build up bands on a screen. All accounts agree on that pattern and on how to calculate it. They disagree about what happens between the source and the screen. Every figure here uses the same wave model and default settings as the analytical double-slit app.</p>
-<p class="prereq"><b>Reading path:</b> Parts 1–4 introduce the experiment; Part 5 compares three views. Use Brief for the demonstrations or Full for explanations and mathematics.</p></div><section class="section" id="foundations" data-nav-label="Before you begin">
+<header><div><p class="eyebrow">Q-Ontic notebook</p><h1>Double Slit: Three Accounts — Analytical Notebook</h1></div></header><div class="qn-intro"><p class="lead">Electrons sent one at a time through two slits build up bands on a screen. All accounts agree on that pattern and on how to calculate it. They disagree about what happens between the source and the screen. Every figure here uses the same wave model and default settings as the analytical double-slit app.</p>
+<p class="prereq"><b>Reading path:</b> Parts 1–4 introduce the experiment; Part 5 compares three views. Use Brief for the demonstrations or Full for explanations and mathematics.</p><p class="concept-note">This notebook uses a simplified analytical model without wall reflections. For numerical wave dynamics and reflection at the wall, see the <a href="../double-slit-webgl/">numerical notebook</a>.</p></div><section class="section" id="foundations" data-nav-label="Before you begin">
 <div class="section-head"><h2>Before you begin: reading the pictures</h2>
 </div><div class="prose ds-overview"><p>Every figure shows the experiment from above, as in the app. The source is on the left, the wall with two slits in the middle, the detector screen on the right. The moving blue shading is the wavefunction ψ: bright where the wave is strong, with stripes that are its crests. Each column is brightened separately to keep weak regions visible. Blue stripes show phase, not extra particles or the bands counted on the screen. Use Density only to hide these stripes; brightness is still rescaled, not an absolute probability scale. The curve beside the screen gives the probability of a hit at each height y.</p>
 <div class="cards ds-concepts">
@@ -237,7 +237,7 @@
 <h2>7. About the model, and going further</h2>
 <p>The figures here and in the app use the same simplified model: the beam moves forward at constant speed and spreads only sideways, and the slits are smooth openings that absorb what they do not let through.</p>
 <div class="prose qn-full ds-explanation"><p>The wavefunction is Ψ = F(x − vt) e<sup>i(kx − ωt)</sup> φ(y, x), with a packet envelope F that translates without spreading. The crests move at the phase velocity ω/k = v/2. The speed slider changes only how fast the display runs. Defaults, as in the app: electron, λ = 50 nm, slit separation 300 nm, slit width σ = 30 nm, source width σ = 200 nm, packet length σ = 50 nm, source-to-wall 225 nm, wall-to-screen Z = 1000 nm. Brightness in the figures is rescaled at each distance from the source. The app's <span class="ui">Physics</span> tab gives the full equations and their limits.</p>
-<p><b>Going further.</b> <a href="../../apps/pilot-wave/double-slit-numerical/" target="_blank" rel="noopener">Double slit, numerical</a>: the wave equation solved on a grid, without the forward approximation. <a href="../../notebooks/double-slit-webgl/" target="_blank" rel="noopener">Pilot-wave double slit notebook</a>: many trajectories in real time. <a href="../../notebooks/delayed-choice/" target="_blank" rel="noopener">Delayed choice notebook</a>: what changes when the decision to look is made late.</p>
+<p><b>Going further.</b> <a href="../double-slit-webgl/" target="_blank" rel="noopener">Double Slit: Wave Dynamics — Numerical Notebook</a>: numerical wave propagation, reflection at the wall and pilot-wave trajectories. The analytical model used here simplifies forward propagation and does not include wall reflections. <a href="../delayed-choice/" target="_blank" rel="noopener">Delayed choice notebook</a>: what changes when the decision to look is made late.</p>
 <p><b>References</b></p>
 <ol class="refs">
 <li>P. G. Merli, G. F. Missiroli and G. Pozzi, “On the statistical aspect of electron interference phenomena,” <i>Am. J. Phys.</i> <b>44</b>, 306–307 (1976). <a href="https://doi.org/10.1119/1.10184" target="_blank" rel="noopener">doi:10.1119/1.10184</a></li>
@@ -967,5 +967,5 @@ document.addEventListener("DOMContentLoaded",()=>{
   let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(drawAll, 120); });
 })();
 </script>
-<script type="module" src="notebook-ui.js?v=20261108-published"></script></body>
+<script type="module" src="notebook-ui.js?v=20261108-titles"></script></body>
 </html>

@@ -1,6 +1,6 @@
 {
   "id": "double-slit-notebook",
-  "title": "Double Slit — Notebook",
+  "title": "Double Slit: Three Accounts — Analytical Notebook",
   "type": "notebook",
   "category": "comparative",
   "module": "double-slit",
@@ -15,7 +15,7 @@
     "many-worlds"
   ],
   "level": "introductory",
-  "description": "Companion notebook to the analytical double-slit app: interference, single detections, which-slit records, and three accounts of the same pattern.",
+  "description": "Interference, single detections and which-slit records in three accounts, using a simplified analytical model without wall reflections.",
   "tags": [
     "Notebook",
     "Double slit",

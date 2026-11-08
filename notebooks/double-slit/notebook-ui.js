@@ -2,7 +2,7 @@ import { mountQonticNotebook } from '../../shared/qontic-notebook.js?v=1.2';
 
 // Use the shared notebook shell for navigation, reading depth and quizzes.
 mountQonticNotebook({
-  title: 'Double-Slit Notebook',
+  title: 'Double Slit: Three Accounts — Analytical Notebook',
   eyebrow: 'Q-Ontic notebook',
   version: 'Double-slit notebook',
   purpose: 'Build the double-slit pattern from single electrons, amplitudes and which-slit records, then compare three accounts of the same experiment.',

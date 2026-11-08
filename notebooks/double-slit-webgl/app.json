@@ -1,6 +1,6 @@
 {
   "id": "double-slit-pilot-wave-notebook",
-  "title": "Pilot-Wave Double Slit — Notebook",
+  "title": "Double Slit: Wave Dynamics — Numerical Notebook",
   "type": "notebook",
   "category": "pilot-wave",
   "module": "double-slit",
@@ -13,7 +13,7 @@
     "pilot-wave"
   ],
   "level": "intermediate",
-  "description": "Classic double-slit experiment with real-time pilot-wave visualization.",
+  "description": "Numerical wave propagation at a double-slit barrier, including reflection and pilot-wave trajectories. Uses WebGL2.",
   "tags": [
     "Notebook",
     "Pilot-wave",
