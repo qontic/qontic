@@ -44,3 +44,9 @@ Phone layouts and video recording were not tested in this review. Source
 probabilities are those of the stated idealized models, not a reconstruction of
 all experimental imperfections. New notebook template files and the optional
 four-account control are included; other shared visual templates are retained.
+
+## Publication update
+
+The double-slit companion notebook has been withdrawn from production at the
+project owner's request. It remains a draft in qontic-dev while its layout is
+migrated to the current notebook template. The other two resources are unchanged.
