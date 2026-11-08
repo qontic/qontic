@@ -1,0 +1,75 @@
+/* Mach–Zehnder app: scoped additions to the shared Q-Ontic layout. */
+.mz-app .qontic-control-section { display: grid; gap: 6px; margin-bottom: 12px; }
+.mz-app .qontic-control-section-title { margin: 0; color: var(--qontic-muted, #829aa8); font-size: 12px; letter-spacing: .04em; }
+.mz-app .qontic-app-toggle-group { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mz-app .qontic-app-toggle-group.mz-three { grid-template-columns: 1fr 1.5fr 1fr; }
+.mz-app .qontic-app-toggle { font-size: 12.5px; padding: 6px 6px; }
+.mz-app .qontic-app-toggle:disabled { opacity: .45; cursor: not-allowed; }
+.mz-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+.mz-predict { display: grid; gap: 8px; padding: 10px; margin: 4px 0 10px; border: 1px solid var(--qontic-panel-border, #294b60); border-radius: 8px; }
+.mz-options { display: grid; gap: 4px; margin: 0; padding: 0; border: 0; }
+.mz-option { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 6px; font-size: 12.5px; line-height: 1.35; color: var(--qontic-text, #d9edf7); cursor: pointer; }
+.mz-option input { margin: 2px 0 0; accent-color: var(--qontic-accent, #55d8e6); }
+.mz-confidence { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; font-size: 12.5px; color: var(--qontic-muted, #829aa8); }
+.mz-confidence > div { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.mz-conf { height: 28px; border: 1px solid var(--qontic-panel-border, #294b60); border-radius: 6px; background: #102334; color: #a9bfce; font: 400 12.5px Inter, Arial, sans-serif; cursor: pointer; }
+.mz-conf.active { border-color: var(--qontic-accent, #55d8e6); background: #12394b; color: #7cecff; }
+.mz-conf:disabled { cursor: default; }
+.mz-conf:focus-visible, .mz-option input:focus-visible { outline: 2px solid var(--qontic-accent, #55d8e6); outline-offset: 2px; }
+.mz-reason { display: grid; gap: 4px; font-size: 12.5px; color: var(--qontic-muted, #829aa8); }
+.mz-reason textarea { width: 100%; resize: vertical; min-height: 44px; padding: 6px 8px; border: 1px solid var(--qontic-panel-border, #294b60); border-radius: 6px; background: #0a1b28; color: var(--qontic-text, #d9edf7); font: 400 12.5px Inter, Arial, sans-serif; }
+.mz-run { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mz-app .core-hint.mz-flash { animation: mz-flash .9s ease 2; }
+@keyframes mz-flash { 50% { color: #ffd166; } }
+@media (prefers-reduced-motion: reduce) { .mz-app .core-hint.mz-flash { animation: none; color: #ffd166; } }
+
+.mz-feedback { display: grid; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--qontic-panel-border, #294b60); font-size: 12.5px; line-height: 1.5; color: var(--qontic-text, #d9edf7); }
+.mz-feedback p { margin: 0; }
+.mz-verdict:empty { display: none; }
+.mz-verdict { padding: 6px 8px; border-radius: 6px; border: 1px solid; }
+.mz-verdict.is-right { border-color: #3aa76d; color: #8fe0b3; background: #0f2a1f; }
+.mz-verdict.is-wrong { border-color: #c98a2e; color: #ffd08a; background: #2a1f0f; }
+.mz-common { color: var(--qontic-muted, #829aa8); }
+
+.mz-counts output { font-variant-numeric: tabular-nums; }
+.mz-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mz-table th, .mz-table td { padding: 6px 8px; border-bottom: 1px solid var(--qontic-panel-border, #294b60); text-align: left; vertical-align: top; }
+.mz-table th { color: var(--qontic-muted, #829aa8); font-weight: 500; }
+.mz-log-wrap { overflow-x: auto; }
+.mz-log-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 14px; }
+
+.qontic-light .mz-conf { border-color: #aec2cb; background: #eef4f6; color: #526a77; }
+.qontic-light .mz-conf.active { border-color: #1594a8; background: #dff4f7; color: #075c69; }
+.qontic-light .mz-reason textarea { border-color: #aec2cb; background: #fff; color: #142b3a; }
+.qontic-light .mz-option { color: #142b3a; }
+.qontic-light .mz-feedback { color: #142b3a; }
+.qontic-light .mz-verdict.is-right { background: #e6f6ed; color: #1d6b43; }
+.qontic-light .mz-verdict.is-wrong { background: #fbf0df; color: #7a4a0c; }
+.qontic-light .mz-predict, .qontic-light .mz-feedback, .qontic-light .mz-table th, .qontic-light .mz-table td { border-color: #aec2cb; }
+
+/* Keep the detectors visible: counts sit in the free upper-left corner. */
+.mz-app .results-panel { top: 12px; left: 12px; right: auto; bottom: auto; width: min(200px, calc(100% - 24px)); }
+.qontic-light .mz-app .controls > h2 { color: #142b3a; }
+.qontic-light .mz-app .results-body span { color: #3d596a; }
+.qontic-light .mz-app .results-body output { color: #8a5a00; }
+.mz-option.is-selected span { color: #7cecff; }
+.mz-option.is-selected { outline: 1px solid var(--qontic-accent, #55d8e6); outline-offset: 2px; border-radius: 4px; }
+.qontic-light .mz-option.is-selected span { color: #075c69; }
+.mz-app [hidden] { display: none !important; }
+.mz-tuning { margin: 2px 0 0; }
+.mz-terms { margin-top: 10px; font-size: 12.5px; color: var(--qontic-text, #d9edf7); }
+.mz-terms summary { cursor: pointer; color: var(--qontic-muted, #829aa8); }
+.mz-terms dl { margin: 8px 0 0; display: grid; gap: 4px; }
+.mz-terms dt { font-weight: 600; }
+.mz-terms dd { margin: 0 0 6px; color: var(--qontic-muted, #829aa8); line-height: 1.45; }
+.qontic-light .mz-terms { color: #142b3a; }
+
+/* Light theme for the Physics and Prediction log tabs (same palette as the other comparative apps). */
+.qontic-light .mz-app .details-panel { color: #142b3a; }
+.qontic-light .mz-app .details-panel h2 { color: #075c69; }
+.qontic-light .mz-app .details-panel p:not(.qontic-details-purpose), .qontic-light .mz-app .details-panel li { color: #2e4a5a; }
+.qontic-light .mz-app .details-panel strong:not(.qontic-details-purpose *) { color: #142b3a; }
+.qontic-light .mz-app .mz-table td { color: #142b3a; }
+.qontic-light .mz-app .mz-table th { color: #3d596a; }
+.qontic-light .mz-app .details-panel .core-hint { color: #3d596a; }

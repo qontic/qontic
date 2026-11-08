@@ -2,6 +2,20 @@
   "id": "delayed-choice",
   "title": "Delayed Choice",
   "summary": "Interferometry and delayed-choice experiments viewed through alternative quantum representations.",
-  "topics": ["delayed-choice", "interferometry", "measurement"],
-  "order": 60
+  "topics": [
+    "delayed-choice",
+    "interferometry",
+    "measurement"
+  ],
+  "order": 60,
+  "recommendedResources": [
+    "mach-zehnder-atom-simulation"
+  ],
+  "resourceNotes": {
+    "mach-zehnder-atom-simulation": "Start here: compare the interferometer with the second beam splitter in place or removed. The setting is fixed during each run.",
+    "delayed-choice-notebook": "Further study: the delayed-choice experiment and its pilot-wave account."
+  },
+  "relatedModules": [
+    "measurement"
+  ]
 }

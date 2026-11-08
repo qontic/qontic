@@ -150,14 +150,28 @@ def validate_collection_structure(collection, errors):
             errors.append(f"Collection '{collection['id']}' section '{section.get('title', index)}' must contain an 'items' array")
 
 
+def resource_module_ids(resource):
+    return list(dict.fromkeys([resource.get("module"), *resource.get("additionalModules", [])]))
+
+
+def ordered_module_resources(resources, module):
+    preferred = module.get("recommendedResources", [])
+    order = {resource_id: index for index, resource_id in enumerate(preferred)}
+    return sorted(resources, key=lambda resource: order.get(resource["id"], len(order)))
+
+
 def validate_references(resources, modules, collections, errors):
     resource_ids = {item["id"] for item in resources}
     module_ids = {module["id"] for module in modules}
     for item in resources:
-        module_id = item.get("module")
-        if module_id and module_id not in module_ids:
-            errors.append(f"Resource '{item['id']}' references unknown module '{module_id}'")
+        for module_id in resource_module_ids(item):
+            if module_id and module_id not in module_ids:
+                errors.append(f"Resource '{item['id']}' references unknown module '{module_id}'")
     for module in modules:
+        attached = {resource["id"] for resource in resources if module["id"] in resource_module_ids(resource)}
+        for resource_id in [*module.get("recommendedResources", []), *module.get("resourceNotes", {})]:
+            if resource_id not in attached:
+                errors.append(f"Module '{module['id']}' recommends or describes unattached resource '{resource_id}'")
         for related_id in module.get("relatedModules", []):
             if related_id not in module_ids:
                 errors.append(f"Module '{module['id']}' references unknown related module '{related_id}'")
@@ -183,13 +197,13 @@ def validate_references(resources, modules, collections, errors):
 def attach_resources_to_modules(resources, modules):
     by_module = {module["id"]: [] for module in modules}
     for resource in resources:
-        module_id = resource.get("module")
-        if module_id in by_module:
-            by_module[module_id].append(resource["id"])
+        for module_id in resource_module_ids(resource):
+            if module_id in by_module:
+                by_module[module_id].append(resource)
     enriched = []
     for module in modules:
         copy = dict(module)
-        copy["resources"] = by_module[module["id"]]
+        copy["resources"] = [resource["id"] for resource in ordered_module_resources(by_module[module["id"]], module)]
         copy["url"] = f"modules/{module['id']}/"
         enriched.append(copy)
     return enriched
@@ -200,7 +214,8 @@ def resource_type_label(resource):
     return labels.get(resource.get("type"), str(resource.get("type", "Resource")).replace("-", " ").title())
 
 
-def render_resource_list(resources):
+def render_resource_list(resources, notes=None):
+    notes = notes or {}
     if not resources:
         return '<p class="empty">Resources for this module are being prepared.</p>'
     groups = []
@@ -216,8 +231,26 @@ def render_resource_list(resources):
             '<article class="resource-row">'
             f'<div><h3>{html.escape(resource.get("title", "Untitled resource"))}</h3>'
             f'<p>{html.escape(resource.get("description", ""))}</p>'
-            f'<div class="tags">{tag_html}</div></div>'
+            + (f'<p class="resource-guidance">{html.escape(notes[resource["id"]])}</p>' if resource["id"] in notes else "")
+            + f'<div class="tags">{tag_html}</div></div>'
             f'<a class="open" href="../../{html.escape(resource["url"], quote=True)}">Open →</a>'
+            '</article>'
+        )
+    return "".join(groups)
+
+
+def render_external_resource_list(resources):
+    groups = []
+    for resource in resources:
+        resource_type = resource_type_label(resource)
+        tag_html = f'<span class="tag">{html.escape(resource_type)}</span>'
+        action = "Watch →" if str(resource.get("type", "")).lower() == "video" else "Open →"
+        groups.append(
+            '<article class="resource-row">'
+            f'<div><h3>{html.escape(resource.get("title", "Untitled resource"))}</h3>'
+            f'<p>{html.escape(resource.get("description", ""))}</p>'
+            f'<div class="tags">{tag_html}</div></div>'
+            f'<a class="open" href="{html.escape(resource.get("url", "#"), quote=True)}" target="_blank" rel="noopener">{action}</a>'
             '</article>'
         )
     return "".join(groups)
@@ -226,9 +259,9 @@ def render_resource_list(resources):
 def generate_module_pages(resources, modules):
     by_module = {module["id"]: [] for module in modules}
     for resource in resources:
-        module_id = resource.get("module")
-        if module_id in by_module:
-            by_module[module_id].append(resource)
+        for module_id in resource_module_ids(resource):
+            if module_id in by_module:
+                by_module[module_id].append(resource)
     module_lookup = {module["id"]: module for module in modules}
 
     for module in modules:
@@ -243,6 +276,7 @@ def generate_module_pages(resources, modules):
         if related_links:
             related_html = '<section class="related"><h2>Related modules</h2><p>' + " · ".join(related_links) + '</p></section>'
         topic_html = "".join(f'<span class="topic">{html.escape(str(topic).replace("-", " ").title())}</span>' for topic in module.get("topics", []))
+        resource_html = render_resource_list(ordered_module_resources(by_module[module["id"]], module), module.get("resourceNotes")) + render_external_resource_list(module.get("externalResources", []))
         page = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -272,6 +306,7 @@ def generate_module_pages(resources, modules):
     .resource-row {{ display:grid; grid-template-columns:1fr auto; gap:1rem; align-items:center; padding:1rem; border-bottom:1px solid var(--border); }}
     .resource-row:last-child {{ border-bottom:0; }} .resource-row h3 {{ margin:0 0 .25rem; color:var(--blue); font-size:1.05rem; }}
     .resource-row p {{ margin:0 0 .5rem; color:#44515f; font-size:.92rem; }} .tags {{ display:flex; gap:.3rem; flex-wrap:wrap; }}
+    .resource-row .resource-guidance {{ color:#164e76; font-weight:600; font-size:.86rem; }}
     .open {{ color:white; background:var(--blue2); padding:.45rem .7rem; border-radius:5px; text-decoration:none; font-weight:700; white-space:nowrap; }}
     .empty {{ color:var(--muted); font-style:italic; padding:1rem; }} .related {{ margin-top:2rem; }} .related a {{ color:var(--blue2); }}
     footer {{ text-align:center; padding:1.2rem; border-top:1px solid var(--border); background:#eef2f7; color:var(--muted); font-size:.85rem; }}
@@ -282,10 +317,10 @@ def generate_module_pages(resources, modules):
 <header><div class="header-inner"><a class="back" href="../../">← All modules</a><h1>{html.escape(module.get("title", "Module"))}</h1><p class="summary">{html.escape(module.get("summary", ""))}</p></div></header>
 <main>
   <div class="topics">{topic_html}</div>
-  <section><h2>Resources</h2><div class="resource-list">{render_resource_list(by_module[module["id"]])}</div></section>
+  <section><h2>Resources</h2><div class="resource-list">{resource_html}</div></section>
   {related_html}
 </main>
-<footer>Q-Ontic Lab · Rice University</footer>
+<footer>Q-Ontic Lab · Rice University · Comments or problems? <a href="mailto:qonticlab@rice.edu">qonticlab@rice.edu</a></footer>
 </body>
 </html>
 '''

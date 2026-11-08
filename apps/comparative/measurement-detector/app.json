@@ -1,0 +1,26 @@
+{
+  "id": "weak-position-measurement-simulation",
+  "title": "Weak Position Measurement",
+  "type": "app",
+  "category": "comparative",
+  "module": "measurement",
+  "topics": [
+    "measurement",
+    "position-measurement",
+    "conditional-wave-functions"
+  ],
+  "interpretations": [
+    "orthodox",
+    "pilot-wave",
+    "many-worlds"
+  ],
+  "level": "intermediate",
+  "description": "Exactly solvable weak position measurement with coupling and readout stages, adjustable interaction strength and duration, marginal or conditional projections, and optional Bohmian configurations.",
+  "tags": [
+    "Multiview",
+    "Measurement",
+    "Exact analytic model"
+  ],
+  "entry": "index.html",
+  "status": "published"
+}

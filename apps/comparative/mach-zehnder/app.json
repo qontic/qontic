@@ -1,0 +1,31 @@
+{
+  "id": "mach-zehnder-atom-simulation",
+  "title": "Atom Mach–Zehnder Interferometer",
+  "type": "app",
+  "category": "comparative",
+  "module": "measurement",
+  "topics": [
+    "interference",
+    "measurement",
+    "decoherence"
+  ],
+  "interpretations": [
+    "orthodox",
+    "pilot-wave",
+    "many-worlds",
+    "spontaneous-collapse"
+  ],
+  "level": "introductory",
+  "description": "Prediction-mode simulation of an atom Mach–Zehnder interferometer: remove the second beam splitter, add a which-way marker or an Elitzur–Vaidman bomb, and compare four accounts.",
+  "tags": [
+    "Multiview",
+    "Prediction mode",
+    "Bomb tester",
+    "Which-way"
+  ],
+  "entry": "index.html",
+  "status": "published",
+  "additionalModules": [
+    "delayed-choice"
+  ]
+}

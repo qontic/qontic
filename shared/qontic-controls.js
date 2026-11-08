@@ -3,6 +3,18 @@ const INTERPRETATIONS = [
   ["pw", "Pilot Wave"],
   ["mw", "Many Worlds"],
 ];
+// Optional entries an app may opt into with the `interpretations` attribute,
+// e.g. interpretations="cpn,pw,mw,sc". The default cycle is unchanged.
+const OPTIONAL_INTERPRETATIONS = [
+  ["sc", "Spontaneous Collapse"],
+];
+const interpretationList = element => {
+  const requested = (element.getAttribute("interpretations") || "").split(",").map(id => id.trim()).filter(Boolean);
+  if (!requested.length) return INTERPRETATIONS;
+  const catalog = [...INTERPRETATIONS, ...OPTIONAL_INTERPRETATIONS];
+  const list = requested.map(id => catalog.find(([known]) => known === id)).filter(Boolean);
+  return list.length ? list : INTERPRETATIONS;
+};
 
 const boolAttr = (element, name, fallback = false) => {
   const value = element.getAttribute(name);
@@ -10,7 +22,7 @@ const boolAttr = (element, name, fallback = false) => {
 };
 
 class QonticControls extends HTMLElement {
-  static observedAttributes = ["interpretation", "running", "auto-run", "speed", "active-tab", "accent", "theme", "show-interpretation", "show-autorun", "show-reset", "show-speed", "speed-min", "speed-max", "speed-step", "disabled", "show-tabs", "show-appearance", "show-advanced", "show-expert"];
+  static observedAttributes = ["interpretation", "interpretations", "running", "auto-run", "speed", "active-tab", "accent", "theme", "show-interpretation", "show-autorun", "show-reset", "show-speed", "speed-min", "speed-max", "speed-step", "disabled", "show-tabs", "show-appearance", "show-advanced", "show-expert"];
 
   constructor() {
     super();
@@ -42,9 +54,10 @@ class QonticControls extends HTMLElement {
     this._connected = true;
     const root = this.shadowRoot;
     root.querySelector(".qontic-interpretation").addEventListener("click", () => {
-      const current = this.getAttribute("interpretation") || "cpn";
-      const index = INTERPRETATIONS.findIndex(([id]) => id === current);
-      const interpretation = INTERPRETATIONS[(index + 1) % INTERPRETATIONS.length][0];
+      const list = interpretationList(this);
+      const current = this.getAttribute("interpretation") || list[0][0];
+      const index = list.findIndex(([id]) => id === current);
+      const interpretation = list[(index + 1) % list.length][0];
       this.setAttribute("interpretation", interpretation);
       this.dispatch("interpretation", { interpretation });
     });
@@ -91,8 +104,9 @@ class QonticControls extends HTMLElement {
 
   sync() {
     const root = this.shadowRoot;
-    const interpretation = this.getAttribute("interpretation") || "cpn";
-    const [, label] = INTERPRETATIONS.find(([id]) => id === interpretation) || INTERPRETATIONS[0];
+    const list = interpretationList(this);
+    const interpretation = this.getAttribute("interpretation") || list[0][0];
+    const [, label] = list.find(([id]) => id === interpretation) || list[0];
     const interpretationButton = root.querySelector(".qontic-interpretation");
     interpretationButton.hidden = this.getAttribute("show-interpretation") === "false";
     interpretationButton.textContent = label;

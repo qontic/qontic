@@ -1,0 +1,76 @@
+/* Q-Ontic Template 2.4 adapter for Measurement Detector. */
+.stagebar {
+  display: none !important;
+}
+
+.lab aside,
+.lab aside button,
+.lab aside label,
+.lab aside input,
+.lab aside select,
+.lab aside output,
+.lab aside small,
+.lab aside span {
+  font-weight: 400 !important;
+}
+
+.lab aside h2,
+.lab aside h3 {
+  font-weight: 500 !important;
+}
+
+body.qontic-light {
+  background: #edf3f7;
+  color: #173044;
+}
+
+body.qontic-light .qontic-app-header {
+  border-bottom-color: #b9cfdd;
+  background: linear-gradient(110deg, #f9fcfe 0%, #eef6fa 58%, #e5f1f7 100%);
+  box-shadow: 0 9px 30px #36566e20;
+}
+
+body.qontic-light .qontic-app-title h1,
+body.qontic-light .qontic-header-actions a {
+  color: #102f48;
+}
+
+body.qontic-light .qontic-app-title .eyebrow {
+  color: #086d88;
+}
+
+body.qontic-light .qontic-title-purpose {
+  border-color: #bca24c;
+  background: #fbfdfe;
+  color: #29465a;
+  box-shadow: 0 12px 30px #36566e35;
+}
+
+body.qontic-light .lab aside,
+body.qontic-light .details-panel {
+  border-color: #b7cbd7;
+  background: #f9fcfe;
+  color: #1a3548;
+}
+
+body.qontic-light .permanent-playback,
+body.qontic-light .xyz-view-control,
+body.qontic-light .graphics-controls-panel,
+body.qontic-light .detector-layout-controls,
+body.qontic-light .core-annotations-control {
+  border-color: #bed0dc !important;
+  background: #eef5f9 !important;
+}
+
+body.qontic-light .xyz-view-control > span,
+body.qontic-light .view-axis-key,
+body.qontic-light .lab aside label,
+body.qontic-light .lab aside small {
+  color: #29485b !important;
+}
+
+body.qontic-light .lab aside button:not(.active) {
+  border-color: #aec5d3;
+  background: #f8fbfd;
+  color: #214258;
+}

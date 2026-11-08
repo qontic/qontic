@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Exact analytic position-measurement demonstration for Q-Ontic.">
+    <title>Weak Position Measurement · Q-Ontic</title>
+    <link rel="stylesheet" href="app.css?v=1.45">
+    <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=1.45">
+    <link rel="stylesheet" href="template-adapter.css?v=1.45">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="app.js?v=1.74"></script>
+    <script type="module" src="local-overrides.js?v=1.74&amp;release=20261107"></script>
+    <script type="module">
+      import { mountQonticShell } from '../../../shared/qontic-shell.js?v=1.45';
+      mountQonticShell({
+        title: 'Weak Position Measurement',
+        eyebrow: 'Comparative quantum demonstration',
+        purpose: 'Follow the coupling and readout stages of a weak position measurement. Compare how Orthodox, Pilot-wave, and Many-Worlds views represent the same analytical evolution.',
+        badge: 'Exact analytical model',
+        version: 'Template 2.4 · Detector v1.74',
+        homeHref: '../../../index.html',
+        labHref: 'https://qonticlab.rice.edu/'
+      });
+    </script>
+  </body>
+</html>

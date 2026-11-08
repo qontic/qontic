@@ -2,8 +2,27 @@
   "id": "double-slit",
   "title": "Double Slit",
   "summary": "Explore interference, detection, trajectories, and branching in the double-slit experiment.",
-  "topics": ["interference", "measurement"],
-  "interpretations": ["orthodox", "pilot-wave", "many-worlds"],
+  "topics": [
+    "interference",
+    "measurement"
+  ],
+  "interpretations": [
+    "orthodox",
+    "pilot-wave",
+    "many-worlds"
+  ],
   "order": 20,
-  "relatedModules": ["free-particle", "measurement"]
+  "relatedModules": [
+    "free-particle",
+    "measurement"
+  ],
+  "recommendedResources": [
+    "double-slit-notebook",
+    "double-slit-analytical-simulation"
+  ],
+  "resourceNotes": {
+    "double-slit-notebook": "Start here: a guided introduction with predictions and interactive figures.",
+    "double-slit-analytical-simulation": "Explore the experiment and compare three views.",
+    "double-slit-pilot-wave-notebook": "Further study: pilot-wave dynamics and numerical trajectories."
+  }
 }

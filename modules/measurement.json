@@ -2,8 +2,27 @@
   "id": "measurement",
   "title": "Quantum Measurement",
   "summary": "Explore measurement interactions, outcomes, records, collapse, trajectories, and branching.",
-  "topics": ["measurement", "quantum-foundations"],
-  "interpretations": ["orthodox", "pilot-wave", "many-worlds"],
+  "topics": [
+    "measurement",
+    "quantum-foundations"
+  ],
+  "interpretations": [
+    "orthodox",
+    "pilot-wave",
+    "many-worlds"
+  ],
   "order": 40,
-  "relatedModules": ["double-slit", "stern-gerlach"]
+  "relatedModules": [
+    "double-slit",
+    "stern-gerlach"
+  ],
+  "recommendedResources": [
+    "mach-zehnder-atom-simulation",
+    "weak-position-measurement-simulation"
+  ],
+  "resourceNotes": {
+    "mach-zehnder-atom-simulation": "Start here: predict interference and which-way outcomes.",
+    "weak-position-measurement-simulation": "Next: follow the system, pointer and readout interactions.",
+    "quantum-measurement-detector-simulation": "A different example: detector coupling near a tunneling barrier."
+  }
 }
