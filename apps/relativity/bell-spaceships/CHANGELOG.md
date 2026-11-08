@@ -1,5 +1,9 @@
 # Bell's Spaceships — changelog
 
+## 0.6.5 (2026-11-07)
+- Require an answer before the first run, including Start, keyboard and recording entry points. Remove the skip link and optional-prediction switch.
+- Show “Correct” or “Wrong” at the start of the result, including when the answer is “It depends on the frame”. Reruns can start directly.
+
 ## 0.6.4 (2026-11-07)
 - Limit the front-engine slider at high speed to prevent crossing ships or material worldlines; shared links use the same limit.
 - Break when the most stretched piece reaches the limit. Intermediate settings fail at the rear end; Bell's uniform case still breaks at 0.553 c for a 20% limit.

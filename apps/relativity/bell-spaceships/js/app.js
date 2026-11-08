@@ -2,8 +2,8 @@ import '../../../../shared/qontic-controls.js?v=3.2';
 import { mountQonticShell } from '../../../../shared/qontic-shell.js?v=3.7';
 import { mountQonticMedia } from '../../../../shared/qontic-media.js?v=3.0';
 import { mountQonticShortcuts } from '../../../../shared/qontic-shortcuts.js?v=1';
-import { APP_RELEASE } from './release.js?v=0.6.4';
-import { makeModel, finalStrain, shipState, rearFrameView, peakStrainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf, maxFrontSetting } from './kinematics.js?v=0.6.4';
+import { APP_RELEASE } from './release.js?v=0.6.5';
+import { makeModel, finalStrain, shipState, rearFrameView, peakStrainAt, rearTimeFor, findBreak, criticalBeta, runEnd, gammaOf, maxFrontSetting } from './kinematics.js?v=0.6.5';
 
 mountQonticShell({
   title: "Bell's Spaceships",
@@ -27,7 +27,7 @@ const controlsEl = $('qontic-controls');
 
 const state = {
   k: 0, beta: 0.9, breakStrain: 0.2, accel: 0.2, layout: 'lab',
-  show: { clocks: false, atoms: false, ghost: true, marks: true, signal: true, simul: true, predict: true },
+  show: { clocks: false, atoms: false, ghost: true, marks: true, signal: true, simul: true },
   t: T0, running: false, autoRun: false, speed: 1,
   prediction: null, predictionAsked: false, askedOnce: false, finished: false, explore: false,
 };
@@ -108,7 +108,7 @@ function updateHints() {
     engines,
   ].map((x) => `<li>${x}</li>`).join('');
   $('#predictionText').textContent = `When the ships reach ${v}, will the thread have snapped?`;
-  $('#setupNext').textContent = state.show.predict ? 'Next: the question' : 'Start';
+  $('#setupNext').textContent = state.askedOnce ? 'Run again' : 'Next: the question';
 }
 
 function setPressed(group, attr, value) {
@@ -134,7 +134,7 @@ function showStep(step) {
   state.step = step;
 }
 $('#setupNext').addEventListener('click', () => {
-  if (state.show.predict) showStep('question'); else start();
+  if (state.askedOnce) start(); else showStep('question');
 });
 $('#setupBack').addEventListener('click', () => showStep('setup'));
 $('#showSetup').addEventListener('click', () => {
@@ -143,7 +143,7 @@ $('#showSetup').addEventListener('click', () => {
 });
 document.querySelectorAll('[data-predict]').forEach((b) => b.addEventListener('click', () => {
   const p = b.dataset.predict;
-  state.prediction = p === 'skip' ? null : p;
+  state.prediction = p;
   state.lastPrediction = state.prediction && { p: state.prediction, beta: state.beta, eps: state.breakStrain, k: state.k };
   start();
 }));
@@ -175,7 +175,6 @@ document.querySelectorAll('[data-toggle]').forEach((b) => b.addEventListener('cl
   const key = b.dataset.toggle;
   state.show[key] = !state.show[key];
   b.setAttribute('aria-pressed', String(state.show[key]));
-  if (key === 'predict') updateHints();
 }));
 
 controlsEl.addEventListener('qontic:start', () => start());
@@ -189,12 +188,22 @@ controlsEl.addEventListener('qontic:tab', (e) => {
 });
 
 function start() {
+  // All entry points (button, keyboard and recording) require a first answer.
+  if (!state.askedOnce && !state.prediction) {
+    state.running = false;
+    controlsEl.setAttribute('running', 'false');
+    showStep('question');
+    $('#questionStep').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return false;
+  }
   if (state.finished || state.t >= tEnd) { state.t = T0; state.finished = false; }
   state.predictionAsked = true;
   state.askedOnce = true;
+  $('#setupNext').textContent = 'Run again';
   showStep('run');
   state.running = true;
   controlsEl.setAttribute('running', 'true');
+  return true;
 }
 
 // Section tabs (Simulation / Physics / Rationale)
@@ -791,18 +800,18 @@ function finish() {
   else outcome = `The thread held but went slack: the gap ended at ${fmt(gapEnd)} L, shorter than its relaxed length ${fmt(1 / g)} L.`;
   let lead = '';
   if (state.prediction === 'depends') {
-    lead = '<strong>It does not depend on the frame.</strong> ';
+    lead = '<strong>Wrong.</strong> It does not depend on the frame. ';
     const ev = snapped ? 'A snapped thread is one event: one thread becomes two pieces.' : 'An intact thread is a fact about one object.';
     const both = snapped && state.layout === 'lab' && state.k === 0 ? ` In A\u2019s frame the moving thread is shorter than the gap; in the ships\u2019 frame the thread\u2019s relaxed length is its rest length L, ${state.k < 1 ? 'and the gap grows past it' : 'and so is the gap'}.` : '';
     why = `${ev} Frames can disagree about lengths and about which ship started first, but not about whether ${snapped ? 'the thread broke' : 'it broke'}.${both}` + (why ? ' ' + why : '');
-  } else if (state.prediction) lead = `<strong>${(state.prediction === 'snaps') === snapped ? 'Your prediction was right.' : 'Not what you predicted.'}</strong> `;
+  } else if (state.prediction) lead = `<strong>${(state.prediction === 'snaps') === snapped ? 'Correct.' : 'Wrong.'}</strong> `;
   else if (state.lastPrediction) {
     // A rerun of the setup the student predicted for (e.g. in another view): tie it back.
     const lp = state.lastPrediction;
     if (lp.beta === state.beta && lp.eps === state.breakStrain && lp.k === state.k) {
       const said = { snaps: 'It snaps', holds: 'It holds', depends: 'It depends on the frame' }[lp.p];
-      const verdict = lp.p === 'depends' ? 'it does not' : (lp.p === 'snaps') === snapped ? 'right' : 'not what happened';
-      lead = `<strong>${state.layout === 'lab' ? 'Same setup' : 'Same run, another view'}. You predicted \u201c${said}\u201d: ${verdict}.</strong> `;
+      const verdict = lp.p !== 'depends' && (lp.p === 'snaps') === snapped ? 'Correct.' : 'Wrong.';
+      lead = `<strong>${verdict}</strong> ${state.layout === 'lab' ? 'Same setup' : 'Same run, another view'}. You predicted \u201c${said}\u201d. `;
     }
   }
   if (snapped && state.k === 0 && ['frames', 'all'].includes(state.layout)) {
@@ -873,7 +882,7 @@ mountQonticMedia({
   getCanvases: () => [canvas],
   filename: 'bell-spaceships',
   getShareUrl: shareUrl,
-  beginRecording: () => { const was = state.running; if (!was) start(); return was; },
+  beginRecording: () => { const was = state.running; if (!was && !start()) throw new Error('Answer the question before recording.'); return was; },
   endRecording: (was) => { if (!was) { state.running = false; controlsEl.setAttribute('running', 'false'); } },
 });
 mountQonticShortcuts({

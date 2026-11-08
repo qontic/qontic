@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="../../../shared/favicon.svg">
 <link rel="stylesheet" href="../../../shared/qontic-shell.css?v=3.7">
 <link rel="stylesheet" href="../../../shared/qontic-app.css?v=3.5">
-<link rel="stylesheet" href="css/spaceships.css?v=0.6.4">
+<link rel="stylesheet" href="css/spaceships.css?v=0.6.5">
 </head>
 <body class="spaceship-app">
 <main class="shell">
@@ -26,7 +26,7 @@
     </section>
     <div class="control-tab-body qontic-control-body">
       <div class="control-pane" data-control-pane="core">
-        <p class="core-hint first-run-hint" id="firstRunHint">Run it once. The controls for exploring further appear afterwards.</p>
+        <p class="core-hint first-run-hint" id="firstRunHint">Choose an answer to start. More controls appear after the first run.</p>
         <div id="explore" class="explore hidden">
         <div class="qontic-control-section" id="frontEngine">
           <div class="qontic-control-section-title">Front engine</div>
@@ -70,7 +70,6 @@
       </div>
 
       <div class="control-pane hidden" data-control-pane="display">
-        <div class="toggle-row"><span>Ask for a prediction (first run)</span><button class="toggle" type="button" data-toggle="predict" aria-pressed="true" aria-label="Ask for a prediction on the first run"></button></div>
         <div class="toggle-row"><span>Clocks on the ships</span><button class="toggle" type="button" data-toggle="clocks" aria-pressed="false" aria-label="Show ship clocks"></button></div>
         <div class="toggle-row"><span>Atoms of the thread (schematic)</span><button class="toggle" type="button" data-toggle="atoms" aria-pressed="false" aria-label="Show the atoms of the thread and their contracted fields"></button></div>
         <div class="toggle-row"><span>Relaxed-length marker</span><button class="toggle" type="button" data-toggle="ghost" aria-pressed="true" aria-label="Show the length the thread would have if it were not stretched"></button></div>
@@ -106,12 +105,13 @@
       </div>
       <div id="questionStep" class="story-step hidden">
         <p class="story-title" id="predictionText"></p>
+        <p>Choose an answer to start.</p>
         <div class="story-buttons">
           <button type="button" class="qontic-app-toggle" data-predict="snaps">It snaps</button>
           <button type="button" class="qontic-app-toggle" data-predict="holds">It holds</button>
           <button type="button" class="qontic-app-toggle" data-predict="depends">It depends on the frame</button>
         </div>
-        <p class="story-links"><button type="button" class="link-button" id="setupBack">Back to the setup</button> · <button type="button" class="link-button" data-predict="skip">Skip and just run it</button></p>
+        <p class="story-links"><button type="button" class="link-button" id="setupBack">Back to the setup</button></p>
       </div>
       <div id="runStep" class="story-step hidden">
         <p class="story-live" id="liveLine"></p>
@@ -191,6 +191,6 @@
   </ol>
 </section>
 </main>
-<script type="module" src="js/app.js?v=0.6.4"></script>
+<script type="module" src="js/app.js?v=0.6.5"></script>
 </body>
 </html>
