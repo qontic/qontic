@@ -48,3 +48,18 @@ Simulation and Numerical Notebook, all prefixed by Double Slit. The Double Slit
 module follows that numbered order. The weak-velocity draft remains optional
 advanced material on dev. Notebook text, simulation source and all resource IDs
 are unchanged. Next cleanup candidate remains Classical Limit.
+
+## Position-color numerical app and return navigation
+
+The owner clarified that the retained numerical app must have starting-position
+colors. The canonical Numerical Simulation entry now runs the extended WebGL2
+implementation previously labelled 2.0. Its up/down, right/left and radial color
+controls, histogram and recording code are retained. There is still one numerical
+app entry. The numerical notebook text and focused applets remain unchanged.
+Return navigation now carries the exact same-site originating page, including
+catalog tab and search; notebook-to-app links retain the notebook as the parent.
+
+Browser validation covers Apps-list and Notebooks-list returns (including search),
+module-to-app return, and a nested notebook-to-app-to-notebook-to-list chain.
+The test browser lacks WebGL2; animation could not be verified. Copied shader
+and position-color source equality is checked.

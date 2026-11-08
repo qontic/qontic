@@ -25,7 +25,7 @@
   "resourceNotes": {
     "double-slit-analytical-simulation": "1. Start with interference and compare three accounts.",
     "double-slit-notebook": "2. Work through the analytical model and its activities.",
-    "double-slit-webgl-simulation": "3. Explore numerical wave dynamics and reflection at the barrier.",
+    "double-slit-webgl-simulation": "3. Explore numerical wave dynamics, reflection and trajectories colored by their starting position.",
     "double-slit-pilot-wave-notebook": "4. Study pilot-wave trajectories and equivariance."
   }
 }

@@ -1,0 +1,51 @@
+.double-slit-template, .double-slit-template body { min-height:100%; height:auto; overflow:auto; background:#07121d; color:#d9edf7; }
+.double-slit-template .shell { max-width:none; margin:0 auto; padding:10px; }
+.double-slit-template .shell > header { min-height:56px; }
+.double-slit-template .classic-link { align-self:center; color:#8ce7f0; font-size:13px; white-space:nowrap; }
+.double-slit-template .tabs { display:flex; gap:8px; margin:8px 0; }
+.double-slit-template .tabs button { flex:0 0 auto; }
+.double-slit-template .tabs button.active { border-color:#55d8e6; color:#7cecff; }
+.double-slit-template .qontic-workspace { --qontic-sidebar-width:340px; --qontic-layout-gap:10px; max-width:none; }
+.double-slit-template .qontic-sidebar { max-height:calc(100dvh - 140px); overflow:auto; }
+.double-slit-template .qontic-sidebar h2 { margin:0 0 12px; font-size:16px; }
+.double-slit-template .qontic-stage { position:relative; overflow:hidden; background:#000; }
+.double-slit-template .qontic-stage > .qontic-media-toolbar { margin:0; padding:7px 10px; background:#0b1926; }
+.double-slit-template #wrap { position:relative; width:100%; height:min(80vh,850px); min-height:450px; overflow:hidden; }
+.double-slit-template .qontic-expanded-dialog .qontic-stage { display:flex; flex-direction:column; }
+.double-slit-template .qontic-expanded-dialog #wrap { flex:1 1 auto; height:auto; min-height:0; }
+.double-slit-template #c { width:100%; height:100%; touch-action:none; }
+.double-slit-template .template-screenshot-surface { position:absolute; inset:0; width:100%; height:100%; opacity:0; pointer-events:none; }
+.double-slit-template #ui { position:static; width:auto; max-height:none; overflow:visible; padding:12px 8px 8px; margin:0; border:1px solid #3a6578; border-radius:0 0 7px 7px; background:#0f2230; backdrop-filter:none; }
+.double-slit-template #ui > div:first-child, .double-slit-template #ui .btns { display:none !important; }
+.double-slit-template #uibody { display:block !important; }
+.double-slit-template #controls { margin-top:0; }
+.double-slit-template .control-pane[hidden], .double-slit-template [data-panel][hidden] { display:none !important; }
+.double-slit-template .row { gap:6px; margin:9px 0; }
+.double-slit-template .row label { flex:0 0 96px; width:96px; color:#c4d8e6; }
+.double-slit-template .row input[type=range] { min-width:40px; }
+.double-slit-template .row .val { width:56px; flex:0 0 56px; }
+.double-slit-template .row button { min-width:0; }
+.double-slit-template .button-group button { padding:6px 3px; }
+.double-slit-template #stats { position:absolute; left:12px; bottom:12px; z-index:4; max-width:min(330px,65%); padding:8px 10px; border-radius:6px; background:#0b1926e0; pointer-events:none; }
+.double-slit-template .webgl-notice { position:absolute; left:50%; top:50%; z-index:35; transform:translate(-50%,-50%); width:min(420px,85%); padding:18px; border:1px solid #55d8e6; border-radius:8px; background:#0b1926; color:#d9edf7; text-align:center; }
+.double-slit-template #export-options { margin:16px 0 8px; }
+.double-slit-template .scale-note { margin:0 0 9px; color:#9fbce0; font-size:11px; line-height:1.35; }
+.double-slit-template #theory { position:static; width:auto; max-width:900px; max-height:none; margin:12px auto; padding:20px; overflow:visible; background:#0b1926; backdrop-filter:none; user-select:text; }
+.double-slit-template #theory.is-minimized { width:auto; overflow:visible; }
+.double-slit-template #theory .panel-toggle { display:none; }
+.double-slit-template #theorybody { display:block; }
+.double-slit-template #theorybody[hidden] { display:block !important; }
+.double-slit-template.qontic-light body { background:#eef5f8; color:#173b4c; }
+.double-slit-template.qontic-light #ui, .double-slit-template.qontic-light #theory { color:#173b4c; }
+.double-slit-template.qontic-light #ui { background:#fff; border-color:#9bb5c1; }
+.double-slit-template.qontic-light .row label { color:#264653; }
+.double-slit-template.qontic-light #ui .row .val, .double-slit-template.qontic-light #ui h3 { color:#173b4c; }
+.double-slit-template.qontic-light #ui button, .double-slit-template.qontic-light #theory button { background:#e7f3f6; color:#173b4c; border-color:#aacbd4; }
+.double-slit-template.qontic-light #ui button:hover, .double-slit-template.qontic-light #ui button.is-active { background:#d2edf2; }
+.double-slit-template.qontic-light #export-options select, .double-slit-template.qontic-light #export-options input { background:#fff; color:#173b4c; border-color:#aacbd4; }
+.double-slit-template.qontic-light #theorybody .note, .double-slit-template.qontic-light .scale-note { color:#526d7a; }
+.double-slit-template.qontic-light #theory { background:#fff; }
+.double-slit-template.qontic-light #theorybody, .double-slit-template.qontic-light #theory .panel-head h3 { color:#173b4c; }
+.double-slit-template.qontic-light #theory .math { background:#f0f6f8; color:#173b4c; }
+@media(max-width:1000px) { .double-slit-template .qontic-sidebar { max-height:none; } .double-slit-template #wrap { height:65vh; } }
+@media(max-width:600px) { .double-slit-template .shell { padding:8px; } .double-slit-template #wrap { height:55vh; min-height:330px; } .double-slit-template #stats { bottom:8px; max-width:75%; } }
