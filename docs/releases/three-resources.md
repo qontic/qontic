@@ -50,3 +50,13 @@ four-account control are included; other shared visual templates are retained.
 The double-slit companion notebook has been withdrawn from production at the
 project owner's request. It remains a draft in qontic-dev while its layout is
 migrated to the current notebook template. The other two resources are unchanged.
+
+## Double-slit notebook republication
+
+The project owner approved republication after the shared-template migration and
+simulated learner-review revisions. The notebook is published again, linked from
+the Double Slit module after the analytical app. Brief retains the essential
+account explanations; the three-band task now has explicit initial conditions,
+a 25% reference line and a peak count. The analytical model is unchanged.
+Only the notebook-specific shared template files are added; the production app
+shell is retained. Approval does not imply a completed real-student evaluation.

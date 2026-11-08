@@ -1,0 +1,79 @@
+/* Double-slit figures and controls; the shared notebook owns the page chrome. */
+.qontic-notebook main.shell { max-width: 1380px; }
+.qontic-notebook .section-head > p { margin: 6px 0 10px; color: var(--qn-muted); }
+.qontic-notebook .ds-draft { color: var(--qn-gold-ink); font-size: 12px; }
+.qontic-notebook .ds-overview > .cards { padding-inline: 0; }
+.qontic-notebook .ds-overview h2 { font-size: 18px; color: var(--qn-head); }
+.qontic-notebook .section-head .ds-explanation { padding: 4px 0 12px; }
+.qontic-notebook .section-head .notice { margin: 10px 0; }
+.qontic-notebook .section-head .cards { padding-inline: 0; }
+.qontic-notebook .guided-equation { display: block; margin-top: 8px; }
+.qontic-notebook .canvas-card { min-width: 0; }
+.qontic-notebook .canvas-card canvas { height: 480px; touch-action: pan-y; }
+.qontic-notebook .canvas-card .sub-canvas { height: 220px; }
+.qontic-notebook [hidden] { display: none !important; }
+.qontic-notebook .ds-results { border-top: 1px solid #23425a; background: #081827; color: #dbeafe; }
+.qontic-notebook .qn-results-head { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; background: #102839; }
+.qontic-notebook .qn-results-head strong { font-size: 12px; font-weight: 600; }
+.qontic-notebook .qn-results-head button { padding: 0 8px; border: 0; background: transparent; color: #9edce5; font-size: 18px; cursor: pointer; }
+.qontic-notebook .ds-results .readout { display: block; padding: 8px 12px; border: 0; border-radius: 0; background: transparent; color: #c5d9e9; font-size: 12px; }
+.qontic-notebook .ds-results .readout span { display: block; }
+.qontic-notebook .ds-results .readout b { color: #fff; }
+.qontic-notebook .ds-demo-bar { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--qn-line); }
+.qontic-notebook .ds-demo-bar .buttons { margin-bottom: 8px; }
+.qontic-notebook .ds-speed { display: grid; grid-template-columns: auto minmax(60px, 1fr) 40px; gap: 8px; align-items: center; color: var(--qn-muted); font-size: 12px; }
+.qontic-notebook .ds-speed output { text-align: right; color: var(--qn-ink); font-variant-numeric: tabular-nums; }
+.qontic-notebook .ds-accounts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.qontic-notebook .ds-accounts button { min-width: 0; padding: 7px 3px; font-size: 11px; }
+.qontic-notebook .shared-control-grid { display: grid; gap: 4px; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--qn-line2); }
+.qontic-notebook .row label span:last-child { color: var(--qn-accent); font-variant-numeric: tabular-nums; }
+.qontic-notebook .control-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.qontic-notebook .control-actions .wide { grid-column: 1 / -1; }
+.qontic-notebook .button[aria-pressed="true"] { background: var(--qn-accent-strong); color: var(--qn-on-accent); }
+.qontic-notebook .checks { display: grid; gap: 6px; margin: 12px 0; }
+.qontic-notebook .checks input { accent-color: var(--qn-accent-strong); }
+.qontic-notebook .app-callout { margin-top: 12px; padding: 10px; border: 1px dashed var(--qn-line); border-radius: 9px; background: var(--qn-field); font-size: 12px; line-height: 1.5; }
+.qontic-notebook .app-callout strong { display: block; margin-bottom: 5px; color: var(--qn-head); }
+.qontic-notebook .app-callout ol { margin: 4px 0 10px; padding-left: 18px; }
+.qontic-notebook .app-callout a.button { display: block; margin-top: 5px; text-align: center; text-decoration: none; }
+.qontic-notebook .controls details.derivation { margin: 12px 0 0; }
+.qontic-notebook .controls .equation { margin-inline: 0; padding: 8px 3px; font-size: 13px; }
+.qontic-notebook .controls .path-record-note { color: var(--qn-muted); font-size: 12px; }
+.qontic-notebook .section-head .quiz { margin: 12px 0; }
+.qontic-notebook .concept-note { margin: 12px 0; padding: 10px 12px; border-left: 3px solid var(--qn-accent); border-radius: 0 8px 8px 0; background: var(--qn-accent-soft); color: var(--qn-notice-ink); }
+.qontic-notebook .task-card { margin: 12px 0; padding: 10px 12px; border: 1px solid var(--qn-task-line); border-radius: 9px; background: var(--qn-task-bg); color: var(--qn-task-ink); }
+.qontic-notebook .task-card strong { color: inherit; }
+.qontic-notebook .inline-terms { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.qontic-notebook .term { padding: 3px 8px; border: 1px solid var(--qn-line); border-radius: 999px; background: var(--qn-field); color: var(--qn-muted); font-size: 12px; }
+.qontic-notebook .symbol { display: inline-block; padding: 5px 8px; border-radius: 7px; background: var(--qn-accent-soft); color: var(--qn-accent); font: 17px Georgia, serif; }
+.qontic-notebook .time-est { color: var(--qn-muted); font-size: 12px; font-weight: 400; white-space: nowrap; }
+.qontic-notebook .ui { padding: 1px 4px; border-radius: 4px; background: var(--qn-accent-soft); font-size: 12px; }
+.qontic-notebook .questions-list { counter-reset: question; display: grid; gap: 8px; padding: 0; list-style: none; }
+.qontic-notebook .questions-list li { counter-increment: question; display: flex; gap: 12px; padding: 9px 12px; border: 1px solid var(--qn-line); border-radius: 8px; background: var(--qn-card2); }
+.qontic-notebook .questions-list li::before { content: "Q" counter(question); color: var(--qn-accent); font-weight: 600; }
+.qontic-notebook .comparison-table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+.qontic-notebook .comparison-table th, .qontic-notebook .comparison-table td { padding: 10px; border: 1px solid var(--qn-line); text-align: left; }
+.qontic-notebook .comparison-table th { color: var(--qn-head); background: var(--qn-card2); }
+.qontic-notebook .comparison-table td.blank { width: 22%; min-width: 100px; height: 46px; }
+.qontic-notebook .refs { padding-left: 22px; font-size: 13px; }
+.qontic-notebook .refs li { margin: 7px 0; }
+.qontic-notebook .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.qontic-notebook .qn-depth-reset { padding: 4px 8px; border: 1px solid var(--qn-line); border-radius: 6px; background: var(--qn-card); color: var(--qn-muted); font: 12px var(--qn-font); cursor: pointer; }
+@media (max-width: 860px) {
+  .qontic-notebook .canvas-card canvas { height: 360px; }
+}
+@media (max-width: 560px) {
+  .qontic-notebook .canvas-card canvas { height: 320px; }
+  .qontic-notebook .ds-results .readout { font-size: 11px; }
+  .qontic-notebook .qn-bar { flex-wrap: wrap; }
+  .qontic-notebook .qn-sections { flex-basis: 100%; }
+  .qontic-notebook .section-head h2 { font-size: 18px; }
+}
+
+.qontic-notebook .ds-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 14px 0; padding: 12px; border: 1px solid var(--qn-line); border-radius: 9px; background: var(--qn-field); }
+.qontic-notebook .ds-settings p { flex: 1 1 300px; margin: 0; font-size: 13px; color: var(--qn-muted); }
+.qontic-notebook .ds-settings select { padding: 6px; border: 1px solid var(--qn-line); border-radius: 6px; background: var(--qn-card); color: var(--qn-ink); font: inherit; }
+.qontic-notebook .ds-figure-key { margin: 0; padding: 9px 12px; background: #102839; color: #dbeafe; font-size: 12px; line-height: 1.5; border-top: 1px solid #23425a; }
+.qontic-notebook .ds-threshold { display: flex; align-items: start; gap: 7px; margin: 12px 0; color: var(--qn-ink); font-size: 13px; }
+.qontic-notebook .task-card p { margin: 9px 0; }
+.qontic-notebook .section > .quiz { margin: 14px 0; }

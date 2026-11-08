@@ -1,0 +1,213 @@
+/* Q-Ontic notebook template, 1.0.
+   Guided, multi-section notebooks with the same branded header, footer,
+   palette and light/dark themes as the Q-Ontic apps. Load after
+   qontic-shell.css; mount with mountQonticNotebook() from qontic-notebook.js.
+   Every rule is scoped to body.qontic-notebook so it cannot leak into apps.
+   Dark is the default, as in the apps; .qontic-light on <html> switches. */
+
+body.qontic-notebook {
+  --qn-page: #06111c;
+  --qn-page2: #0a1c2c;
+  --qn-card: #0b1926;
+  --qn-card2: #0f2232;
+  --qn-field: #0a1826;
+  --qn-line: #23425a;
+  --qn-line2: #1a3447;
+  --qn-ink: #c9d9e4;
+  --qn-head: #f1f8fc;
+  --qn-muted: #8da9bb;
+  --qn-accent: #55d8e6;
+  --qn-accent-strong: #1594a8;
+  --qn-accent-soft: #0e2f3f;
+  --qn-on-accent: #04202a;
+  --qn-notice-ink: #bfeef4;
+  --qn-gold: #d7a51e;
+  --qn-gold-soft: #0a1d2e;
+  --qn-gold-ink: #f0ca61;
+  --qn-task-bg: #111a38;
+  --qn-task-line: #4658a8;
+  --qn-task-ink: #b4c0ff;
+  --qn-good: #3fd39a;
+  --qn-good-soft: #0c2b22;
+  --qn-bad: #f59e0b;
+  --qn-wrong: #f87171;
+  --qn-wrong-soft: #2d1416;
+  --qn-canvas: #071020;
+  --qn-shadow: 0 10px 30px #0005;
+  --qn-font: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  margin: 0;
+  background: radial-gradient(1200px 600px at 20% -10%, var(--qn-page2), transparent 70%), var(--qn-page);
+  color: var(--qn-ink);
+  font-family: var(--qn-font);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.qontic-light body.qontic-notebook,
+body.qontic-notebook.qontic-light {
+  --qn-page: #eef3f7;
+  --qn-page2: #f7fafc;
+  --qn-card: #ffffff;
+  --qn-card2: #f5f9fb;
+  --qn-field: #ffffff;
+  --qn-line: #cfdce4;
+  --qn-line2: #e3ebf0;
+  --qn-ink: #26394a;
+  --qn-head: #0d2233;
+  --qn-muted: #5d7484;
+  --qn-accent: #087487;
+  --qn-accent-strong: #087487;
+  --qn-accent-soft: #e2f4f7;
+  --qn-on-accent: #ffffff;
+  --qn-notice-ink: #0b4f5c;
+  --qn-gold: #b7860b;
+  --qn-gold-soft: #fbf7ec;
+  --qn-gold-ink: #8a5a00;
+  --qn-task-bg: #eef1ff;
+  --qn-task-line: #9aa6e6;
+  --qn-task-ink: #3141a0;
+  --qn-good: #047857;
+  --qn-good-soft: #ecfdf5;
+  --qn-bad: #b45309;
+  --qn-wrong: #dc2626;
+  --qn-wrong-soft: #fef2f2;
+  --qn-shadow: 0 10px 26px #36576c1f;
+}
+body.qontic-notebook * { box-sizing: border-box; }
+html:has(body.qontic-notebook) { scroll-behavior: smooth; }
+body.qontic-notebook a { color: var(--qn-accent); }
+body.qontic-notebook main.shell { max-width: 1280px; margin: 0 auto; padding: 0 18px 18px; }
+
+/* Intro and sticky section bar */
+.qontic-notebook .qn-intro { margin-top: 16px; padding: 16px 20px; border: 1px solid var(--qn-line); border-radius: 14px; background: var(--qn-card); box-shadow: var(--qn-shadow); }
+.qontic-notebook .qn-intro p.lead { margin: 0; font-size: 16px; color: var(--qn-ink); max-width: 920px; }
+.qontic-notebook .qn-intro p.prereq { margin: 10px 0 0; padding: 9px 12px; border-left: 3px solid var(--qn-gold); border-radius: 0 8px 8px 0; background: var(--qn-gold-soft); font-size: 13.5px; max-width: 920px; }
+.qontic-notebook .qn-intro p.prereq b { color: var(--qn-gold-ink); }
+.qontic-notebook .qn-intro p.progress { margin: 10px 0 0; font-size: 13px; color: var(--qn-muted); }
+.qontic-notebook .qn-bar { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 8px; margin: 12px -18px 0; padding: 8px 18px; background: color-mix(in srgb, var(--qn-page) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--qn-line2); }
+.qontic-notebook .qn-sections { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; flex: 1; min-width: 0; }
+.qontic-notebook .qn-sections a { flex: none; padding: 5px 10px; border: 1px solid var(--qn-line); border-radius: 999px; background: var(--qn-card); color: var(--qn-ink); font-size: 12.5px; text-decoration: none; white-space: nowrap; }
+.qontic-notebook .qn-sections a:hover { border-color: var(--qn-accent); color: var(--qn-accent); }
+.qontic-notebook .qn-sections a.current { border-color: var(--qn-accent); background: var(--qn-accent-soft); color: var(--qn-accent); }
+.qontic-notebook .qn-theme { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid var(--qn-line); border-radius: 8px; background: var(--qn-card); color: var(--qn-ink); font: 12.5px var(--qn-font); cursor: pointer; }
+.qontic-notebook .qn-theme i { position: relative; width: 28px; height: 15px; border: 1px solid var(--qn-line); border-radius: 99px; background: var(--qn-field); }
+.qontic-notebook .qn-theme i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--qn-muted); transition: left .15s ease; }
+.qontic-light .qontic-notebook .qn-theme i::after, .qontic-notebook.qontic-light .qn-theme i::after { left: 15px; background: var(--qn-accent); }
+
+/* Sections */
+.qontic-notebook .section { margin-top: 18px; border: 1px solid var(--qn-line); border-radius: 14px; background: var(--qn-card); box-shadow: var(--qn-shadow); overflow: hidden; scroll-margin-top: 60px; }
+.qontic-notebook .section-head { padding: 16px 18px 6px; }
+.qontic-notebook .section-head h2 { margin: 0; color: var(--qn-head); font-size: 20px; font-weight: 720; letter-spacing: -.01em; }
+.qontic-notebook .section-head .purpose { margin: 4px 0 0; color: var(--qn-muted); font-size: 14px; }
+.qontic-notebook .prose { max-width: 900px; padding: 4px 18px 14px; }
+.qontic-notebook .prose p { margin: 8px 0; }
+.qontic-notebook .prose ul, .qontic-notebook .prose ol { margin: 6px 0; padding-left: 22px; }
+.qontic-notebook .prose li { margin: 4px 0; }
+.qontic-notebook .prose b, .qontic-notebook .prose strong { color: var(--qn-head); }
+.qontic-notebook .notice { max-width: 880px; margin: 8px 18px 0; padding: 9px 12px; border-left: 3px solid var(--qn-accent); border-radius: 0 8px 8px 0; background: var(--qn-accent-soft); color: var(--qn-notice-ink); font-size: 14px; }
+.qontic-notebook .notice b { color: var(--qn-notice-ink); }
+.qontic-notebook .formula { margin: 10px 0; color: var(--qn-head); font-family: Georgia, "Times New Roman", serif; font-size: 17px; text-align: center; }
+
+/* Demonstration: canvas plus side controls */
+.qontic-notebook .section-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 14px; align-items: start; }
+.qontic-notebook .canvas-card { position: relative; overflow: hidden; border: 1px solid #12263a; border-radius: 12px; background: var(--qn-canvas); }
+.qontic-notebook .canvas-card canvas { display: block; width: 100%; height: 440px; }
+.qontic-notebook .canvas-card.short canvas { height: 300px; }
+.qontic-notebook .controls { padding: 12px; border: 1px solid var(--qn-line); border-top: 3px solid var(--qn-accent-strong); border-radius: 12px; background: var(--qn-card2); font-size: 13px; }
+.qontic-notebook .row { margin: 0 0 12px; }
+.qontic-notebook .row label { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; color: var(--qn-ink); font-size: 12.5px; font-weight: 600; }
+.qontic-notebook .row label output { color: var(--qn-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.qontic-notebook input[type=range] { width: 100%; accent-color: var(--qn-accent-strong); }
+.qontic-notebook input[type=range]:disabled { opacity: .45; }
+.qontic-notebook .check { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0 10px; color: var(--qn-ink); }
+.qontic-notebook .check input { margin-top: 3px; accent-color: var(--qn-accent-strong); }
+.qontic-notebook fieldset { margin: 4px 0 10px; padding: 4px 10px 2px; border: 1px solid var(--qn-line); border-radius: 10px; background: var(--qn-field); }
+.qontic-notebook fieldset legend { padding: 0 4px; color: var(--qn-head); font-size: 12.5px; font-weight: 650; }
+.qontic-notebook fieldset .check { margin: 4px 0 6px; font-size: 13.5px; }
+.qontic-notebook .buttons { display: flex; gap: 6px; margin-bottom: 10px; }
+.qontic-notebook .button { flex: 1; padding: 7px 9px; border: 1px solid var(--qn-accent-strong); border-radius: 9px; background: transparent; color: var(--qn-accent); font: 600 13px var(--qn-font); cursor: pointer; }
+.qontic-notebook .button:hover { background: var(--qn-accent-soft); }
+.qontic-notebook .button.primary { background: var(--qn-accent-strong); color: #fff; }
+.qontic-notebook .button.primary:hover { filter: brightness(1.1); }
+.qontic-notebook .readout { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; padding: 8px 10px; border: 1px solid var(--qn-line); border-radius: 10px; background: var(--qn-field); color: var(--qn-ink); font-size: 12.5px; }
+.qontic-notebook .readout output { color: var(--qn-head); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.qontic-notebook .readout .hl { color: var(--qn-good); }
+.qontic-notebook .readout .bad { color: var(--qn-bad); }
+.qontic-notebook .readout .sub { padding-left: 10px; color: var(--qn-muted); font-weight: 400; }
+.qontic-notebook .readout output.sub { padding-left: 0; }
+.qontic-notebook .mini { margin: 8px 0 0; color: var(--qn-muted); font-size: 12px; }
+.qontic-notebook .mini.warn { padding: 7px 9px; border: 1px solid var(--qn-wrong); border-radius: 8px; background: var(--qn-wrong-soft); color: var(--qn-wrong); }
+
+/* Collapsed derivations, quizzes, challenges, comparison cards, references */
+.qontic-notebook details.derivation { max-width: 900px; margin: 0 18px 16px; overflow: hidden; border: 1px solid var(--qn-line); border-radius: 10px; }
+.qontic-notebook details.derivation summary { padding: 9px 12px; background: var(--qn-card2); color: var(--qn-accent); font-size: 13.5px; font-weight: 650; cursor: pointer; }
+.qontic-notebook details.derivation .body { padding: 6px 14px 10px; font-size: 14px; }
+.qontic-notebook .quiz { max-width: 900px; margin: 4px 18px 16px; padding: 12px 14px; border: 1px solid var(--qn-line); border-radius: 10px; background: var(--qn-card2); }
+.qontic-notebook .quiz p.q { margin: 0 0 8px; color: var(--qn-head); font-weight: 650; }
+.qontic-notebook .quiz .options { display: grid; gap: 6px; }
+.qontic-notebook .quiz button { padding: 7px 10px; border: 1px solid var(--qn-line); border-radius: 8px; background: var(--qn-field); color: var(--qn-ink); font: 14px var(--qn-font); text-align: left; cursor: pointer; }
+.qontic-notebook .quiz button:hover { border-color: var(--qn-accent); }
+.qontic-notebook .quiz button.right { border-color: var(--qn-good); background: var(--qn-good-soft); }
+.qontic-notebook .quiz button.wrong { border-color: var(--qn-wrong); background: var(--qn-wrong-soft); }
+.qontic-notebook .quiz .fb { margin: 8px 0 0; font-size: 14px; }
+.qontic-notebook .challenges { max-width: 900px; margin: 10px 18px 16px; padding: 10px 14px 6px; border: 1px solid var(--qn-task-line); border-left: 3px solid var(--qn-task-line); border-radius: 0 10px 10px 0; background: var(--qn-task-bg); }
+.qontic-notebook .challenges h3 { margin: 0 0 6px; color: var(--qn-task-ink); font-size: 15px; }
+.qontic-notebook .challenges ol { margin: 0; padding: 0; list-style: none; }
+.qontic-notebook .challenges li { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 10px; font-size: 14px; }
+.qontic-notebook .challenges li b { color: var(--qn-head); }
+.qontic-notebook .challenges .tick { position: relative; flex: 0 0 18px; height: 18px; margin-top: 2px; border: 2px solid var(--qn-task-ink); border-radius: 50%; }
+.qontic-notebook .challenges li.done .tick { border-color: var(--qn-good); background: var(--qn-good); }
+.qontic-notebook .challenges li.done .tick::after { content: ""; position: absolute; left: 5px; top: 1px; width: 4px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.qontic-notebook .challenges .done-msg { margin: 4px 0 0; color: var(--qn-good); }
+.qontic-notebook .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; padding: 4px 18px 14px; }
+.qontic-notebook .card { padding: 10px 14px; border: 1px solid var(--qn-line); border-radius: 10px; background: var(--qn-card2); }
+.qontic-notebook .card h3 { margin: 4px 0 6px; color: var(--qn-head); font-size: 15px; }
+.qontic-notebook .card p { margin: 6px 0; font-size: 14px; }
+.qontic-notebook .references { max-width: 940px; padding: 0 18px 16px 40px; font-size: 13.5px; }
+.qontic-notebook .references li { margin: 4px 0; }
+
+@media (max-width: 860px) {
+  .qontic-notebook .section-body { grid-template-columns: 1fr; }
+  .qontic-notebook .canvas-card canvas { height: 340px; }
+  .qontic-notebook .canvas-card.short canvas { height: 260px; }
+}
+@media (max-width: 560px) {
+  body.qontic-notebook main.shell { padding: 0 10px 10px; }
+  .qontic-notebook .qn-bar { margin-inline: -10px; padding-inline: 10px; }
+  .qontic-notebook .qn-theme span { display: none; }
+  .qontic-notebook .section-body { padding: 10px; }
+  .qontic-notebook .qn-intro { padding: 12px 14px; }
+}
+
+/* Embedded applets (iframes loaded on demand), display equations, captions.
+   Class names match the earlier notebooks so they can migrate unchanged. */
+.qontic-notebook .applet-shell { margin: 6px 18px 4px; overflow: hidden; border: 1px solid #12263a; border-radius: 12px; background: var(--qn-canvas); box-shadow: var(--qn-shadow); }
+.qontic-notebook .applet-toolbar { padding: 8px 12px; border-bottom: 1px solid #1d3a52; background: #061225; color: #d9e6f8; font-size: 13px; }
+.qontic-notebook .applet-stage { position: relative; min-height: 650px; background: #000; }
+.qontic-notebook .applet-frame { position: relative; z-index: 1; display: block; width: 100%; height: 650px; border: 0; background: #000; }
+.qontic-notebook .applet-shell.is-inactive .applet-frame { visibility: hidden; }
+.qontic-notebook .applet-play { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 0; background: radial-gradient(circle at 50% 50%, #0b2a3d 0, #040b14 70%); color: #d9edf7; font: 600 15px var(--qn-font); cursor: pointer; }
+.qontic-notebook .applet-play::before { content: ""; width: 64px; height: 64px; border-radius: 50%; background: var(--qn-accent-strong) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 6l9 6-9 6z' fill='white'/%3E%3C/svg%3E") center/30px no-repeat; box-shadow: 0 6px 22px #0008; }
+.qontic-notebook .applet-play:hover::before, .qontic-notebook .applet-play:focus-visible::before { filter: brightness(1.15); }
+.qontic-notebook .caption { max-width: 900px; margin: 6px 18px 14px; color: var(--qn-muted); font-size: 13.5px; }
+.qontic-notebook .equation { max-width: 900px; margin: 10px 18px 14px; padding: 10px 14px; overflow-x: auto; border: 1px solid var(--qn-line); border-left: 3px solid var(--qn-accent-strong); border-radius: 0 8px 8px 0; background: var(--qn-card2); color: var(--qn-head); font-size: 16px; }
+.qontic-notebook .prose .equation { margin-inline: 0; }
+.qontic-notebook .eq-label { display: block; margin-bottom: 4px; color: var(--qn-accent); font-size: 12px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.qontic-notebook .prose h3 { margin: 16px 0 4px; color: var(--qn-head); font-size: 16px; }
+.qontic-notebook .applet-actions { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 18px 16px; }
+.qontic-notebook .primary-button { display: inline-block; padding: 8px 14px; border: 1px solid var(--qn-accent-strong); border-radius: 9px; background: var(--qn-accent-strong); color: #fff !important; font-size: 14px; font-weight: 600; text-decoration: none; }
+.qontic-notebook .primary-button:hover { filter: brightness(1.1); }
+@media (max-width: 860px) {
+  .qontic-notebook .applet-stage { min-height: 560px; }
+  .qontic-notebook .applet-frame { height: 560px; }
+}
+@media (max-width: 560px) {
+  .qontic-notebook .applet-shell { margin-inline: 10px; }
+}
+
+/* Reading depth: Brief shows .qn-brief and hides .qn-full; Full the reverse. */
+body.qontic-notebook.qn-depth-brief .qn-full,
+body.qontic-notebook.qn-depth-full .qn-brief { display: none !important; }
+.qontic-notebook .qn-depth { flex: none; display: inline-flex; padding: 2px; border: 1px solid var(--qn-line); border-radius: 8px; background: var(--qn-card); }
+.qontic-notebook .qn-depth button { padding: 4px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--qn-muted); font: 12.5px var(--qn-font); cursor: pointer; }
+.qontic-notebook .qn-depth button[aria-pressed="true"] { background: var(--qn-accent-strong); color: #fff; }
+.qontic-notebook .qn-more { display: inline; margin-left: 4px; padding: 0; border: 0; background: none; color: var(--qn-accent); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

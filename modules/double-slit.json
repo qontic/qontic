@@ -17,10 +17,12 @@
     "measurement"
   ],
   "recommendedResources": [
-    "double-slit-analytical-simulation"
+    "double-slit-analytical-simulation",
+    "double-slit-notebook"
   ],
   "resourceNotes": {
     "double-slit-analytical-simulation": "Start here: explore the experiment and compare three views.",
-    "double-slit-pilot-wave-notebook": "Further study: pilot-wave dynamics and numerical trajectories."
+    "double-slit-pilot-wave-notebook": "Further study: pilot-wave dynamics and numerical trajectories.",
+    "double-slit-notebook": "Guided companion: predictions, single-electron detections, which-slit records, and three accounts."
   }
 }
