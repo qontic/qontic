@@ -23,3 +23,12 @@ could not be rechecked because the test browser reports WebGL2 unavailable.
 Next cleanup candidate: review Classical Limit while keeping the original
 WebGPU implementation as a reference. Remaining catalog work includes Hydrogen
 Atom, Stern–Gerlach Close-Up and intended Dirac Momentum visibility.
+
+## Standalone WebGL2 app retained
+
+The owner clarified that the numerical notebook and a standalone WebGL2 app
+must both remain discoverable. `apps/pilot-wave/double-slit-webgl/` is now a
+published app entry opening the notebook's existing full-applet.html directly
+with standalone controls. No simulation source or shader is changed. This is
+the numerical app whose playback could not be rechecked in the WebGL2-lacking
+test browser; it is distinct from the older archived standalone implementation.

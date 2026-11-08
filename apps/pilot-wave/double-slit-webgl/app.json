@@ -1,0 +1,25 @@
+{
+  "id": "double-slit-webgl-simulation",
+  "title": "Double Slit — Numerical (WebGL2)",
+  "type": "app",
+  "category": "pilot-wave",
+  "module": "double-slit",
+  "topics": [
+    "wave-mechanics",
+    "interference",
+    "trajectories"
+  ],
+  "interpretations": [
+    "pilot-wave"
+  ],
+  "level": "intermediate",
+  "description": "Standalone numerical wave simulation with a double-slit barrier, reflected waves and pilot-wave trajectories. Also used in the numerical notebook. Requires WebGL2.",
+  "tags": [
+    "Pilot-wave",
+    "Double slit",
+    "WebGL2"
+  ],
+  "gpu": true,
+  "entry": "index.html",
+  "status": "published"
+}
