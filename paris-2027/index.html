@@ -273,8 +273,8 @@
         <p>Participants book their own lodging; there is no group rate. July is high season in Paris, so we recommend booking early, with a refundable rate. Not all small hotels in the Marais have air conditioning, so check before booking. The hotels in the first two lists are air-conditioned and come from a list prepared by Rice Global Paris; times are to the center.</p>
         <p class="small">Price guide per night: $ under $250 · $$ $250–400 · $$$ over $400. Indicative only, based on recent typical rates on Kayak; July is high season and usually costs more.</p>
         <div class="acc-views" role="group" aria-label="Show hotels as" hidden>
-          <button type="button" data-view="list" aria-pressed="true">List</button>
-          <button type="button" data-view="cards" aria-pressed="false">Pictures</button>
+          <button type="button" data-view="cards" aria-pressed="true">Pictures</button>
+          <button type="button" data-view="list" aria-pressed="false">List</button>
           <button type="button" data-view="map" aria-pressed="false">Map</button>
         </div>
         <div id="acc-list">
@@ -510,6 +510,7 @@
         if (v === 'map') buildMap();
       }
       sw.addEventListener('click', function (e) { var b = e.target.closest('button[data-view]'); if (b) show(b.dataset.view); });
+      show('cards'); // open on the pictures; the list stays as the no-JavaScript fallback
       // Leaflet needs a resize once its tab becomes visible
       var accTab = document.getElementById('tab-accommodation');
       function refit() { if (map) setTimeout(function () { map.invalidateSize(); }, 50); }
