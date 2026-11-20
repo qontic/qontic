@@ -1,0 +1,163 @@
+/* The shared shell supplies page layout. These rules size the orbital canvas. */
+:root {
+  --bg-primary: #081520;
+  --bg-panel: #0b1926;
+  --text-primary: #d9edf7;
+  --text-secondary: #a8bdc9;
+  --border-color: #294b60;
+}
+:root.qontic-light {
+  --bg-primary: #eef4f7;
+  --bg-panel: #fbfdff;
+  --text-primary: #172b3a;
+  --text-secondary: #496476;
+  --border-color: #b2c8d4;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 100dvh;
+  overflow: auto;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: 14px/1.45 Inter, system-ui, sans-serif;
+}
+[hidden] { display: none !important; }
+.shell { width: calc(100% - 24px); max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; flex: 1 0 auto; }
+.qontic-footer { flex-shrink: 0; }
+.shell > .qontic-app-header { margin-inline: -12px; }
+.qontic-workspace { max-width: 100%; margin-top: 12px; }
+.hydrogen-sidebar { display: grid; gap: 12px; }
+.hydrogen-diagnostics { min-width: 0; padding: 12px; }
+.diagnostics-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
+.diagnostics-heading h2 { font-size: 13px; font-weight: 600; }
+.diagnostics-actions { gap: 4px; }
+.diagnostics-actions .qontic-app-toggle { padding-inline: 6px; font-size: 12px; }
+[data-control-pane] { display: grid; gap: 10px; }
+.quick-orbitals .qontic-app-toggle { padding-inline: 2px; font-size: 12px; }
+.orbital-modes { margin-bottom: 8px; }
+.orbital-modes .qontic-app-toggle { flex: 1 1 auto; }
+[data-control-pane] .crow { min-height: 25px; }
+.hydrogen-stage { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+.hydrogen-stage .canvas-wrap {
+  flex: 1 1 0; width: 100%; min-height: 0; height: auto; order: 0;
+  border: 1px solid var(--border-color); border-radius: 6px;
+}
+.hydrogen-stage .gpu-status-banner { border: 0; border-radius: 5px; padding: 6px 10px; }
+.hydrogen-prompt { margin: 6px 0 0; color: var(--text-secondary); font-size: 12px; }
+.hydrogen-predict { display: grid; gap: 6px; }
+.hydrogen-predict .hydrogen-prompt { margin: 0; }
+.predict-answers { flex-wrap: wrap; gap: 4px; }
+.predict-answers .qontic-app-toggle { flex: 1 1 auto; font-size: 12px; padding-inline: 6px; }
+#predictFeedback:empty { display: none; }
+#predictNext { justify-self: start; font-size: 12px; }
+/* Story strip under the canvas: state, description and what the marks mean. */
+.hydrogen-story.info {
+  position: static; max-width: none; margin: 0; padding: 6px 10px;
+  background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 6px;
+  color: var(--text-primary); font-size: 12.5px; line-height: 1.5; backdrop-filter: none;
+}
+.hydrogen-story .ket { display: inline; margin: 0 8px 0 0; font-size: 15px; }
+.hydrogen-story .view-caption { display: block; color: var(--text-secondary); }
+body.light .hydrogen-story.info { background: var(--bg-panel); color: var(--text-primary); }
+#axesBtn, #insetBtn, #projBtn { font-size: 12px; }
+.hydrogen-stage-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.hydrogen-camera { flex-wrap: wrap; gap: 4px; }
+.hydrogen-camera .qontic-app-toggle { min-width: 34px; }
+#camera-plane { width: auto; font-size: 12px; }
+#camera-hint { color: var(--text-secondary); font-size: 11px; }
+.hydrogen-legend { position: absolute; top: 10px; right: 10px; z-index: 2; max-width: 80%; }
+.hydrogen-legend summary { display: none; }
+.hydrogen-legend .pal-opt { width: 100%; text-align: left; border: 0; background: transparent; }
+.hydrogen-legend .pal-opt.selected { background: var(--bg-primary); }
+.hydrogen-legend .pal-opt:hover { background: var(--bg-primary); color: var(--accent); }
+.hydrogen-legend .legend { position: relative; inset: auto; max-width: none; }
+.hydrogen-legend :is(button, summary):focus-visible, #c:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+#diagnostic-results {
+  box-sizing: border-box;
+  width: min(calc(100% - 24px), 600px);
+  margin: auto;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+}
+#diagnostic-results::backdrop { background: rgb(0 0 0 / 60%); }
+.diagnostic-results-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.diagnostic-results-heading h2 { font: 600 15px/1.4 Inter, system-ui, sans-serif; }
+#diagnostic-results-text { margin-top: 10px; max-height: 62dvh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+#c { touch-action: none; }
+#physics { margin-top: 12px; }
+#physics .tp-body { display: grid; gap: 22px; width: 100%; max-width: 860px; }
+#physics .tp-sec { overflow-wrap: anywhere; }
+#physics .tp-sec h2, #physics .tp-sec h3 { font-family: inherit; }
+@media (min-width: 1001px) {
+  body:has(#simulation:not([hidden])) { height: 100dvh; }
+  body:has(#simulation:not([hidden])) .shell { flex: 1 1 0; min-height: 0; }
+  #simulation { flex: 1 1 0; min-height: 260px; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+  .hydrogen-sidebar { min-height: 0; align-content: start; overflow-y: auto; }
+}
+@media (max-width: 1000px) {
+  #simulation > .hydrogen-stage { height: max(360px, calc(100dvh - var(--hydrogen-header-height, 80px) - 12px)); }
+}
+body[data-view="physics"] :is(.qontic-media-toolbar, .qontic-media-menu-toggle) { display: none !important; }
+@media (max-width: 600px) {
+  .hydrogen-stage { padding: 7px; }
+  .hydrogen-stage-actions { gap: 4px; }
+  .hydrogen-stage-actions .qontic-app-toggle { min-height: 36px; padding-inline: 7px; }
+  #camera-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .hydrogen-legend { display: grid; justify-items: end; gap: 4px; }
+  .has-projections .hydrogen-legend { top: 126px; }
+  .hydrogen-legend summary { display: list-item; width: max-content; cursor: pointer; }
+  .hydrogen-legend .legend { line-height: 1.75; }
+}
+@media (max-height: 700px) and (min-width: 601px) {
+  .hydrogen-legend { display: grid; justify-items: end; gap: 4px; }
+  .hydrogen-legend summary { display: list-item; width: max-content; cursor: pointer; }
+}
+#physics a { color: var(--accent, #4fd1e8); text-decoration: underline; }
+.display-settings { display: grid; gap: 6px; }
+.reading-label { margin-bottom: 4px; }
+.predict-in-stage { padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-panel); }
+.hydrogen-stage-actions .qontic-app-toggle { display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 600px) {
+  .nbtn, .obtn { min-height: 36px; min-width: 40px; }
+  #zoom-in, #zoom-out { min-width: 40px; min-height: 40px; }
+  .gpu-status-banner { font-size: 11px; padding: 4px 8px; }
+}
+
+.lrow-txt{display:inline-flex;flex-direction:column;align-items:flex-start;text-align:left}
+.lrow-sub{font-size:10px;opacity:.8;margin-top:2px;white-space:normal;max-width:200px}
+#spinJRow select{flex:1 1 auto;min-width:12em;max-width:100%}
+.spin-ket{font-size:12px;line-height:1.4;flex-wrap:wrap}
+/* Contrast (WCAG 4.5:1 for small text) */
+.slabel{color:#8098c0}
+:is(body.light,body.qontic-light) .slabel{color:#004f99}
+:is(body.light,body.qontic-light) .crow label{color:#3d5070}
+:is(body.light,body.qontic-light) .crow-val{color:#004f99}
+:is(body.light,body.qontic-light) :is(.qontic-footer, .qontic-footer span, .qontic-footer p){color:#3d5070}
+/* Slice plane menu (was an inline 10 px style) */
+.slice-select{width:auto;padding:2px 5px;font-size:11px}
+/* Phones: keep the atom and the controls on one screen */
+@media (max-width: 600px) {
+  #simulation > .hydrogen-stage { height: auto; }
+  .hydrogen-stage .canvas-wrap { flex: none; height: min(84vw, 36dvh); min-height: 230px; }
+  .hydrogen-story.info { font-size: 12px; line-height: 1.4; }
+}
+/* Touch screens: larger targets and text */
+@media (pointer: coarse) {
+  .slice-select{font-size:13px;padding:6px 8px;min-height:36px}
+  .nbtn, .obtn { min-height: 36px; min-width: 40px; font-size: 12px; }
+  .crow input[type=range] { min-height: 28px; }
+  .reading-label, .slabel { font-size: 11px; }
+}
+/* Sidebar that scrolls: fade at the bottom while more content is below */
+.hydrogen-sidebar.more-below::after{content:'';position:sticky;bottom:0;display:block;height:28px;margin-top:-28px;pointer-events:none;
+  background:linear-gradient(rgba(8,21,32,0),rgb(8,21,32))}
+:is(body.light,body.qontic-light) .hydrogen-sidebar.more-below::after{background:linear-gradient(rgba(244,247,252,0),#f4f7fc)}
+.hydrogen-sidebar{scrollbar-width:thin}

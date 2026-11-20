@@ -62,9 +62,52 @@
   display: flex;
   min-width: 0;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 18px;
 }
+
+.qontic-header-tools {
+  display: flex;
+  min-width: 0;
+  margin-left: 0;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.qontic-header-icon-button {
+  position: relative;
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  padding: 6px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #36576c;
+  border-radius: 7px;
+  background: #162d3d;
+  color: #d9edf7;
+  cursor: pointer;
+}
+
+.qontic-header-icon-button:hover { border-color: #55d8e6; }
+.qontic-header-icon-button:focus-visible { outline: 2px solid #55d8e6; outline-offset: 3px; }
+.qontic-header-icon-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.qontic-header-icon-button::after {
+  content: attr(data-tooltip); position: absolute; z-index: 100; top: calc(100% + 7px); right: 0;
+  width: max-content; max-width: min(220px,80vw); padding: 6px 9px;
+  border: 1px solid #36576c; border-radius: 6px; background: #102333; color: #eefaff;
+  font: 400 12px/1.4 Inter,Arial,sans-serif; pointer-events: none; opacity: 0; visibility: hidden;
+}
+.qontic-header-icon-button:hover::after,.qontic-header-icon-button:focus-visible::after { opacity: 1; visibility: visible; }
+.qontic-header-restore {
+  position:fixed; top:6px; right:6px; z-index:300;
+  box-shadow:0 4px 16px #0008;
+}
+.qontic-header-restore[hidden] { display:none!important; }
+.qontic-header-hidden .qontic-app-header { display:none!important; }
 
 .qontic-app-title h1 {
   margin: 0;
@@ -146,7 +189,8 @@
   text-transform: uppercase;
 }
 
-/* Only on title hover or keyboard focus of the title block, not when a section tab is focused. */
+/* Show only while the title itself is hovered or the title block has keyboard focus,
+   not while a section tab inside the header row is focused or hovered. */
 .qontic-app-title:has(h1:hover) .qontic-title-purpose,
 .qontic-app-title:focus-visible .qontic-title-purpose {
   opacity: 1;
@@ -181,6 +225,7 @@
 
 .qontic-footer {
   display: flex;
+  flex-wrap: wrap;
   width: min(100%, 1540px);
   justify-content: space-between;
   gap: 18px;
@@ -196,7 +241,7 @@
   gap: 18px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1180px) {
   .qontic-app-header {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -208,20 +253,23 @@
   .qontic-title-row {
     align-items: flex-start;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
+  .qontic-header-tools { width:100%; gap:6px 10px; }
 }
 
 @media (max-width: 560px) {
   .qontic-app-header {
-    gap: 10px;
+    gap: 8px;
+    margin-inline:-10px;
+    padding:7px 10px;
   }
   .qontic-brand {
-    width: 62px;
+    width: 38px;
   }
   .qontic-brand img {
-    width: 54px;
-    height: 54px;
+    width: 34px;
+    height: 34px;
   }
   .qontic-brand span {
     display: none;
@@ -229,6 +277,17 @@
   .qontic-footer {
     flex-direction: column;
   }
+  .qontic-app-title h1 { font-size:22px; line-height:1.1; }
+  .qontic-directory-header .qontic-breadcrumbs { font-size:9px; }
+  .qontic-breadcrumbs ol { flex-wrap:nowrap; overflow:hidden; }
+  .qontic-breadcrumbs li { flex:none; }
+  .qontic-breadcrumbs li:last-child { min-width:0; overflow:hidden; }
+  .qontic-breadcrumbs [aria-current] { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .qontic-view-tabs { display:flex; flex-wrap:wrap; gap:4px; }
+  .qontic-view-tabs button { min-width:0; min-height:38px; padding:6px 9px; }
+  .qontic-header-icon-button { width:36px; height:36px; min-width:36px; }
+  .qontic-view-tabs button { font-size:0; }
+  .qontic-view-tabs button::after { content:attr(data-compact-label);font-size:10px;line-height:1; }
 }
 
 /* Enabled only on sidebars explicitly registered by qontic-resize.js. */
@@ -249,16 +308,25 @@
 body.qontic-sidebar-dragging, body.qontic-sidebar-dragging * { cursor: col-resize !important; user-select: none !important; }
 
 /* Optional compact branding leaves more vertical space for the experiment. */
-.qontic-app-header.qontic-compact-header {min-height:0;padding-block:8px;gap:12px;}
-.qontic-compact-header .qontic-brand {width:56px;}
-.qontic-compact-header .qontic-brand img {width:48px;height:48px;}
+.qontic-app-header.qontic-compact-header {min-height:0;padding-block:5px;gap:10px;}
+.qontic-compact-header .qontic-brand {width:44px;}
+.qontic-compact-header .qontic-brand img {width:38px;height:38px;}
 .qontic-compact-header .qontic-brand span {display:none;}
-.qontic-compact-header .qontic-app-title .eyebrow {margin:0 0 3px;font-size:9px;}
-.qontic-compact-header .qontic-app-title h1 {font-size:clamp(24px,2.4vw,30px);line-height:1.15;}
+.qontic-compact-header .qontic-app-title .eyebrow {margin:0 0 2px;font-size:9px;}
+.qontic-compact-header .qontic-app-title h1 {font-size:clamp(21px,2.1vw,26px);line-height:1.1;}
+.qontic-compact-header .qontic-breadcrumbs {margin-bottom:2px;font-size:9px;}
 .qontic-compact-header .qontic-title-row {align-items:center;}
-@media(max-width:900px) {
+.qontic-compact-header .qontic-view-tabs button {padding-block:4px;}
+.qontic-compact-header .qontic-header-icon-button {width:32px;height:32px;min-width:32px;}
+@media(max-width:1180px) {
   .qontic-compact-header .qontic-title-row {align-items:flex-start;gap:6px;}
   .qontic-compact-header .qontic-header-actions {display:none;}
+}
+@media(max-width:560px) {
+  .qontic-compact-header .qontic-brand {width:38px;}
+  .qontic-compact-header .qontic-brand img {width:34px;height:34px;}
+  .qontic-compact-header .qontic-app-title h1 {font-size:21px;}
+  .qontic-compact-header .qontic-header-icon-button {width:36px;height:36px;min-width:36px;}
 }
 
 /* Directory navigation is opt-in; legacy consumers keep their existing shell. */
@@ -271,6 +339,8 @@ body.qontic-directory .qontic-back-home {display:none!important;}
 .qontic-breadcrumbs a:hover {color:#7cecff;text-decoration:underline;}
 .qontic-breadcrumbs [aria-current] {color:#d9edf7;}
 .qontic-breadcrumbs[hidden] {display:none;}
+
+.qontic-light .qontic-header-icon-button {color:#203746;background:#edf5f8;border-color:#aec2cb;}
 
 .qontic-breadcrumbs a:focus-visible {outline:2px solid #55d8e6;outline-offset:3px;}
 body.qontic-no-site-navigation .qontic-back-home {display:none!important;}

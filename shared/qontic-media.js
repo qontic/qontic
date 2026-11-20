@@ -1,5 +1,5 @@
 // Optional shared presentation tools. Models supply canvas layers and playback hooks.
-export function mountQonticMedia({stage, controls, getCanvases, beginRecording = () => {}, endRecording = () => {}, filename = 'qontic-simulation', getShareUrl = () => location.href, onRecord = null, headerTools = true, labelNode = null, scaleControl = null, rangeControl = null, coordinateControl = null, dynamicCanvases = false}) {
+export function mountQonticMedia({stage, controls, getCanvases, beginRecording = () => {}, endRecording = () => {}, filename = 'qontic-simulation', getShareUrl = () => location.href, onRecord = null, headerTools = true, labelNode = null, scaleControl = null, rangeControl = null, coordinateControl = null, axesControl = null, dynamicCanvases = false}) {
   if (!document.querySelector('link[data-qontic-media]')) {
     const link = document.createElement('link');
     link.rel = 'stylesheet'; link.href = new URL('./qontic-media.css?v=3.8', import.meta.url);
@@ -28,7 +28,8 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
     record:'<rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3"/>',
     screenshot:'<path d="M8 5 10 3h4l2 2h4a1 1 0 0 1 1 1v13H3V6a1 1 0 0 1 1-1Z"/><circle cx="12" cy="12" r="4"/>',
     share:'<path d="m10 13 4-4m-5 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m0 10a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1"/>',
-    check:'<path d="m5 12 4 4L19 6"/>'
+    check:'<path d="m5 12 4 4L19 6"/>',
+    axes:'<path d="M6 18V4M6 18h14M6 18l-4 4M6 4 4 6m2-2 2 2m12 14-2-2m2 2-2 2"/>'
   };
   const setAction = (button, icon, name, description = name) => {
     button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+icons[icon]+'</svg>';
@@ -46,6 +47,11 @@ export function mountQonticMedia({stage, controls, getCanvases, beginRecording =
   let scaleButton;
   const syncScale = () => {if(scaleButton){const shown=scaleControl.getVisible();scaleButton.setAttribute('aria-pressed',String(shown));setAction(scaleButton,'ruler','Distance scale',shown?'Hide distance scale':'Show distance scale');}};
   if(scaleControl){scaleButton=action('ruler','Distance scale','Show or hide distance scale');scaleButton.addEventListener('click',()=>{scaleControl.setVisible(!scaleControl.getVisible());syncScale();});syncScale();}
+
+  // Optional: axesControl = { getVisible(), setVisible(boolean) } adds an Axes on/off button.
+  let axesButton;
+  const syncAxes=()=>{if(axesButton){const shown=axesControl.getVisible();axesButton.setAttribute('aria-pressed',String(shown));setAction(axesButton,'axes','Axes',shown?'Hide axes':'Show axes');}};
+  if(axesControl){axesButton=action('axes','Axes','Show or hide axes');axesButton.addEventListener('click',()=>{axesControl.setVisible(!axesControl.getVisible());syncAxes();});syncAxes();}
 
   let rangeButton;
   const syncRange=()=>{if(rangeButton){const shown=rangeControl.getVisible();rangeButton.setAttribute('aria-pressed',String(shown));setAction(rangeButton,'range','Wave range',shown?'Hide wave range':'Show wave range');}};

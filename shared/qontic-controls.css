@@ -37,13 +37,13 @@ button { font:inherit; }
 .qontic-control-tabs button + button { border-left-width:0; }
 .qontic-control-tabs button.active { position:relative; z-index:2; border-color:#3a6578; border-bottom-color:#0f2230; background:#0f2230; color:#7cecff; }
 :host-context(.qontic-light) { color:#203746; }
-:host-context(.qontic-light) .qontic-interpretation { background:#f5fafc; }
+:host-context(.qontic-light) .qontic-interpretation { background:#f5fafc; color:#075c69; border-color:#087487; }
 :host-context(.qontic-light) .qontic-run-row button { background:#edf5f8; color:#203746; }
 :host-context(.qontic-light) .qontic-main-run {
   background:var(--qontic-run-background-light,#15803d) !important;
   color:var(--qontic-run-color-light,#fff) !important;
 }
-:host-context(.qontic-light) .qontic-auto-rerun { background:#eef4f6 !important; }
+:host-context(.qontic-light) .qontic-auto-rerun { background:#eef4f6 !important; color:#4a5f6b !important; }
 :host-context(.qontic-light) .qontic-control-tabs button { background:#e8f0f3; color:#526a77; }
 :host-context(.qontic-light) .qontic-control-tabs button.active { background:#fff; color:#087487; border-bottom-color:#fff; }
 @media (max-width:700px) { :host { font-size:12px; } }
@@ -59,7 +59,7 @@ button { font:inherit; }
 :host-context(.qontic-light) .qontic-common-display { border-color:#9bb5c1; background:#fff; }
 :host-context(.qontic-light) .qontic-theme-toggle { color:#203746; }
 
-.qontic-interpretation[hidden], .qontic-reset[hidden], .qontic-auto-rerun[hidden], .qontic-speed[hidden] { display:none; }
+.qontic-interpretation[hidden], .qontic-reset[hidden], .qontic-rerun[hidden], .qontic-auto-rerun[hidden], .qontic-speed[hidden] { display:none; }
 .qontic-run-row.without-autorun { grid-template-columns:54px 48px minmax(0,1fr); }
 .qontic-run-row.without-reset { grid-template-columns:54px 30px minmax(0,1fr); }
 .qontic-run-row.without-reset.without-autorun { grid-template-columns:62px minmax(0,1fr); }
@@ -76,6 +76,7 @@ button:disabled, input:disabled { opacity:.5; cursor:default; }
 .qontic-run-row { display:flex; flex-wrap:wrap; }
 .qontic-run-row .qontic-main-run { flex:0 0 78px; min-height:44px; font-size:16px; font-weight:600; }
 .qontic-run-row .qontic-reset { flex:0 0 70px; min-height:44px; font-size:15px; }
+.qontic-run-row .qontic-rerun { flex:0 0 36px; min-height:44px; font-size:18px; }
 .qontic-speed { flex:1 1 90px; max-width:140px; grid-template-columns:minmax(32px,1fr) 35px; gap:2px 5px; }
 .qontic-speed > span { grid-column:1 / -1; font-size:11px; }
 .qontic-speed input { margin:0; }

@@ -2,7 +2,7 @@
   "title": "Hydrogen Atom",
   "type": "app",
   "category": "pilot-wave",
-  "description": "Hydrogen orbital visualization with trajectory-oriented pilot-wave structure.",
+  "description": "Hydrogen eigenstates and superpositions: |ψ|², phase, and the electron trajectories of pilot-wave theory, with an optional Pauli spin term.",
   "tags": [
     "Pilot-wave",
     "Hydrogen",

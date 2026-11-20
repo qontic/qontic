@@ -78,39 +78,18 @@
 .qontic-light .qontic-app-toggle.active,
 .qontic-light .qontic-app-toggle[aria-pressed="true"] { border-color: #1594a8; background: #dff4f7; color: #075c69; }
 
-.qontic-stage-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+/* Shared compact sections and display-layer rows. Apps supply the controls;
+   the template supplies their layout, color target, and visual hierarchy. */
+.qontic-control-section { margin-top: 14px; }
+.qontic-control-section-title {
+  display: block;
+  margin: 0 0 7px;
+  color: var(--qontic-muted);
+  font: 600 11px/1.2 Inter, Arial, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
-.qontic-stage-toolbar > .qontic-stage-label {
-  margin-right: auto;
-  min-width: 0;
-}
-
-.qontic-reading-panel {
-  width: min(1080px, 100%);
-  margin-inline: auto;
-  padding: 20px;
-  line-height: 1.6;
-}
-
-@media (max-width: 1000px) {
-  .qontic-workspace {
-    grid-template-columns: minmax(0, 1fr);
-    max-width: 100%;
-  }
-}
-
-@media (max-width: 600px) {
-  :root { --qontic-layout-gap: 8px; }
-  .qontic-control-panel { padding: 10px; }
-  .qontic-reading-panel { padding: 12px; }
-}
-
-/* Display-tab layers and colour buttons (from qontic-dev shared/qontic-app.css) */
 .qontic-display-layers {
   padding: 2px 10px;
   border: 1px solid var(--qontic-panel-border);
@@ -158,3 +137,48 @@
 .qontic-light .qontic-color-input,
 .qontic-light .qontic-color-button { border-color: #aec2cb; background: #edf5f8; }
 
+.qontic-stage-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.qontic-stage-toolbar > .qontic-stage-label {
+  margin-right: auto;
+  min-width: 0;
+}
+
+.qontic-reading-panel {
+  width: min(1080px, 100%);
+  margin-inline: auto;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1000px) {
+  .qontic-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 100%;
+    gap: 12px;
+  }
+  .qontic-stage { width:100%; }
+  .qontic-workspace > .qontic-stage { grid-column:1; grid-row:1; }
+  .qontic-workspace > .qontic-sidebar { grid-column:1; grid-row:2; }
+  .qontic-sidebar-divider { display:none!important; }
+}
+
+@media (max-width: 600px) {
+  :root { --qontic-layout-gap: 8px; }
+  .qontic-control-panel { padding: 10px; }
+  .qontic-reading-panel { padding: 12px; }
+  .qontic-panel,.qontic-stage { max-width:100%; }
+  .qontic-app-toggle { min-height:40px; }
+  .qontic-display-layer { min-height:40px; }
+  .qontic-display-layer input[type="range"] { min-height:28px; }
+}
+
+@media (pointer: coarse) {
+  .qontic-app-toggle,.qontic-color-input,.qontic-color-button { min-height:40px; }
+  .qontic-display-layer input[type="range"] { min-height:30px; }
+}

@@ -688,3 +688,25 @@ body.light .tp-tbl th { color: #0066cc; background: rgba(0,102,204,.06); }
 }
 .spin-diag .stat-val.ok   { color: #00e5a0; }
 .spin-diag .stat-val.warn { color: #ff9040; }
+
+.quick-orbitals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.quick-orbitals .vtab { min-height: 31px; padding: 4px 1px; white-space: nowrap; text-transform: none; }
+.options-group { border-top: 1px solid var(--border); padding-top: 6px; }
+.options-group summary { cursor: pointer; padding: 4px 0; font-weight: 600; }
+.options-group[open] summary { margin-bottom: 6px; }
+#c:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+@media (max-width: 760px) {
+  body { height: auto; min-height: 100dvh; overflow: auto; }
+  header { flex-wrap: wrap; gap: 6px 10px; padding: 8px 12px; }
+  header .sub { display: none; }
+  .main { flex-direction: column; overflow: visible; min-width: 0; }
+  .canvas-wrap { order: -1; flex: none; height: clamp(280px, 48dvh, 500px); }
+  .sidebar { width: 100% !important; overflow: visible; padding: 12px; }
+  .sidebar-resize { display: none; }
+  .gpu-status-banner { padding: 6px 12px; }
+  .info { max-width: min(235px, 61%); padding: 5px 8px; font-size: 10px; line-height: 1.45; }
+  .legend { max-width: 42%; }
+  .hint { font-size: 9px; }
+  #theoryPanel { position: fixed; }
+  .tp-body { padding: 14px; }
+}

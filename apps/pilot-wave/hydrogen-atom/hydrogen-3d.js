@@ -41,11 +41,15 @@ function Rnl(n,l,r){
   return Math.sqrt(Math.max(0,N2))*Math.exp(-rho/2)*Math.pow(rho,l)*laguerre(n-l-1,2*l+1,rho);
 }
 
+// Brightness ∝ (ρ/ρmax)^γ in Volume, Slices and Projections. γ = 0.25 keeps the faint outer
+// shells of s orbitals (≈ 0.2–2 % of the central density) visible, so their radial nodes show.
+const DENS_GAMMA=0.25;
+
 // ψ(x,y,z,t) → [Re,Im]
 function psiXYZ(comps,x,y,z,t){
   const r=Math.sqrt(x*x+y*y+z*z);
-  if(r<1e-12)return[0,0];
-  const theta=Math.acos(Math.max(-1,Math.min(1,z/r)));
+
+  const theta=Math.acos(Math.max(-1,Math.min(1,r > 0 ? z/r : 1)));
   const phi=Math.atan2(y,x);
   let re=0,im=0;
   for(const c of comps){
@@ -59,13 +63,21 @@ function psiXYZ(comps,x,y,z,t){
   return[re,im];
 }
 
+// ψ for the Phase display: the global phase e^{−iE₀t} of the first component is removed,
+// so a stationary state shows fixed colours and a superposition shows relative phases.
+function psiForPhase(x,y,z){
+  if(!densityEvolves()) return psiXYZ(comps,x,y,z,0);
+  const [re,im]=psiXYZ(comps,x,y,z,t), a=-0.5/comps[0].n**2*t, c=Math.cos(a), sn=Math.sin(a);
+  return [re*c-im*sn, re*sn+im*c];
+}
+
 function rhoAt(comps,x,y,z,t){const[a,b]=psiXYZ(comps,x,y,z,t);return a*a+b*b;}
 
 // Particle velocity v=Im(∇ψ/ψ)
 function bohmV(comps,x,y,z,t){
   // ── Spin gate: delegate to Pauli–Bohm guidance when spin is on ──
-  if(spinEnabled&&spinComps.length)return bohmVPauli(spinComps,x,y,z,t);
-  if(Math.sqrt(x*x+y*y+z*z)<0.15)return[0,0,0];
+  if(spinEnabled&&spinComps.length)return bohmVPauli(spinComps,x,y,z,t,spinTerm);
+  // ψ is smooth at the nucleus, so no radial cutoff is needed; only the density guard below.
   const h=0.07,p0=psiXYZ(comps,x,y,z,t);
   const den=p0[0]*p0[0]+p0[1]*p0[1];
   if(den<1e-22)return[0,0,0];
@@ -84,20 +96,21 @@ function bohmV(comps,x,y,z,t){
 // ════════════════════════════════════════════════════════════════
 //  PAULI–BOHMIAN GUIDANCE  (spinor wave function)
 //
-//  Reference: T. Jia & R. Callaway, BYU preprint (2005).
+//  References: Holland, Phys. Rev. A 60, 4326 (1999);
+//  Colijn & Vrscay, Phys. Lett. A 300, 334 (2002).
 //  v_P = Im(Ψ†∇Ψ)/ρ  +  (∇×S)/(2ρ)
 //  where S = Ψ†σΨ  is the local spin-density vector.
-//  The second term is zero for the scalar case and makes every
-//  m=0 eigenstate non-stationary when the spin is not aligned
-//  with z (the orbital quantisation axis).
+//  The second term is zero for the scalar case. It sets the electrons
+//  of every eigenstate moving (|ψ|² stays stationary), including
+//  1s with spin along z, since ∇×(ρẑ) = ∇ρ×ẑ ≠ 0.
 // ════════════════════════════════════════════════════════════════
 
 // Spinor ψ(x,y,z,t) → [ψ↑_Re, ψ↑_Im, ψ↓_Re, ψ↓_Im]
 // Each spinor-component c: {n,l,m, upRe,upIm,dnRe,dnIm}
 function psiSpinor(sc,x,y,z,t){
   const r=Math.sqrt(x*x+y*y+z*z);
-  if(r<1e-12)return[0,0,0,0];
-  const theta=Math.acos(Math.max(-1,Math.min(1,z/r)));
+
+  const theta=Math.acos(Math.max(-1,Math.min(1,r > 0 ? z/r : 1)));
   const phi=Math.atan2(y,x);
   let ur=0,ui=0,dr=0,di=0;
   for(const c of sc){
@@ -120,8 +133,7 @@ function rhoSpinAt(sc,x,y,z,t){
 // Pauli–Bohmian guidance velocity using 6-point central finite differences.
 // Convective term is the same as scalar bohmV but summed over both channels.
 // Spin-current term adds (∇×S)/(2ρ) where S = [2Re(ψ↑*ψ↓), 2Im(ψ↑*ψ↓), |ψ↑|²−|ψ↓|²].
-function bohmVPauli(sc,x,y,z,t){
-  if(Math.sqrt(x*x+y*y+z*z)<0.15)return[0,0,0];
+function bohmVPauli(sc,x,y,z,t,withCurl=true){
   const h=0.07;
   const p0=psiSpinor(sc,x,y,z,t);
   const rho=p0[0]*p0[0]+p0[1]*p0[1]+p0[2]*p0[2]+p0[3]*p0[3];
@@ -133,6 +145,10 @@ function bohmVPauli(sc,x,y,z,t){
   const vcx=(p0[0]*(pp[1]-pn[1])-p0[1]*(pp[0]-pn[0])+p0[2]*(pp[3]-pn[3])-p0[3]*(pp[2]-pn[2]))/(2*h*rho);
   const vcy=(p0[0]*(qp[1]-qn[1])-p0[1]*(qp[0]-qn[0])+p0[2]*(qp[3]-qn[3])-p0[3]*(qp[2]-qn[2]))/(2*h*rho);
   const vcz=(p0[0]*(rp[1]-rn[1])-p0[1]*(rp[0]-rn[0])+p0[2]*(rp[3]-rn[3])-p0[3]*(rp[2]-rn[2]))/(2*h*rho);
+  if(!withCurl){   // convective current only: v = Im(Ψ†∇Ψ)/ρ
+    const spd0=Math.sqrt(vcx*vcx+vcy*vcy+vcz*vcz);
+    return spd0>25?[vcx*25/spd0,vcy*25/spd0,vcz*25/spd0]:[vcx,vcy,vcz];
+  }
   // Spin-density vector S = [Sx,Sy,Sz] at each of the 6 stencil points
   const sv=(ps)=>[2*(ps[0]*ps[2]+ps[1]*ps[3]), 2*(ps[0]*ps[3]-ps[1]*ps[2]), ps[0]*ps[0]+ps[1]*ps[1]-ps[2]*ps[2]-ps[3]*ps[3]];
   const Sxp=sv(pp),Sxn=sv(pn),Syp=sv(qp),Syn=sv(qn),Szp=sv(rp),Szn=sv(rn);
@@ -191,9 +207,9 @@ function _buildJStatesForOrbit(n,l){
   const out=[];
   for(const dj of [0.5,-0.5]){
     const j=l+dj; if(j<0.45) continue;
-    for(let mj=j;mj>=-j+0.001;mj-=1){
+    for(let mj=j;mj>=-j-0.001;mj-=1){
       const sc=_jState(n,l,j,mj); if(!sc.length) continue;
-      const note=l===0?' (= product)':sc.length===1?' (pure)':' (mixed)';
+      const note=l===0?' (= product)':sc.length===1?' (pure)':' (coupled)';
       out.push({label:`${n}${lName}  j=${fmtJ(j)}, mⱼ=${fmtMj(mj)}${note}`, sc, n, l, j, mj});
     }
   }
@@ -230,12 +246,12 @@ function _refreshJStateDropdown(){
 
 const SPIN_ORBITALS=[
   {label:'2p₃/₂, mⱼ=+³/₂ (pure ↑)',  sc:_jState(2,1,1.5,+1.5)},
-  {label:'2p₃/₂, mⱼ=+½ (mixed)',      sc:_jState(2,1,1.5,+0.5)},
-  {label:'2p₃/₂, mⱼ=−½ (mixed)',      sc:_jState(2,1,1.5,-0.5)},
-  {label:'2p₁/₂, mⱼ=+½ (mixed)',      sc:_jState(2,1,0.5,+0.5)},
-  {label:'2p₁/₂, mⱼ=−½ (mixed)',      sc:_jState(2,1,0.5,-0.5)},
-  {label:'3d₅/₂, mⱼ=+½ (mixed)',      sc:_jState(3,2,2.5,+0.5)},
-  {label:'3d₃/₂, mⱼ=+½ (mixed)',      sc:_jState(3,2,1.5,+0.5)},
+  {label:'2p₃/₂, mⱼ=+½ (coupled)',      sc:_jState(2,1,1.5,+0.5)},
+  {label:'2p₃/₂, mⱼ=−½ (coupled)',      sc:_jState(2,1,1.5,-0.5)},
+  {label:'2p₁/₂, mⱼ=+½ (coupled)',      sc:_jState(2,1,0.5,+0.5)},
+  {label:'2p₁/₂, mⱼ=−½ (coupled)',      sc:_jState(2,1,0.5,-0.5)},
+  {label:'3d₅/₂, mⱼ=+½ (coupled)',      sc:_jState(3,2,2.5,+0.5)},
+  {label:'3d₃/₂, mⱼ=+½ (coupled)',      sc:_jState(3,2,1.5,+0.5)},
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -245,66 +261,79 @@ const ORBITALS=[
   {label:'1s',  n:1,l:0,m: 0},
   {label:'2s',  n:2,l:0,m: 0},
   {label:'2p₀', n:2,l:1,m: 0},
-  {label:'2p+', n:2,l:1,m:+1},
-  {label:'2p−', n:2,l:1,m:-1},
+  {label:'2p₊₁', n:2,l:1,m:+1},
+  {label:'2p₋₁', n:2,l:1,m:-1},
   {label:'3s',  n:3,l:0,m: 0},
   {label:'3p₀', n:3,l:1,m: 0},
-  {label:'3p+', n:3,l:1,m:+1},
+  {label:'3p₊₁', n:3,l:1,m:+1},
   {label:'3d₀', n:3,l:2,m: 0},
-  {label:'3d+1',n:3,l:2,m:+1},
-  {label:'3d−1',n:3,l:2,m:-1},
-  {label:'3d+2',n:3,l:2,m:+2},
+  {label:'3d₊₁',n:3,l:2,m:+1},
+  {label:'3d₋₁',n:3,l:2,m:-1},
+  {label:'3d₊₂',n:3,l:2,m:+2},
   // n = 4
   {label:'4s',  n:4,l:0,m: 0},
   {label:'4p₀', n:4,l:1,m: 0},
-  {label:'4p+', n:4,l:1,m:+1},
+  {label:'4p₊₁', n:4,l:1,m:+1},
   {label:'4d₀', n:4,l:2,m: 0},
-  {label:'4d+1',n:4,l:2,m:+1},
-  {label:'4d+2',n:4,l:2,m:+2},
+  {label:'4d₊₁',n:4,l:2,m:+1},
+  {label:'4d₊₂',n:4,l:2,m:+2},
   {label:'4f₀', n:4,l:3,m: 0},
-  {label:'4f+3',n:4,l:3,m:+3},
+  {label:'4f₊₃',n:4,l:3,m:+3},
   // n = 5
   {label:'5s',  n:5,l:0,m: 0},
   {label:'5p₀', n:5,l:1,m: 0},
-  {label:'5p+', n:5,l:1,m:+1},
+  {label:'5p₊₁', n:5,l:1,m:+1},
   {label:'5d₀', n:5,l:2,m: 0},
-  {label:'5d+1',n:5,l:2,m:+1},
-  {label:'5d+2',n:5,l:2,m:+2},
+  {label:'5d₊₁',n:5,l:2,m:+1},
+  {label:'5d₊₂',n:5,l:2,m:+2},
   {label:'5f₀', n:5,l:3,m: 0},
-  {label:'5f+3',n:5,l:3,m:+3},
+  {label:'5f₊₃',n:5,l:3,m:+3},
   {label:'5g₀', n:5,l:4,m: 0},
-  {label:'5g+4',n:5,l:4,m:+4},
+  {label:'5g₊₄',n:5,l:4,m:+4},
   // n = 6
   {label:'6s',  n:6,l:0,m: 0},
   {label:'6p₀', n:6,l:1,m: 0},
-  {label:'6p+', n:6,l:1,m:+1},
+  {label:'6p₊₁', n:6,l:1,m:+1},
   {label:'6d₀', n:6,l:2,m: 0},
-  {label:'6d+1',n:6,l:2,m:+1},
-  {label:'6d+2',n:6,l:2,m:+2},
+  {label:'6d₊₁',n:6,l:2,m:+1},
+  {label:'6d₊₂',n:6,l:2,m:+2},
   {label:'6f₀', n:6,l:3,m: 0},
-  {label:'6f+3',n:6,l:3,m:+3},
+  {label:'6f₊₃',n:6,l:3,m:+3},
   {label:'6g₀', n:6,l:4,m: 0},
-  {label:'6g+4',n:6,l:4,m:+4},
+  {label:'6g₊₄',n:6,l:4,m:+4},
   {label:'6h₀', n:6,l:5,m: 0},
-  {label:'6h+5',n:6,l:5,m:+5},
+  {label:'6h₊₅',n:6,l:5,m:+5},
 ];
 // Real-orbital superpositions. To derive: ψ_real = Σ c_m · R(r)·Y_l^m(θ,φ)·e^{-iEt}
 // With our Ylm convention (csPhase=(-1)^|m| for m<0):
 //   Y₁⁺¹ = N·P·e^{+iφ}   Y₁⁻¹ = -N·P·e^{-iφ}
 // p_x ∝ cos(φ): m=+1 cRe=+1/√2,  m=-1 cRe=-1/√2
-// Degenerate pairs (same n, same E) → stationary particles.
+// Same-energy combinations keep |ψ|² stationary; a real combination such as p_x has zero velocity.
 // Different-n pairs (ΔE≠0) → oscillating ρ(t) → genuine particle dynamics.
 //
-// 1s+2s: canonical example from Tumulka / bohmian-mechanics.net.
+// 1s+2s: the simplest beat between two s states.
 //   Both spherically symmetric → density oscillates radially.
 //   ΔE = E₁−E₂ = 1/2−1/8 = 3/8 a.u. → period = 2π/(3/8) ≈16.8 a.u.
 //
 // 2p⁺¹+3d⁺¹: same m=+1 → both have azimuthal phase e^{iφ} → particles circulate.
-//   Different n → ΔE = 1/8−1/18 = 5/72 a.u. → period≈91 a.u. Density ring beats radially
+//   Different n → ΔE = 1/8−1/18 = 5/72 a.u. → period≈91 a.u. Density ring sloshes above and below the xy plane (interference ∝ sin²θ cosθ)
 //   while particles orbit. Most dynamic preset: circulation + beating combined.
+function realOrbital(n,l,m,type){
+  const s=(-1)**m, h=1/Math.SQRT2;
+  return type==='c'
+    ? [{n,l,m,cRe:s*h,cIm:0},{n,l,m:-m,cRe:h,cIm:0}]
+    : [{n,l,m,cRe:0,cIm:-s*h},{n,l,m:-m,cRe:0,cIm:h}];
+}
+const REAL_SUPERS=new Set(['px','py','pz','dxz','dyz','dx2y2','dxy','dz2']);
 const SUPERS={
   none:null,
-  px:[{n:2,l:1,m:+1,cRe: 1/Math.SQRT2,cIm:0},{n:2,l:1,m:-1,cRe:-1/Math.SQRT2,cIm:0}],
+  // Real orbitals as drawn in chemistry. With this code's Y_l^m (Condon–Shortley sign in P_l^m):
+  // cos type = (−1)^m [Y^m + (−1)^m Y^−m]/√2, sin type = (−1)^m [Y^m − (−1)^m Y^−m]/(i√2),
+  // signed so that, e.g., p_x > 0 on +x and d_xy > 0 at (1, 1, 0).
+  px:realOrbital(2,1,1,'c'), py:realOrbital(2,1,1,'s'), pz:[{n:2,l:1,m:0,cRe:1,cIm:0}],
+  dz2:[{n:3,l:2,m:0,cRe:1,cIm:0}],
+  dxz:realOrbital(3,2,1,'c'), dyz:realOrbital(3,2,1,'s'),
+  dx2y2:realOrbital(3,2,2,'c'), dxy:realOrbital(3,2,2,'s'),
   ss:[{n:1,l:0,m:0,cRe:1/Math.SQRT2,cIm:0},{n:2,l:0,m:0,cRe:1/Math.SQRT2,cIm:0}],
   sp:[{n:1,l:0,m:0,cRe:1/Math.SQRT2,cIm:0},{n:2,l:1,m:0,cRe:1/Math.SQRT2,cIm:0}],
   pd:[{n:2,l:1,m:0,cRe:1/Math.SQRT2,cIm:0},{n:3,l:2,m:0,cRe:1/Math.SQRT2,cIm:0}],
@@ -314,7 +343,7 @@ const SUPERS={
 // Smaller box → better voxel resolution within the fixed VRES grid.
 // px/ss/sp: both components are n≤2; virtually all density within 14 a₀.
 // pd/circ: max n=3; density mostly within 24 a₀.
-const SUPER_RM={px:14,ss:14,sp:14,pd:24,circ:24,spin_ss:14,spin_sp:14,spin_circ:24};
+const SUPER_RM={px:14,py:14,pz:14,dz2:24,dxz:24,dyz:24,dx2y2:24,dxy:24,ss:14,sp:14,pd:24,circ:24,spin_ss:14,spin_sp:14,spin_circ:24};
 
 // Spin superpositions — each has a 'spinComps' (full spinor state) and
 // 'comps' (scalar equivalent for density sampling and volume visualisation).
@@ -343,54 +372,57 @@ const SPIN_SUPERS={
   },
 };
 
+// Magnetic quantum number as shown in kets: +1, 0, −1.
+function fmtM(m){return m>0?'+'+m:m<0?'−'+(-m):'0';}
+
 // Exact ⟨r⟩ = a₀/2 * (3n² - l(l+1))
 function exactR(n,l){return 0.5*(3*n*n-l*(l+1));}
 
 const INFO={
-  '1s':'Ground state. m=0 → real ψ → Im(∇ψ/ψ)=0. Particles are stationary.',
-  '2s':'Two radial shells. Node at r≈2a₀. Stationary particles.',
-  '2p₀':'2p_z dumbbell. Real ψ, stationary. Nodal plane at z=0.',
-  '2p+':'m=+1 → ψ∝e^{+iφ}. CCW azimuthal particle circulation: v_φ=1/(r sinθ).',
-  '2p−':'m=−1 → ψ∝e^{−iφ}. Clockwise circulation. Same |ψ|² as 2p+.',
-  '3s':'Three concentric shells. Stationary.',
-  '3p₀':'3p_z elongated dumbbell with inner radial node. Stationary.',
-  '3p+':'m=+1, n=3. CCW circulation over toroidal density ring.',
-  '3d₀':'3d_z² double-cone. Stationary.',
-  '3d+1':'m=+1. Azimuthal particle circulation, double-ring density.',
-  '3d−1':'m=−1. CW circulation.',
-  '3d+2':'m=+2. Fastest circulation: v_φ=2/(r sinθ). Strong toroidal current.',
-  '4s':'n=4 s-state. 3 radial nodes. Real ψ, stationary. Spread over ~80 a₀.',
-  '4p₀':'n=4 p_z. 2 radial nodes plus equatorial node. Real ψ, stationary.',
-  '4p+':'m=+1. CCW azimuthal circulation. Density forms thick torus at ~40 a₀.',
-  '4d₀':'n=4 d_z² type. 1 radial node. Real ψ, stationary.',
-  '4d+1':'m=+1. Azimuthal circulation. Layered toroidal density.',
-  '4d+2':'m=+2. v_φ=2/(r sinθ). Double-ring fast circulation.',
-  '4f₀':'n=4 f orbital, m=0. No radial nodes. Axially symmetric nodal cones. Stationary.',
-  '4f+3':'m=+3. Maximum l=3 circulation: v_φ=3/(r sinθ). Equatorial ring current.',
+  '1s':'Ground state. ψ is real, so with the standard guidance law the pilot-wave velocity Im(∇ψ/ψ) is zero: each electron stays where it is (Physics § 4: with the spin term it moves). Most probable radius 1 a₀.',
+  '2s':'Two radial shells, node at r = 2 a₀. ψ is real: zero pilot-wave velocity.',
+  '2p₀':'Dumbbell along z (the chemists’ 2p_z), nodal plane at z = 0. ψ is real: zero pilot-wave velocity.',
+  '2p₊₁':'m = +1, ψ ∝ exp(+iφ). In pilot-wave theory the electron circles the z axis anticlockwise at vᵩ = 1/(r sinθ) a.u., at fixed height and radius.',
+  '2p₋₁':'m = −1, ψ ∝ exp(−iφ). Same |ψ|² as 2p₊₁; in pilot-wave theory the circulation is clockwise.',
+  '3s':'Three concentric shells. ψ is real: zero pilot-wave velocity.',
+  '3p₀':'3p_z dumbbell with an inner radial node. ψ is real: zero pilot-wave velocity.',
+  '3p₊₁':'m = +1, n = 3. Ring-shaped density; pilot-wave circulation anticlockwise about z.',
+  '3d₀':'3d_z² lobes and ring. ψ is real: zero pilot-wave velocity.',
+  '3d₊₁':'m = +1. Double-ring density; pilot-wave circulation about z.',
+  '3d₋₁':'m = −1. Pilot-wave circulation clockwise about z.',
+  '3d₊₂':'m = +2. Pilot-wave speed vᵩ = 2/(r sinθ) a.u., twice that of m = 1 at the same point.',
+  '4s':'n = 4 s state, 3 radial nodes. ψ is real: zero pilot-wave velocity. Most probable radius ≈ 25 a₀; 99% within 42 a₀.',
+  '4p₀':'n = 4 p_z, 2 radial nodes plus the equatorial nodal plane. ψ is real: zero pilot-wave velocity.',
+  '4p₊₁':'m = +1. Thick ring of density, most probable radius ≈ 24 a₀ (99% within 41 a₀). Pilot-wave circulation anticlockwise.',
+  '4d₀':'n = 4 d_z² type, 1 radial node. ψ is real: zero pilot-wave velocity.',
+  '4d₊₁':'m = +1. Layered ring-shaped density; pilot-wave circulation about z.',
+  '4d₊₂':'m = +2. Double ring; pilot-wave speed vᵩ = 2/(r sinθ) a.u.',
+  '4f₀':'n = 4 f orbital, m = 0. No radial nodes; nodal cones. ψ is real: zero pilot-wave velocity.',
+  '4f₊₃':'m = +3. Equatorial ring; pilot-wave speed vᵩ = 3/(r sinθ) a.u.',
   // n=5
-  '5s':'n=5 s-state. 4 radial nodes. Real ψ, stationary. Extends ~125 a₀.',
-  '5p₀':'n=5 p_z. 3 radial nodes plus equatorial nodal plane. Stationary.',
-  '5p+':'m=+1. CCW azimuthal circulation over extended torus (~80 a₀).',
-  '5d₀':'n=5 d_z² type. 2 radial nodes. Real ψ, stationary.',
-  '5d+1':'m=+1. Azimuthal circulation. Multi-ring layered toroidal density.',
-  '5d+2':'m=+2. v_φ=2/(r sinθ). Fast double-ring circulation.',
-  '5f₀':'n=5 f orbital, m=0. 1 radial node. Nodal cones. Stationary.',
-  '5f+3':'m=+3. v_φ=3/(r sinθ). Ring current with radial envelope.',
-  '5g₀':'n=5 g orbital, m=0. l=4, no radial nodes. Stationary. Complex nodal structure.',
-  '5g+4':'m=+4. Maximum l=4 circulation: v_φ=4/(r sinθ). Dense equatorial ring.',
+  '5s':'n = 5 s state, 4 radial nodes. ψ is real: zero pilot-wave velocity. Most probable radius ≈ 40 a₀; 99% within 63 a₀.',
+  '5p₀':'n = 5 p_z, 3 radial nodes plus the equatorial nodal plane. ψ is real: zero pilot-wave velocity.',
+  '5p₊₁':'m = +1. Extended ring, most probable radius ≈ 39 a₀ (99% within 62 a₀). Pilot-wave circulation anticlockwise.',
+  '5d₀':'n = 5 d_z² type, 2 radial nodes. ψ is real: zero pilot-wave velocity.',
+  '5d₊₁':'m = +1. Several nested rings; pilot-wave circulation about z.',
+  '5d₊₂':'m = +2. Double ring; pilot-wave speed vᵩ = 2/(r sinθ) a.u.',
+  '5f₀':'n = 5 f orbital, m = 0, 1 radial node, nodal cones. ψ is real: zero pilot-wave velocity.',
+  '5f₊₃':'m = +3. Ring with a radial node; pilot-wave speed vᵩ = 3/(r sinθ) a.u.',
+  '5g₀':'n = 5 g orbital, m = 0, l = 4, no radial nodes. ψ is real: zero pilot-wave velocity.',
+  '5g₊₄':'m = +4. Thin equatorial ring; pilot-wave speed vᵩ = 4/(r sinθ) a.u.',
   // n=6
-  '6s':'n=6 s-state. 5 radial nodes. Spread over ~200 a₀. Stationary.',
-  '6p₀':'n=6 p_z. 4 radial nodes. Elongated along z. Stationary.',
-  '6p+':'m=+1. CCW circulation. Very extended torus.',
-  '6d₀':'n=6 d_z² type. 3 radial nodes. Stationary.',
-  '6d+1':'m=+1. Layered toroidal density. Circulation.',
-  '6d+2':'m=+2. Fast double-ring current.',
-  '6f₀':'n=6 f orbital, m=0. 2 radial nodes. Stationary.',
-  '6f+3':'m=+3. Ring current. 2 radial nodes.',
-  '6g₀':'n=6 g orbital, m=0. l=4. 1 radial node. Stationary.',
-  '6g+4':'m=+4. Maximum g-orbital circulation.',
-  '6h₀':'n=6 h orbital, m=0. l=5, no radial nodes. Highest angular momentum at n=6. Stationary.',
-  '6h+5':'m=+5. Maximum l=5 circulation: v_φ=5/(r sinθ). Extreme equatorial ring current.',
+  '6s':'n = 6 s state, 5 radial nodes. ψ is real: zero pilot-wave velocity. Most probable radius ≈ 59 a₀; 99% within 89 a₀.',
+  '6p₀':'n = 6 p_z, 4 radial nodes. ψ is real: zero pilot-wave velocity.',
+  '6p₊₁':'m = +1. Large ring-shaped density; pilot-wave circulation anticlockwise.',
+  '6d₀':'n = 6 d_z² type, 3 radial nodes. ψ is real: zero pilot-wave velocity.',
+  '6d₊₁':'m = +1. Layered rings; pilot-wave circulation about z.',
+  '6d₊₂':'m = +2. Double ring; pilot-wave speed vᵩ = 2/(r sinθ) a.u.',
+  '6f₀':'n = 6 f orbital, m = 0, 2 radial nodes. ψ is real: zero pilot-wave velocity.',
+  '6f₊₃':'m = +3, 2 radial nodes. Pilot-wave speed vᵩ = 3/(r sinθ) a.u.',
+  '6g₀':'n = 6 g orbital, m = 0, 1 radial node. ψ is real: zero pilot-wave velocity.',
+  '6g₊₄':'m = +4. Pilot-wave speed vᵩ = 4/(r sinθ) a.u.',
+  '6h₀':'n = 6 h orbital, m = 0, l = 5, no radial nodes. ψ is real: zero pilot-wave velocity.',
+  '6h₊₅':'m = +5. Thin equatorial ring; pilot-wave speed vᵩ = 5/(r sinθ) a.u.',
 };
 
 // ════════════════════════════════════════════════════════════════
@@ -398,9 +430,12 @@ const INFO={
 // ════════════════════════════════════════════════════════════════
 let orbIdx=3,superKey='none';
 let selectedN=ORBITALS[3].n; // n-shell shown in sub-grid (defaults to n=2) 
-let nPart=2,simSpeed=1.0,trailLen=800,dtStep=0.04;
+let nPart=12,simSpeed=1.0,trailLen=800,dtStep=0.04;
 const BASE_SPEED=20;
 let running=true;
+// Reading of the display: 'pw' (pilot wave: |ψ|² plus electron positions) or 'cpn' (orthodox: |ψ|² only).
+// Switching never resets the clock or the particles; orthodox simply does not draw positions.
+let interp='pw';
 
 const PT_PRESETS=[
   {hue:190,r:0,  g:229,b:255,hex:'#00e5ff',label:'Cyan'},
@@ -412,8 +447,8 @@ const PT_PRESETS=[
 ];
 let ptColor=PT_PRESETS[0];
 
-let densOp=0.60,isoOp=0.00,ptSize=2.5,lobeThresh=0.12,showAxes=false;
-let lightTheme=false,showInset=true,showProjections=true;
+let densOp=0.60,isoOp=0.00,ptSize=3,lobeThresh=0.12,showAxes=true;
+let lightTheme=false,showInset=false,showProjections=false;
 let projData={xz:null,xy:null,yz:null},projDirty=true;
 let projVolCache=null; // {xz,xy,yz} offscreen canvases — volumetric render matching main canvas
 let projPanelHitBoxes=[]; // [{plane,x,y,w,h}] — rebuilt each frame by drawProjectionPanels
@@ -425,12 +460,6 @@ let showVol=true,showSlice=false,showLobes=false,showPhase=false,showCloud=false
 let cloudSpherePx=10;      // sphere sprite diameter in screen pixels (user slider)
                            // cloudN is auto-computed — see autoCloudN()
                            // (particles[] serves both roles — cloud or trail)
-const CLOUD_GN=24;         // velocity grid resolution (24³ = 13824 nodes)
-let cloudVelGrid=null;     // Float32Array [CLOUD_GN³ × 3] (vx,vy,vz)
-let cloudFieldAge=Infinity;// frames since last field build
-const CLOUD_FIELD_TTL=45;  // rebuild every N frames when running
-const CLOUD_RESAMPLE_RATE=0.02; // fraction of cloud particles reseeded per frame (~2%)
-let cloudMaxRho=-1;        // cached peak |ψ|²·r² for rejection sampling
 let cloudSprite=null;      // pre-rendered sphere sprite (rebuilt when colour changes)
 
 // Auto-compute cloud particle count: pack non-overlapping spheres of diameter
@@ -446,16 +475,20 @@ function autoCloudN(){
 
 let slicePlane='xz';
 let t=0,comps=[],particles=[];
-let camTheta=0.55,camPhi=0.5,camDist=1.0;
+let camTheta=0.55,camPhi=0.5,camDist=1.25;
 let preferSliceFallback=false;
 
 // ════════════════════════════════════════════════════════════════
 //  SPIN — Pauli–Bohmian extension (completely non-destructive)
 //  Toggle spinEnabled to switch between the original scalar-Bohm
 //  guidance equation and the full Pauli–Bohm equation which adds
-//  a spin-current term (∇×S)/(2ρ) — making ALL m=0 orbitals
-//  non-stationary and modifying the velocity of m≠0 orbitals.
+//  a spin-current term (∇×S)/(2ρ) — setting the electrons of m=0
+//  orbitals moving and changing the velocity in m≠0 orbitals (|ψ|² unchanged).
 // ════════════════════════════════════════════════════════════════
+// spinEnabled: the state is a spinor (spin preset, j-state, or orbital × spin direction).
+// spinTerm: the pilot-wave guidance law includes (∇×S)/(2ρ). On spin presets and j-states the
+// Spin term button toggles only spinTerm, so the same state can be watched under both laws.
+let spinTerm     = true;
 let spinEnabled  = false;           // master gate — false → exactly original behaviour
 let spinMode     = 'product';       // 'product': orbital × spin-state  |  'jstate': spin-orbit eigenstate
 let spinTheta    = Math.PI/2;       // spin polar angle  (π/2 = equatorial, breaks azimuthal symmetry)
@@ -465,153 +498,73 @@ let voxelRhoUp   = null;           // Float32Array[VRES³] — |ψ↑|²  (alloc
 let voxelRhoDn   = null;           // Float32Array[VRES³] — |ψ↓|²
 let spinUpColor  = {r:0,  g:229,b:255,hex:'#00e5ff'};  // ↑ channel colour (cyan)
 let spinDnColor  = {r:224,g:64, b:251,hex:'#e040fb'};  // ↓ channel colour (magenta)
+let spinFromPreset=false;           // true when a Pauli–Bohm preset (not the user) switched spin on
 let dragging=false,lastMX=0,lastMY=0;
 
 function buildComps(){
+  if(spinFromPreset&&!SPIN_SUPERS[superKey]){
+    // Leaving a spin preset restores the scalar guidance law it switched on.
+    spinEnabled=false; spinComps=[]; spinFromPreset=false; spinTerm=true;
+    voxelRhoUp=null; voxelRhoDn=null;
+  }
   if(SPIN_SUPERS[superKey]){
     // ── Spin superposition preset ──────────────────────────────────
     const sp=SPIN_SUPERS[superKey];
     comps=sp.comps.map(c=>({...c}));  // scalar equiv for sampling/visualisation
     spinComps=sp.spinComps.map(c=>({...c}));
+    if(!spinEnabled) spinFromPreset=true;
     spinEnabled=true; spinMode='product';
-    _syncSpinUI();
+    showPhase=false;
   } else if(superKey!=='none'&&SUPERS[superKey]){
     comps=SUPERS[superKey].map(c=>({...c}));
-    if(spinEnabled) buildSpinComps();
+    if(spinEnabled){spinMode='product';buildSpinComps();}
   } else {
     const o=ORBITALS[orbIdx];comps=[{n:o.n,l:o.l,m:o.m,cRe:1,cIm:0}];
-    cloudVelGrid=null; cloudFieldAge=Infinity; cloudMaxRho=-1;
     if(spinEnabled){
-      if(spinMode==='jstate') _refreshJStateDropdown();
+      if(spinMode==='jstate'&&superKey==='none') _refreshJStateDropdown();
       else buildSpinComps();
     }
   }
+  invalidateDensity();
+  _syncSpinUI();
+}
+
+// A single source of Born density for every renderer and sampler.
+function densityAt(x,y,z,time){
+  return spinEnabled&&spinComps.length
+    ? rhoSpinAt(spinComps,x,y,z,time)
+    : rhoAt(comps,x,y,z,time);
+}
+
+// Sign colouring is meaningful only when ψ is real up to one global phase:
+// a stationary combination of real orbitals (m = 0 states, or p_x).
+function psiRealUpToPhase(){
+  if(spinEnabled&&spinComps.length) return false;
+  if(densityEvolves()) return false;
+  return REAL_SUPERS.has(superKey)||comps.every(c=>c.m===0);
+}
+
+function densityEvolves(){
+  // The spin presets have orthogonal spin channels; their individual densities are stationary.
+  return !SPIN_SUPERS[superKey] && comps.some(c=>c.n!==comps[0].n);
+}
+
+function invalidateDensity(){
+  sliceDirty=true; volumeDirty=true; lobeTexDirty=true; volNeedsRedraw=true;
   projDirty=true; projVolCache=null;
-  if(showCloud) initCloudParts();
-  // Invalidate voxel grid so spin channels are rebuilt on next frame
-  volumeDirty=true; lobeTexDirty=true;
-}
-
-// ════════════════════════════════════════════════════════════════
-//  CLOUD MODE — thousands of particles advected by grid velocity
-// ════════════════════════════════════════════════════════════════
-
-// Build 24³ Bohmian velocity field at current time t.
-// Strategy: evaluate ψ once per node, then finite-difference within the grid.
-// ~13 824 psiXYZ calls ≈ 10–30 ms depending on orbital complexity.
-function buildCloudField(){
-  // When spin is active, delegate to spinor version
-  if(spinEnabled&&spinComps.length){buildCloudFieldSpin();return;}
-  const N=CLOUD_GN,rm=rMax(),step=2*rm/(N-1);
-  const pRe=new Float32Array(N*N*N),pIm=new Float32Array(N*N*N);
-  for(let i=0;i<N;i++){const x=-rm+i*step;
-    for(let j=0;j<N;j++){const y=-rm+j*step;
-      for(let k=0;k<N;k++){const z=-rm+k*step;
-        const[re,im]=psiXYZ(comps,x,y,z,t);
-        const idx=i*N*N+j*N+k;pRe[idx]=re;pIm[idx]=im;
-      }}}
-  if(!cloudVelGrid)cloudVelGrid=new Float32Array(N*N*N*3);
-  for(let i=0;i<N;i++)for(let j=0;j<N;j++)for(let k=0;k<N;k++){
-    const idx=i*N*N+j*N+k;
-    const re=pRe[idx],im=pIm[idx],den=re*re+im*im;
-    if(den<1e-20){cloudVelGrid[idx*3]=cloudVelGrid[idx*3+1]=cloudVelGrid[idx*3+2]=0;continue;}
-    const ig=(dre,dim)=>(re*dim-im*dre)/den;
-    const i0=Math.max(0,i-1),i1=Math.min(N-1,i+1),dx=(i1-i0)*step;
-    const j0=Math.max(0,j-1),j1=Math.min(N-1,j+1),dy=(j1-j0)*step;
-    const k0=Math.max(0,k-1),k1=Math.min(N-1,k+1),dz=(k1-k0)*step;
-    let vx=ig((pRe[i1*N*N+j*N+k]-pRe[i0*N*N+j*N+k])/dx,(pIm[i1*N*N+j*N+k]-pIm[i0*N*N+j*N+k])/dx);
-    let vy=ig((pRe[i*N*N+j1*N+k]-pRe[i*N*N+j0*N+k])/dy,(pIm[i*N*N+j1*N+k]-pIm[i*N*N+j0*N+k])/dy);
-    let vz=ig((pRe[i*N*N+j*N+k1]-pRe[i*N*N+j*N+k0])/dz,(pIm[i*N*N+j*N+k1]-pIm[i*N*N+j*N+k0])/dz);
-    const spd=Math.sqrt(vx*vx+vy*vy+vz*vz);
-    if(spd>25){const s=25/spd;vx*=s;vy*=s;vz*=s;}
-    cloudVelGrid[idx*3]=vx;cloudVelGrid[idx*3+1]=vy;cloudVelGrid[idx*3+2]=vz;
-  }
-  cloudFieldAge=0;
-}
-
-// Spinor version of buildCloudField — uses all 4 spinor channels and computes
-// the Pauli–Bohm guidance field (convective + spin-curl terms) on the 24³ grid.
-function buildCloudFieldSpin(){
-  const N=CLOUD_GN,rm=rMax(),step=2*rm/(N-1);
-  // Allocate four spinor-component arrays for the grid
-  const pUR=new Float32Array(N*N*N),pUI=new Float32Array(N*N*N);
-  const pDR=new Float32Array(N*N*N),pDI=new Float32Array(N*N*N);
-  for(let i=0;i<N;i++){const x=-rm+i*step;
-    for(let j=0;j<N;j++){const y=-rm+j*step;
-      for(let k=0;k<N;k++){const z=-rm+k*step;
-        const[ur,ui,dr,di]=psiSpinor(spinComps,x,y,z,t);
-        const idx=i*N*N+j*N+k;pUR[idx]=ur;pUI[idx]=ui;pDR[idx]=dr;pDI[idx]=di;
-      }}}
-  if(!cloudVelGrid)cloudVelGrid=new Float32Array(N*N*N*3);
-  for(let i=0;i<N;i++)for(let j=0;j<N;j++)for(let k=0;k<N;k++){
-    const idx=i*N*N+j*N+k;
-    const ur=pUR[idx],ui=pUI[idx],dr=pDR[idx],di=pDI[idx];
-    const rho=ur*ur+ui*ui+dr*dr+di*di;
-    if(rho<1e-20){cloudVelGrid[idx*3]=cloudVelGrid[idx*3+1]=cloudVelGrid[idx*3+2]=0;continue;}
-    const i0=Math.max(0,i-1),i1=Math.min(N-1,i+1),dx=(i1-i0)*step;
-    const j0=Math.max(0,j-1),j1=Math.min(N-1,j+1),dy=(j1-j0)*step;
-    const k0=Math.max(0,k-1),k1=Math.min(N-1,k+1),dz=(k1-k0)*step;
-    // Spinor gradients (central differences on pre-computed grid)
-    const dxUR=(pUR[i1*N*N+j*N+k]-pUR[i0*N*N+j*N+k])/dx;
-    const dxUI=(pUI[i1*N*N+j*N+k]-pUI[i0*N*N+j*N+k])/dx;
-    const dxDR=(pDR[i1*N*N+j*N+k]-pDR[i0*N*N+j*N+k])/dx;
-    const dxDI=(pDI[i1*N*N+j*N+k]-pDI[i0*N*N+j*N+k])/dx;
-    const dyUR=(pUR[i*N*N+j1*N+k]-pUR[i*N*N+j0*N+k])/dy;
-    const dyUI=(pUI[i*N*N+j1*N+k]-pUI[i*N*N+j0*N+k])/dy;
-    const dyDR=(pDR[i*N*N+j1*N+k]-pDR[i*N*N+j0*N+k])/dy;
-    const dyDI=(pDI[i*N*N+j1*N+k]-pDI[i*N*N+j0*N+k])/dy;
-    const dzUR=(pUR[i*N*N+j*N+k1]-pUR[i*N*N+j*N+k0])/dz;
-    const dzUI=(pUI[i*N*N+j*N+k1]-pUI[i*N*N+j*N+k0])/dz;
-    const dzDR=(pDR[i*N*N+j*N+k1]-pDR[i*N*N+j*N+k0])/dz;
-    const dzDI=(pDI[i*N*N+j*N+k1]-pDI[i*N*N+j*N+k0])/dz;
-    // Convective term Im(Ψ†∂ᵢΨ)/ρ
-    let vx=(ur*dxUI-ui*dxUR+dr*dxDI-di*dxDR)/rho;
-    let vy=(ur*dyUI-ui*dyUR+dr*dyDI-di*dyDR)/rho;
-    let vz=(ur*dzUI-ui*dzUR+dr*dzDI-di*dzDR)/rho;
-    // Spin-density S at stencil points
-    const si=(ic,jc,kc)=>{const f=ic*N*N+jc*N+kc;const a=pUR[f],b=pUI[f],c2=pDR[f],d=pDI[f];
-      return[2*(a*c2+b*d),2*(a*d-b*c2),a*a+b*b-c2*c2-d*d];};
-    const Sxp=si(i1,j,k),Sxn=si(i0,j,k);
-    const Syp=si(i,j1,k),Syn=si(i,j0,k);
-    const Szp=si(i,j,k1),Szn=si(i,j,k0);
-    // Spin-curl term (∇×S)/(2ρ)  where (∇×S)_x = ∂_y S_z − ∂_z S_y, etc.
-    vx=((ur*dxUI-ui*dxUR+dr*dxDI-di*dxDR)/rho) + (Syp[2]-Syn[2])/(dy*2*rho) - (Szp[1]-Szn[1])/(dz*2*rho);
-    vy=((ur*dyUI-ui*dyUR+dr*dyDI-di*dyDR)/rho) + (Szp[0]-Szn[0])/(dz*2*rho) - (Sxp[2]-Sxn[2])/(dx*2*rho);
-    vz=((ur*dzUI-ui*dzUR+dr*dzDI-di*dzDR)/rho) + (Sxp[1]-Sxn[1])/(dx*2*rho) - (Syp[0]-Syn[0])/(dy*2*rho);
-    const spd=Math.sqrt(vx*vx+vy*vy+vz*vz);
-    if(spd>25){const s=25/spd;vx*=s;vy*=s;vz*=s;}
-    cloudVelGrid[idx*3]=vx;cloudVelGrid[idx*3+1]=vy;cloudVelGrid[idx*3+2]=vz;
-  }
-  cloudFieldAge=0;
-}
-function cloudVelAt(x,y,z){
-  if(!cloudVelGrid)return[0,0,0];
-  const N=CLOUD_GN,rm=rMax(),step=2*rm/(N-1);
-  const gx=(x+rm)/step,gy=(y+rm)/step,gz=(z+rm)/step;
-  const i0=Math.max(0,Math.min(N-2,gx|0));
-  const j0=Math.max(0,Math.min(N-2,gy|0));
-  const k0=Math.max(0,Math.min(N-2,gz|0));
-  const fx=gx-i0,fy=gy-j0,fz=gz-k0;
-  const i1=i0+1,j1=j0+1,k1=k0+1;
-  const g=(ci,cj,ck,o)=>cloudVelGrid[(ci*N*N+cj*N+ck)*3+o];
-  const L=(a,b,f)=>a+(b-a)*f;
-  const bx0=(o)=>L(L(g(i0,j0,k0,o),g(i0,j0,k1,o),fz),L(g(i0,j1,k0,o),g(i0,j1,k1,o),fz),fy);
-  const bx1=(o)=>L(L(g(i1,j0,k0,o),g(i1,j0,k1,o),fz),L(g(i1,j1,k0,o),g(i1,j1,k1,o),fz),fy);
-  return[L(bx0(0),bx1(0),fx),L(bx0(1),bx1(1),fx),L(bx0(2),bx1(2),fx)];
 }
 
 function initCloudParts(){
-  cloudVelGrid=null;cloudFieldAge=Infinity;cloudMaxRho=-1;
   buildCloudSprite();
   // Auto-derive count from sphere size and orbital extent
-  const n=autoCloudN();
-  particles=sampleParticlesStratified(n);
+  const n=cloudCount();
+  particles=sampleParticlesStratified(n,t);
   // For pure m≠0 eigenstates, |ψ|² is azimuthally symmetric (no φ dependence).
   // Bohmian motion only rotates φ — it never changes ρ=√(x²+y²) or z.
   // Randomising φ at init gives a uniform azimuthal distribution; rotating a
   // uniform distribution by any (ρ-dependent) angle keeps it uniform forever.
   // This prevents Cartesian-grid sampling asymmetry from winding into a spiral.
-  if(comps.length===1&&comps[0].m!==0){
+  if(!spinEnabled&&comps.length===1&&comps[0].m!==0){
     for(const p of particles){
       const rho=Math.sqrt(p.x*p.x+p.y*p.y);
       const phi=Math.random()*2*Math.PI;
@@ -628,7 +581,7 @@ function initCloudParts(){
   }
   // Update readonly count label in sidebar
   const lbl=document.getElementById('vAutoN');
-  if(lbl)lbl.textContent=n;
+  if(lbl)lbl.textContent=particles.length;
 }
 
 // Pre-render a shaded sphere sprite once; reused for every particle draw.
@@ -652,125 +605,42 @@ function buildCloudSprite(){
   cloudSprite=oc;
 }
 
-// Analytical Bohmian velocity for a single eigenstate |n,l,m⟩.
-// For ψ = R(r)·Θ(θ)·e^{imφ}, Im(∇ψ/ψ) = m/(r sinθ) in the φ̂ direction.
-// In Cartesian: v_x = -m·y/ρ², v_y = m·x/ρ², v_z = 0  (ρ²=x²+y²).
-// This is exact — no grid error, no radial drift, particles orbit forever.
-function analyticalVel(x,y,z){
-  const m=comps[0].m;
-  if(m===0)return[0,0,0]; // real eigenstate: v=0 (static Bohmian cloud)
-  const rho2=x*x+y*y;
-  if(rho2<1e-12)return[0,0,0];
-  const spd=Math.abs(m)/Math.sqrt(rho2);
-  const cap=25,s=spd>cap?cap/spd:1;
-  return[-m*y/rho2*s, m*x/rho2*s, 0];
+function rotateAroundZ(p,angle){
+  const cosine=Math.cos(angle), sine=Math.sin(angle);
+  const x=p.x*cosine-p.y*sine;
+  p.y=p.x*sine+p.y*cosine;
+  p.x=x;
 }
 
-function stepCloudParticles(){
-  if(!showCloud)return;
-  const dt=dtStep*simSpeed*BASE_SPEED;
-  const rmSq=(rMax()*1.5)**2;
-  // ── Spin mode ────────────────────────────────────────────────────────────
-  if(spinEnabled&&spinComps.length){
-    // Helper: write p.spinW from current spinor
-    const syncW=(p)=>{
-      const[ur,ui,dr,di]=psiSpinor(spinComps,p.x,p.y,p.z,t);
-      const rhoT=ur*ur+ui*ui+dr*dr+di*di;
-      p.spinW=rhoT>1e-30?(ur*ur+ui*ui)/rhoT:0.5;
-    };
+// Number of cloud samples. With spin, every dot is moved along its own
+// trajectory (RK4 on the Pauli–Bohm field), which costs far more per dot.
+const CLOUD_SPIN_MAX=500;
+const CLOUD_SPIN_STEP=0.12;   // a.u.; coarser than trail mode to keep many dots moving smoothly
+function cloudCount(){
+  const n=autoCloudN();
+  return interp==='pw'&&spinEnabled&&spinComps.length&&!densityEvolves() ? Math.min(n,CLOUD_SPIN_MAX) : n;
+}
 
-    // Fast path: 1s orbital (single component, n=1, l=0).
-    // Analytically v = −(r̂ × n̂), which is exact Rodrigues rotation around n̂
-    // at angular speed 1/r — r and the polar angle to n̂ are both conserved.
-    // This avoids Euler drift regardless of dt size.
-    const is1s=comps.length===1&&comps[0].n===1&&comps[0].l===0;
-    if(is1s){
-      let nax,nay,naz; // spin quantisation axis
-      if(spinMode==='product'){
-        nax=Math.sin(spinTheta)*Math.cos(spinPhi);
-        nay=Math.sin(spinTheta)*Math.sin(spinPhi);
-        naz=Math.cos(spinTheta);
-      } else {
-        // j-state on l=0: pure |↑⟩ (upRe≈1) or |↓⟩ (dnRe≈1)
-        const sg=spinComps[0].upRe>0.5?1:-1;
-        nax=0;nay=0;naz=sg;
-      }
-      for(const p of particles){
-        if(isNaN(p.x)||p.x*p.x+p.y*p.y+p.z*p.z>rmSq){
-          const sr=resampleOne(t);if(sr){p.x=sr.x;p.y=sr.y;p.z=sr.z;}syncW(p);continue;
-        }
-        const pr=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
-        if(pr<0.15){syncW(p);continue;}
-        // Rodrigues rotation: r_new = r cosθ + (n̂×r) sinθ + n̂(n̂·r)(1−cosθ)
-        const ang=dt/pr,cosA=Math.cos(ang),sinA=Math.sin(ang),ocA=1-cosA;
-        const dotN=nax*p.x+nay*p.y+naz*p.z;
-        const cpx=nay*p.z-naz*p.y,cpy=naz*p.x-nax*p.z,cpz=nax*p.y-nay*p.x;
-        p.x=p.x*cosA+cpx*sinA+nax*dotN*ocA;
-        p.y=p.y*cosA+cpy*sinA+nay*dotN*ocA;
-        p.z=p.z*cosA+cpz*sinA+naz*dotN*ocA;
-        syncW(p);
-      }
-      return;
-    }
-
-    // General spin (higher orbitals, superpositions): sub-stepped RK2 midpoint.
-    // RK2 preserves orbital radius to O(dtSub⁴) per step — stable for ω·dtSub < √2.
-    // dtSub=0.1 a.u. ensures stability for ω ≤ 1/r with r ≥ 0.15 a.u.
-    const DT_SUB=0.1;
-    const nSub=Math.min(50,Math.max(1,Math.ceil(Math.abs(dt)/DT_SUB)));
-    const dtSub=dt/nSub;
-    for(const p of particles){
-      if(isNaN(p.x)||p.x*p.x+p.y*p.y+p.z*p.z>rmSq){
-        const sr=resampleOne(t);if(sr){p.x=sr.x;p.y=sr.y;p.z=sr.z;}syncW(p);continue;
-      }
-      let px=p.x,py=p.y,pz=p.z,escaped=false;
-      for(let sub=0;sub<nSub;sub++){
-        const[k1x,k1y,k1z]=bohmVPauli(spinComps,px,py,pz,t);
-        const mx=px+0.5*dtSub*k1x,my=py+0.5*dtSub*k1y,mz=pz+0.5*dtSub*k1z;
-        const[k2x,k2y,k2z]=bohmVPauli(spinComps,mx,my,mz,t);
-        px+=dtSub*k2x;py+=dtSub*k2y;pz+=dtSub*k2z;
-        if(px*px+py*py+pz*pz>rmSq){escaped=true;break;}
-      }
-      if(escaped||isNaN(px)){
-        const sr=resampleOne(t);if(sr){p.x=sr.x;p.y=sr.y;p.z=sr.z;}syncW(p);continue;
-      }
-      p.x=px;p.y=py;p.z=pz;
-      syncW(p);
-    }
+function stepCloudParticles(dt,start=t-dt){
+  if(densityEvolves()){
+    // A fresh sample represents the changing Born density. Individual dots in
+    // this mode are not presented as continuous trajectories.
+    particles=sampleParticlesStratified(cloudCount(),t);
     return;
   }
-  const isEigenstate=comps.length===1;
-  if(isEigenstate){
-    const m=comps[0].m;
-    for(const p of particles){
-      if(isNaN(p.x)||p.x*p.x+p.y*p.y+p.z*p.z>rmSq){
-        const s=resampleOne(t);if(s){p.x=s.x;p.y=s.y;p.z=s.z;}continue;
-      }
-      if(m===0)continue; // real orbital — static density, no motion
-      const rho2=p.x*p.x+p.y*p.y;
-      if(rho2<1e-14)continue;
-      // Exact angle increment: ρ is conserved by construction (no Euler drift).
-      // Azimuthal symmetry of |ψ|² + uniform initial φ → distribution stays
-      // uniform at all times regardless of differential rotation speed.
-      const dphi=m*dt/rho2;
-      const c=Math.cos(dphi),s2=Math.sin(dphi);
-      const nx=p.x*c-p.y*s2;
-      const ny=p.x*s2+p.y*c;
-      p.x=nx;p.y=ny;
-    }
-  }else{
-    // Superposition: grid-based Bohmian velocity
-    cloudFieldAge++;
-    if(!cloudVelGrid||(cloudFieldAge>CLOUD_FIELD_TTL&&!dragging))buildCloudField();
-    for(const p of particles){
-      const[vx,vy,vz]=cloudVelAt(p.x,p.y,p.z);
-      const nx=p.x+dt*vx,ny=p.y+dt*vy,nz=p.z+dt*vz;
-      if(isNaN(nx)||nx*nx+ny*ny+nz*nz>rmSq){
-        const s=resampleOne(t);
-        if(s){p.x=s.x;p.y=s.y;p.z=s.z;}
-        continue;
-      }
-      p.x=nx;p.y=ny;p.z=nz;
+  if(interp!=='pw') return;   // orthodox: samples are measurement outcomes, not moving positions
+  const spin=spinEnabled&&spinComps.length>0;
+  if(!spin&&!(comps.length===1&&comps[0].m!==0)) return;   // real ψ, no spin: v = 0
+  const radiusLimit=(rMax()*1.4)**2;
+  for(const p of particles){
+    stepParticle(p,start,dt,CLOUD_SPIN_STEP);
+    if(!Number.isFinite(p.x+p.y+p.z)||p.x*p.x+p.y*p.y+p.z*p.z>radiusLimit){
+      const replacement=sampleParticlesStratified(1,t)[0];
+      if(replacement) Object.assign(p,replacement);
+    }else if(spin){
+      const [ur,ui,dr,di]=psiSpinor(spinComps,p.x,p.y,p.z,t);
+      const up=ur*ur+ui*ui;
+      p.spinW=up/(up+dr*dr+di*di||1);
     }
   }
 }
@@ -785,10 +655,9 @@ function renderCloudCanvas(cam){
   if(spinEnabled&&spinComps.length){
     // Dual-channel spin rendering: each particle coloured by its ↑/↓ weight
     // Uses arc+fill per particle (slower but required for per-particle colour).
-    // For large clouds (>8k) the cloud field cost already dominates.
     for(const p of particles){
       const[sx,sy]=proj(p.x,p.y,p.z,cam);
-      const w=p.spinW||0.5;
+      const w=p.spinW??0.5;
       const r=(spinUpColor.r*w+spinDnColor.r*(1-w))|0;
       const g=(spinUpColor.g*w+spinDnColor.g*(1-w))|0;
       const b=(spinUpColor.b*w+spinDnColor.b*(1-w))|0;
@@ -831,50 +700,58 @@ function rMax(){
   return Math.max(15, Math.round(o.n*(2*o.n + 1.5*o.l + 5)));
 }
 
-// Stratified CDF sampling: builds a 3-D density grid, computes the cumulative
-// weight function, then draws exactly one particle per equal-probability stratum.
-// IMPORTANT: grid is uniform Cartesian (dV = step³), so the correct weight is
-// simply |ψ|² — NOT |ψ|²·r².  The r² Jacobian is only needed when sampling in
-// spherical coordinates (as in the rejection sampler below).
+// Cloud sampling from |ψ|²: grid-bounded rejection sampling.
+// 1. Evaluate the density on a Cartesian lattice that contains the nucleus as a vertex.
+// 2. Bound each cell by 1.5 × the largest of its eight vertex values.
+// 3. Pick a cell with probability ∝ its bound, a uniform point in it, and accept
+//    with probability ρ(x)/bound. Accepted points are exact samples of |ψ|²
+//    wherever the bound holds; points that exceed it are counted in
+//    lastCloudBoundMisses so tests can check the bound.
+// The earlier version drew one point per CDF stratum and jittered it ±0.75 voxel,
+// which smeared the density outward (⟨r⟩ 1.5–2 % high for 1s).
+let lastCloudBoundMisses=0;
 function sampleParticlesStratified(n, sampleT=0){
   const rm=rMax();
-  // Grid resolution: at minimum we need ~10 voxels per n-shell so radial nodes
-  // are resolved. Use the larger of the particle-count heuristic and 10×maxN.
   const maxOrbN=comps.reduce((a,c)=>Math.max(a,c.n),1);
-  // Raise cap to 100: G³ rhoAt calls are one-time init cost (~1s at G=100 for n=6).
-  // 12×maxOrbN ensures radial nodes are resolved (was 10×).
-  const G=Math.max(20,Math.min(100,Math.max(Math.ceil(Math.cbrt(n*8)),12*maxOrbN)));
+  let G=Math.max(21,Math.min(101,Math.max(Math.ceil(Math.cbrt(n*8)),12*maxOrbN)));
+  if(G%2===0) G++;                     // odd: the nucleus is a lattice vertex
   const step=2*rm/(G-1);
-  const wt=new Float32Array(G*G*G);
-  let total=0,maxRho=0;
+  const V=new Float32Array(G*G*G);
   for(let i=0;i<G;i++){const x=-rm+i*step;
     for(let j=0;j<G;j++){const y=-rm+j*step;
-      for(let k=0;k<G;k++){const z=-rm+k*step;
-        const w=rhoAt(comps,x,y,z,sampleT);
-        const idx=i*G*G+j*G+k; wt[idx]=w; total+=w; if(w>maxRho)maxRho=w;
-      }}}
-  cloudMaxRho=maxRho*1.2; // cache as max|ψ|² for resampleOne (also Cartesian)
-  if(total<1e-30)return [];
-  // Build normalised CDF over flattened voxel array
-  const cdf=new Float32Array(G*G*G);
+      for(let k=0;k<G;k++) V[(i*G+j)*G+k]=densityAt(x,y,-rm+k*step,sampleT);
+    }}
+  const C=G-1, cdf=new Float64Array(C*C*C);
   let cum=0;
-  for(let i=0;i<wt.length;i++){cum+=wt[i]/total;cdf[i]=cum;}
-  // Stratified draw: target for stratum p is (p + U[0,1]) / n
-  const pts=[];
-  let ci=0;
-  for(let p=0;p<n;p++){
-    const target=(p+Math.random())/n;
-    while(ci<wt.length-1&&cdf[ci]<target)ci++;
-    const gi=ci/(G*G)|0, gj=(ci/G|0)%G, gk=ci%G;
-    // Jitter symmetrically around the grid point with 1.5× voxel width.
-    // ±0.5×step confines each particle to its own voxel, making voxel boundaries
-    // subtly visible. ±0.75×step blurs across neighbours while keeping the mean
-    // exactly at the grid point, eliminating the grid appearance.
-    const x=-rm+gi*step+(Math.random()-0.5)*step*1.5;
-    const y=-rm+gj*step+(Math.random()-0.5)*step*1.5;
-    const z=-rm+gk*step+(Math.random()-0.5)*step*1.5;
-    pts.push({x,y,z,trail:[],age:0});
+  for(let i=0;i<C;i++)for(let j=0;j<C;j++)for(let k=0;k<C;k++){
+    const a=(i*G+j)*G+k;
+    const m=Math.max(V[a],V[a+1],V[a+G],V[a+G+1],V[a+G*G],V[a+G*G+1],V[a+G*G+G],V[a+G*G+G+1]);
+    cum+=1.5*m; cdf[(i*C+j)*C+k]=cum;
   }
+  if(cum<1e-30) return [];
+  const pts=[];
+  let tries=0, misses=0;
+  const maxTries=n*60;
+  while(pts.length<n&&tries<maxTries){
+    tries++;
+    const target=Math.random()*cum;
+    let lo=0,hi=cdf.length-1;
+    while(lo<hi){const mid=(lo+hi)>>1; if(cdf[mid]<target) lo=mid+1; else hi=mid;}
+    const bound=cdf[lo]-(lo?cdf[lo-1]:0);
+    const ci=(lo/(C*C))|0, cj=((lo/C)|0)%C, ck=lo%C;
+    const x=-rm+(ci+Math.random())*step, y=-rm+(cj+Math.random())*step, z=-rm+(ck+Math.random())*step;
+    const rho=densityAt(x,y,z,sampleT);
+    if(rho>bound) misses++;
+    if(Math.random()*bound>=rho) continue;
+    const particle={x,y,z,trail:[],age:0};
+    if(spinEnabled&&spinComps.length){
+      const [ur,ui,dr,di]=psiSpinor(spinComps,x,y,z,sampleT);
+      const up=ur*ur+ui*ui;
+      particle.spinW=up/(up+dr*dr+di*di||1);
+    }
+    pts.push(particle);
+  }
+  lastCloudBoundMisses=misses;
   return pts;
 }
 
@@ -883,36 +760,19 @@ function sampleParticles(n, sampleT=0){
   const rm=rMax();let maxR=1e-30;
   for(let i=0;i<3000;i++){
     const r=Math.random()*rm,th=Math.acos(2*Math.random()-1),ph=Math.random()*2*Math.PI;
-    const v=rhoAt(comps,r*Math.sin(th)*Math.cos(ph),r*Math.sin(th)*Math.sin(ph),r*Math.cos(th),sampleT)*r*r;
+    const v=densityAt(r*Math.sin(th)*Math.cos(ph),r*Math.sin(th)*Math.sin(ph),r*Math.cos(th),sampleT)*r*r;
     if(v>maxR)maxR=v;
   }
-  maxR*=1.2; cloudMaxRho=maxR;
+  maxR*=1.2;
   const pts=[];let tries=0;
   const maxTries=Math.min(n*200,800000);
   while(pts.length<n&&tries<maxTries){
     tries++;
     const r=Math.random()*rm,th=Math.acos(2*Math.random()-1),ph=Math.random()*2*Math.PI;
     const x=r*Math.sin(th)*Math.cos(ph),y=r*Math.sin(th)*Math.sin(ph),z=r*Math.cos(th);
-    if(Math.random()<rhoAt(comps,x,y,z,sampleT)*r*r/maxR)pts.push({x,y,z,trail:[],age:0});
+    if(Math.random()<densityAt(x,y,z,sampleT)*r*r/maxR)pts.push({x,y,z,trail:[],age:0});
   }
   return pts;
-}
-
-// Lightweight single-particle resample — used by the cloud trickle.
-// Uses uniform Cartesian sampling inside the bounding sphere, consistent
-// with sampleParticlesStratified (both use weight = |ψ|², no r² Jacobian).
-function resampleOne(sampleT){
-  if(cloudMaxRho<=0)return null;
-  const rm=rMax(),rm2=rm*rm;
-  for(let tries=0;tries<600;tries++){
-    // Uniform in cube, reject outside sphere
-    const x=(Math.random()*2-1)*rm;
-    const y=(Math.random()*2-1)*rm;
-    const z=(Math.random()*2-1)*rm;
-    if(x*x+y*y+z*z>rm2)continue;
-    if(Math.random()<rhoAt(comps,x,y,z,sampleT)/cloudMaxRho)return{x,y,z};
-  }
-  return null;
 }
 
 // Compute ⟨r⟩ numerically from voxel grid for verification
@@ -941,15 +801,19 @@ let lobeDensTex=null,lobeSignTex=null,lobeUnif={};
 let phasePalTex=null; // 256×1 RGBA 2D texture for phase palette
 let densPalTex=null;  // 256×1 RGBA 2D texture for density palette
 let gl2Ready=false,lobeTexDirty=true;
+let glScale=1; // ray-march resolution; reduced on software renderers, which otherwise freeze the page
+function sizeGLCanvas(){if(lobeGLCanvas){lobeGLCanvas.width=Math.max(1,Math.ceil(W*glScale));lobeGLCanvas.height=Math.max(1,Math.ceil(H*glScale));}}
 
 function resize(){
   const wrap=canvas.parentElement;
+  if(!wrap.clientWidth||!wrap.clientHeight||(W===wrap.clientWidth&&H===wrap.clientHeight)) return;
   W=canvas.width=wrap.clientWidth;
   H=canvas.height=wrap.clientHeight;
-  if(lobeGLCanvas){lobeGLCanvas.width=W;lobeGLCanvas.height=H;}
+  sizeGLCanvas();
   sliceDirty=true;volumeDirty=true;
 }
-resize();window.addEventListener('resize',resize);
+resize();
+new ResizeObserver(resize).observe(canvas.parentElement);
 
 function getCam(){
   const sT=Math.sin(camTheta),cT=Math.cos(camTheta),sP=Math.sin(camPhi),cP=Math.cos(camPhi);
@@ -997,7 +861,7 @@ const PHASE_PAL_META=[
   {key:'twilight', label:'Twilight', grad:'linear-gradient(90deg,#1d2073,#6d52a2,#b999d6,#faeedd,#dc8c5a,#c45c26,#1d2073)'},
   {key:'phase4',   label:'4-Phase',  grad:'linear-gradient(90deg,#dc3220,#ebc800,#00c8dc,#3737dc,#dc3220)'},
 ];
-let phasePalette='hsv';
+let phasePalette='twilight'; // purple and orange halves stay distinct with red-green colour blindness
 
 function palColor(v,pal){
   const stops=PALETTES[pal]||PALETTES.cyan;
@@ -1076,14 +940,14 @@ function computeSlice(plane){
     if(plane==='xz'){x=u;z=-v;}
     else if(plane==='xy'){x=u;y=-v;}
     else{y=u;z=-v;}
-    const d=rhoAt(comps,x,y,z,0);
+    const d=densityAt(x,y,z,t);
     vals[j*N+i]=d;if(d>maxV)maxV=d;
   }
   const img=new ImageData(N,N);
   for(let k=0;k<N*N;k++){
-    const vn=Math.pow(vals[k]/maxV,0.42);
+    const vn=Math.pow(vals[k]/maxV,DENS_GAMMA);
     const[r,g,b]=sliceCol(vn);
-    img.data[k*4]=r;img.data[k*4+1]=g;img.data[k*4+2]=b;img.data[k*4+3]=vn*255|0;
+    img.data[k*4]=r;img.data[k*4+1]=g;img.data[k*4+2]=b;img.data[k*4+3]=Math.sqrt(vn)*255|0;
   }
   return{vals,img,maxV,N,rm};
 }
@@ -1110,7 +974,7 @@ function computePhaseSlice(plane,tVal){
     if(plane==='xz'){x=u;z=-v;}
     else if(plane==='xy'){x=u;y=-v;}
     else{y=u;z=-v;}
-    const[re,im]=psiXYZ(comps,x,y,z,tVal);
+    const[re,im]=psiForPhase(x,y,z);
     const rho=re*re+im*im;
     const k=j*N+i;
     rhos[k]=rho;if(rho>maxRho)maxRho=rho;
@@ -1215,55 +1079,83 @@ let meanRcomputed=0;
 let volumeImageData=null;
 let volumeBuildPending=false;
 
+let voxelBasis;
 function buildVoxelGrid(){
-  // Adaptive resolution: ensure step ≤ 3 a₀ so radial nodes are resolved for all n.
-  // VRES³ × 3 floats: at 96 that's ~10 MB — well within budget.
   const rm=rMax();
-  VRES = Math.min(96, Math.max(52, Math.ceil(2*rm/3)+1));
-  const N=VRES;
-  voxelVals  =new Float32Array(N*N*N);
-  voxelPsi   =new Float32Array(N*N*N);
-  voxelImPsi =new Float32Array(N*N*N);
-  voxelMaxV=1e-30;
-  const step=2*rm/(N-1);
-  for(let i=0;i<N;i++){
-    const x=-rm+i*step;
-    for(let j=0;j<N;j++){
-      const y=-rm+j*step;
-      for(let k=0;k<N;k++){
-        const z=-rm+k*step;
-        const[re,im]=psiXYZ(comps,x,y,z,0);
-        const v=re*re+im*im;
-        const idx2=i*N*N+j*N+k;
-        voxelVals [idx2]=v;
-        voxelPsi  [idx2]=re;
-        voxelImPsi[idx2]=im;
-        if(v>voxelMaxV)voxelMaxV=v;
+  VRES=Math.min(96,Math.max(52,Math.ceil(2*rm/3)+1));
+  const N=VRES, size=N**3, step=2*rm/(N-1);
+  const evolving=densityEvolves();
+  const spin=spinEnabled&&spinComps.length>0;
+  const product=spin&&spinMode==='product'&&!SPIN_SUPERS[superKey];
+  const sampleTime=evolving?t:0;
+  if(evolving&&voxelBasis?.comps!==comps){
+    const fields=comps.map(()=>new Float32Array(size*2));
+    for(let i=0;i<N;i++)for(let j=0;j<N;j++)for(let k=0;k<N;k++){
+      const index=2*(i*N*N+j*N+k);
+      for(let c=0;c<comps.length;c++){
+        const [re,im]=psiXYZ([comps[c]],-rm+i*step,-rm+j*step,-rm+k*step,0);
+        fields[c][index]=re;
+        fields[c][index+1]=im;
       }
     }
+    voxelBasis={comps,fields};
+  }else if(!evolving) voxelBasis=null;
+
+  if(voxelVals?.length!==size){
+    voxelVals=new Float32Array(size);
+    voxelPsi=new Float32Array(size);
+    voxelImPsi=new Float32Array(size);
+  }
+  if(spin&&voxelRhoUp?.length!==size){
+    voxelRhoUp=new Float32Array(size);
+    voxelRhoDn=new Float32Array(size);
+  }else if(!spin){
+    voxelRhoUp=null;
+    voxelRhoDn=null;
+  }
+  // Relative to the first component: the global phase does not change |ψ|² and is not shown in Phase.
+  const phase=comps.map(c=>sampleTime/(2*c.n*c.n)-sampleTime/(2*comps[0].n**2));
+  const cosines=phase.map(Math.cos), sines=phase.map(Math.sin);
+  const upWeight=Math.cos(spinTheta/2)**2;
+  voxelMaxV=1e-30;
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++)for(let k=0;k<N;k++){
+    const index=i*N*N+j*N+k;
+    let re=0,im=0,density;
+    if(evolving){
+      for(let c=0;c<comps.length;c++){
+        const field=voxelBasis.fields[c];
+        re+=field[2*index]*cosines[c]-field[2*index+1]*sines[c];
+        im+=field[2*index]*sines[c]+field[2*index+1]*cosines[c];
+      }
+    }else if(!spin||product){
+      [re,im]=psiXYZ(comps,-rm+i*step,-rm+j*step,-rm+k*step,0);
+    }
+    density=re*re+im*im;
+    if(product){
+      voxelRhoUp[index]=density*upWeight;
+      voxelRhoDn[index]=density*(1-upWeight);
+    }else if(spin){
+      const [ur,ui,dr,di]=psiSpinor(spinComps,-rm+i*step,-rm+j*step,-rm+k*step,0);
+      const up=ur*ur+ui*ui, down=dr*dr+di*di;
+      voxelRhoUp[index]=up;
+      voxelRhoDn[index]=down;
+      density=up+down;
+    }
+    voxelVals[index]=density;
+    voxelPsi[index]=re;
+    voxelImPsi[index]=im;
+    voxelMaxV=Math.max(voxelMaxV,density);
   }
   meanRcomputed=computeMeanR(voxelVals,N,rm);
-  // ── Spin dual-channel voxels (only when spin is active) ────────────────────
-  if(spinEnabled&&spinComps.length){
-    voxelRhoUp=new Float32Array(N*N*N);
-    voxelRhoDn=new Float32Array(N*N*N);
-    for(let i=0;i<N;i++){const x=-rm+i*step;
-      for(let j=0;j<N;j++){const y=-rm+j*step;
-        for(let k=0;k<N;k++){const z=-rm+k*step;
-          const[ur,ui,dr,di]=psiSpinor(spinComps,x,y,z,0);
-          const ij=i*N*N+j*N+k;
-          voxelRhoUp[ij]=ur*ur+ui*ui;
-          voxelRhoDn[ij]=dr*dr+di*di;
-        }}}
-  }else{
-    voxelRhoUp=null;voxelRhoDn=null;
-  }
   volumeDirty=false;
-  projDirty=true; projVolCache=null;
+  lobeTexDirty=true;
+  volNeedsRedraw=true;
+  projDirty=true;
+  projVolCache=null;
 }
 
 // Trilinear interpolation into voxel grid
-function sampleVoxel(x,y,z){
+function sampleVoxel(x,y,z,values=voxelVals){
   const N=VRES,rm=rMax();
   const fi=(x+rm)/(2*rm)*(N-1);
   const fj=(y+rm)/(2*rm)*(N-1);
@@ -1273,10 +1165,10 @@ function sampleVoxel(x,y,z){
   const k0=Math.max(0,Math.min(N-2,fk|0));
   const tx=fi-i0,ty=fj-j0,tz=fk-k0;
   const idx=(i,j,k)=>i*N*N+j*N+k;
-  const v000=voxelVals[idx(i0,j0,k0)],  v100=voxelVals[idx(i0+1,j0,k0)];
-  const v010=voxelVals[idx(i0,j0+1,k0)],v110=voxelVals[idx(i0+1,j0+1,k0)];
-  const v001=voxelVals[idx(i0,j0,k0+1)],v101=voxelVals[idx(i0+1,j0,k0+1)];
-  const v011=voxelVals[idx(i0,j0+1,k0+1)],v111=voxelVals[idx(i0+1,j0+1,k0+1)];
+  const v000=values[idx(i0,j0,k0)],  v100=values[idx(i0+1,j0,k0)];
+  const v010=values[idx(i0,j0+1,k0)],v110=values[idx(i0+1,j0+1,k0)];
+  const v001=values[idx(i0,j0,k0+1)],v101=values[idx(i0+1,j0,k0+1)];
+  const v011=values[idx(i0,j0+1,k0+1)],v111=values[idx(i0+1,j0+1,k0+1)];
   return(1-tz)*((1-ty)*((1-tx)*v000+tx*v100)+ty*((1-tx)*v010+tx*v110))
         +tz*((1-ty)*((1-tx)*v001+tx*v101)+ty*((1-tx)*v011+tx*v111));
 }
@@ -1306,7 +1198,16 @@ function sampleVoxelReIm(x,y,z){
 // We render at half resolution and upscale for speed
 let cachedVolCanvas=null;
 
-function renderVolume(cam){
+function sampledSpinColor(x,y,z,density){
+  const weight=Math.max(0,Math.min(1,sampleVoxel(x,y,z,voxelRhoUp)/density));
+  return [
+    spinDnColor.r+(spinUpColor.r-spinDnColor.r)*weight,
+    spinDnColor.g+(spinUpColor.g-spinDnColor.g)*weight,
+    spinDnColor.b+(spinUpColor.b-spinDnColor.b)*weight,
+  ];
+}
+
+function renderVolume(cam,preview=false){
   // proj() maps world point P to screen as:
   //   sx = W/2 + dot(P, right) * sc
   //   sy = H/2 - dot(P, up)   * sc
@@ -1318,14 +1219,17 @@ function renderVolume(cam){
   //   Ray origin = that offset - forward*bigDist  (behind the scene)
   //   Ray direction = +forward  (pointing toward and through the scene)
 
-  const scale=2; // render at half res, upscale
+  const scale=preview?5:2;
   const rw=Math.ceil(W/scale), rh=Math.ceil(H/scale);
   const img=new ImageData(rw,rh);
   const rm=rMax();
   const sc=Math.min(W,H)*0.47/rMax()*camDist; // same scale as proj()
   const bigDist=rm*3.0;
   // Scale step count so each step ≈ 2.5 a₀ — enough to resolve radial nodes at all n
-  const STEPS=Math.min(220,Math.max(90,Math.ceil(bigDist*2/2.5)));
+  const STEPS=preview?60:Math.min(220,Math.max(90,Math.ceil(bigDist*2/2.5)));
+  // Evolving grids already contain the time-dependent phases.
+  const angle=0;   // global phase removed: stationary grids at t = 0, evolving ones relative to component 1
+  const cs=Math.cos(angle),sn=Math.sin(angle);
   const stepSize=(bigDist*2)/STEPS;
   // Per-step base opacity: normalise so that integrated look is independent of STEPS.
   // Calibrated at STEPS=90 → baseDens=0.30; scales as 90/STEPS for larger step counts.
@@ -1353,21 +1257,14 @@ function renderVolume(cam){
         if(Math.abs(wx)>rm||Math.abs(wy)>rm||Math.abs(wz)>rm) continue;
         const raw=sampleVoxel(wx,wy,wz);
         if(raw<1e-30) continue;
-        const v=Math.pow(raw/voxelMaxV,0.42); // gamma: matches slice/projection renderers
+        const v=Math.pow(raw/voxelMaxV,DENS_GAMMA); // same exponent as slices/projections
         if(v<0.008+isoOp*0.65) continue;      // isoOp=0: show all; isoOp=1: show top ~35%
         let cr,cg,cb,ca;
-        if(showPhase){
-          // For phase coloring, derive time-evolved Re/Im from cached t=0 values:
-          // pure state: rotate by −E·t; superposition: call psiXYZ directly (shape also changes).
-          let rp,ip;
-          if(superKey==='none'){
-            const[re0,im0]=sampleVoxelReIm(wx,wy,wz);
-            const En=-0.5/(ORBITALS[orbIdx].n*ORBITALS[orbIdx].n);
-            const cs=Math.cos(-En*t),sn=Math.sin(-En*t);
-            rp=cs*re0-sn*im0; ip=sn*re0+cs*im0;
-          }else{
-            [rp,ip]=psiXYZ(comps,wx,wy,wz,t);
-          }
+        if(spinEnabled&&voxelRhoUp){
+          [cr,cg,cb]=sampledSpinColor(wx,wy,wz,raw);ca=v;
+        }else if(showPhase){
+          const[re,im]=sampleVoxelReIm(wx,wy,wz);
+          const rp=cs*re-sn*im,ip=sn*re+cs*im;
           const ph=Math.atan2(ip,rp);
           const hue=((ph/(2*Math.PI))%1+1)%1;
           const bri=Math.pow(raw/voxelMaxV,0.14);
@@ -1408,66 +1305,9 @@ function blitVolume(){
 // ════════════════════════════════════════════════════════════════
 //  WEBGL2 LOBE RENDERER — GPU ray-march, full resolution, real-time
 // ════════════════════════════════════════════════════════════════
-function showGpuFallbackNotice() {
-  const sidebar = document.getElementById('sidebar');
-  if (!sidebar || document.getElementById('gpuFallbackNotice')) return;
-
-  const notice = document.createElement('div');
-  notice.id = 'gpuFallbackNotice';
-  notice.style.cssText = [
-    'margin:0 0 10px 0',
-    'padding:10px 11px',
-    'border:1px solid rgba(245,158,11,0.55)',
-    'border-radius:10px',
-    'background:rgba(120,53,15,0.22)',
-    'color:#f8e7c4',
-    'font-size:12px',
-    'line-height:1.4'
-  ].join(';');
-
-  notice.innerHTML = `
-    <b>GPU warning:</b> WebGL2 is unavailable in this browser session, so the
-    hydrogen atom app is using the CPU lobe renderer.
-    <div style="margin-top:6px;opacity:.95">
-      If this should be GPU-accelerated, try enabling hardware acceleration,
-      open the page in Edge, reset Chrome graphics/WebGL flags, or test with a
-      clean browser profile.
-    </div>
-  `;
-
-  showGpuStatusBanner('GPU unavailable', 'WebGL2 is unavailable in this browser session, so hydrogen atom is using the CPU renderer.');
-  sidebar.prepend(notice);
-}
-
-function showGpuSoftwareRendererNotice(rendererInfo) {
-  const sidebar = document.getElementById('sidebar');
-  if (!sidebar || document.getElementById('gpuFallbackNotice')) return;
-
-  const notice = document.createElement('div');
-  notice.id = 'gpuFallbackNotice';
-  notice.style.cssText = [
-    'margin:0 0 10px 0',
-    'padding:10px 11px',
-    'border:1px solid rgba(245,158,11,0.55)',
-    'border-radius:10px',
-    'background:rgba(120,53,15,0.22)',
-    'color:#f8e7c4',
-    'font-size:12px',
-    'line-height:1.4'
-  ].join(';');
-
-  notice.innerHTML = `
-    <b>GPU warning:</b> WebGL2 is available, but this browser is using a software
-    renderer (${rendererInfo}), so hydrogen atom may run very slowly.
-    <div style="margin-top:6px;opacity:.95">
-      If this should use the GPU, try enabling hardware acceleration, open the
-      page in Edge, reset Chrome graphics/WebGL flags, or test with a clean
-      browser profile.
-    </div>
-  `;
-
-  showGpuStatusBanner('GPU software fallback', `WebGL2 is available, but this browser is using a software renderer (${rendererInfo}), so hydrogen atom is switching to the CPU renderer and may run very slowly.`);
-  sidebar.prepend(notice);
+function showGpuFallbackNotice(){
+  preferSliceFallback=true;
+  showGpuStatusBanner('Software graphics', 'Volume and Lobes run at reduced resolution here and can be slow; Slices and Cloud are fast.');
 }
 
 function showGpuStatusBanner(title, message) {
@@ -1502,8 +1342,8 @@ function initLobeGL(){
   const rendererInfo = detectWebGl2Renderer(gl2);
   if (!rendererInfo.hasDebugInfo || isSoftwareRenderer(rendererInfo.text)) {
     console.warn('WebGL2 software or unverified renderer detected:', rendererInfo.text);
-    showGpuSoftwareRendererNotice(rendererInfo.text);
-    preferSliceFallback=true;
+    glScale=0.3; sizeGLCanvas();
+    showGpuFallbackNotice();
   }
 
   const vsrc=`#version 300 es
@@ -1529,6 +1369,7 @@ uniform float u_densOp;  // opacity multiplier passed from JS densOp
 uniform float u_isoOp;   // fog-clip threshold passed from JS isoOp
 // Spin dual-channel uniforms (u_spinMode=0 → original behaviour unchanged)
 uniform float u_spinMode;    // 0=no spin  1=dual channel
+uniform float u_sign;        // 1: ψ is real up to a global phase, colour lobes by sign
 uniform vec3  u_spinUpCol;   // ↑ channel colour [0,1]
 uniform vec3  u_spinDnCol;   // ↓ channel colour [0,1]
 out vec4 outColor;
@@ -1541,7 +1382,8 @@ vec3 hsv2rgb(float h,float s,float v){
 float sDens(vec3 p){
   vec3 uv=p/(2.0*u_rm)+0.5;
   if(any(lessThan(uv,vec3(0.0)))||any(greaterThan(uv,vec3(1.0))))return 0.0;
-  return texture(u_vol,uv).r;
+  float e=texture(u_vol,uv).r;   // stored as (ρ/ρmax)^(1/4)
+  return e*e*e*e;
 }
 // A channel holds ρ↑/(ρ↑+ρ↓) quantised to [0,1] when spin is enabled
 float sSpinW(vec3 p){
@@ -1578,7 +1420,7 @@ void main(){
       vec3 p=ro+rd*float(i)*vss;
       if(any(greaterThan(abs(p),vec3(u_rm)))) continue;
       float raw=sDens(p);
-      float v=pow(raw,0.42);
+      float v=pow(raw,0.25);   // = DENS_GAMMA in JS
       if(v<fogClip) continue;
       float sa=v*baseDens*(1.0-acc.a);
       vec3 col;
@@ -1608,7 +1450,7 @@ void main(){
       vec3 p=ro+rd*float(i)*vss;
       if(any(greaterThan(abs(p),vec3(u_rm)))) continue;
       float raw=sDens(p);
-      float v=pow(raw,0.42);
+      float v=pow(raw,0.25);   // = DENS_GAMMA in JS
       if(v<fogClip) continue;
       vec2 ri=sReIm(p);
       ri=vec2(cs*ri.x-sn*ri.y,sn*ri.x+cs*ri.y);
@@ -1660,13 +1502,15 @@ void main(){
     ri=vec2(cs*ri.x-sn*ri.y, sn*ri.x+cs*ri.y);
     float hue=fract(atan(ri.y,ri.x)/(2.0*3.14159265));
     base=texture(u_phaseTex,vec2(hue,0.5)).rgb;
+  }else if(u_spinMode>0.5){
+    base=mix(u_spinDnCol,u_spinUpCol,sSpinW(hp));
   }else{
     vec2 ri=sReIm(hp);
     // Still apply time rotation so sign coloring is consistent with evolving phase
     float angle=-u_en*u_t;
     float cs=cos(angle),sn=sin(angle);
     ri=vec2(cs*ri.x-sn*ri.y, sn*ri.x+cs*ri.y);
-    base=ri.x>=0.0?vec3(0.883,0.431,0.078):vec3(0.275,0.353,0.863);
+    base=(u_sign<0.5||ri.x>=0.0)?vec3(0.883,0.431,0.078):vec3(0.275,0.353,0.863);
   }
   outColor=vec4(clamp(base*light+spec*vec3(1.0,0.86,0.86),0.0,1.0),1.0);
 }`;
@@ -1697,7 +1541,7 @@ void main(){
   gl2.bindVertexArray(null);
 
   // Uniform locations
-  ['u_vol','u_res','u_thresh','u_sc','u_rm','u_cf','u_cr','u_cu','u_phase','u_t','u_en','u_volmode','u_phaseTex','u_densTex','u_densOp','u_isoOp','u_spinMode','u_spinUpCol','u_spinDnCol']
+  ['u_vol','u_res','u_thresh','u_sc','u_rm','u_cf','u_cr','u_cu','u_phase','u_t','u_en','u_volmode','u_phaseTex','u_densTex','u_densOp','u_isoOp','u_spinMode','u_sign','u_spinUpCol','u_spinDnCol']
     .forEach(n=>{lobeUnif[n]=gl2.getUniformLocation(lobeProg,n);});
 
   // Create RGBA8 3D texture (R=density, G=Re(ψ) in [0,1], B=Im(ψ) in [0,1]).
@@ -1736,7 +1580,7 @@ function uploadLobeTex(){
       for(let kz=0;kz<N;kz++){
         const volFlat=ix*N*N+jy*N+kz;
         const texFlat=ix+jy*N+kz*N*N;
-        packed[texFlat*4  ]=(voxelVals[volFlat]*invMax*255+0.5)|0; // R = density
+        packed[texFlat*4  ]=(Math.pow(voxelVals[volFlat]*invMax,0.25)*255+0.5)|0; // R = (ρ/ρmax)^¼, so faint shells survive 8 bits
         packed[texFlat*4+1]=((voxelPsi  [volFlat]*invAbs+1)*0.5*255+0.5)|0; // G = Re mapped [0,1]
         packed[texFlat*4+2]=((voxelImPsi[volFlat]*invAbs+1)*0.5*255+0.5)|0; // B = Im mapped [0,1]
               // A channel: spin-↑ fraction when spin enabled, 255 otherwise
@@ -1784,7 +1628,8 @@ function renderLobesGL(cam, volmode=0){
   const sc=Math.min(W,H)*0.47/rm*camDist;
   const thresh=lobeThresh;
 
-  gl2.viewport(0,0,W,H);
+  const gw=lobeGLCanvas.width, gh=lobeGLCanvas.height;
+  gl2.viewport(0,0,gw,gh);
   gl2.clearColor(0,0,0,0);
   gl2.clear(gl2.COLOR_BUFFER_BIT);
   gl2.useProgram(lobeProg);
@@ -1801,9 +1646,9 @@ function renderLobesGL(cam, volmode=0){
   gl2.bindTexture(gl2.TEXTURE_2D,densPalTex);
   gl2.uniform1i(lobeUnif['u_densTex'],2);
 
-  gl2.uniform2f(lobeUnif['u_res'],W,H);
+  gl2.uniform2f(lobeUnif['u_res'],gw,gh);
   gl2.uniform1f(lobeUnif['u_thresh'],thresh);
-  gl2.uniform1f(lobeUnif['u_sc'],sc);
+  gl2.uniform1f(lobeUnif['u_sc'],sc*gw/Math.max(1,W));
   gl2.uniform1f(lobeUnif['u_rm'],rm);
   gl2.uniform3f(lobeUnif['u_cf'],cam.fx,cam.fy,cam.fz);
   gl2.uniform3f(lobeUnif['u_cr'],cam.rx,cam.ry,cam.rz);
@@ -1812,11 +1657,12 @@ function renderLobesGL(cam, volmode=0){
   gl2.uniform1f(lobeUnif['u_volmode'],volmode);
   gl2.uniform1f(lobeUnif['u_densOp'],densOp);
   gl2.uniform1f(lobeUnif['u_isoOp'],isoOp);
-  const pureEn=(superKey==='none')?(-0.5/(ORBITALS[orbIdx].n*ORBITALS[orbIdx].n)):0.0;
+  const pureEn=0;   // global phase e^{−iEt} not shown (see psiForPhase)
   gl2.uniform1f(lobeUnif['u_t'],t);
   gl2.uniform1f(lobeUnif['u_en'],pureEn);
   // Spin uniforms
   gl2.uniform1f(lobeUnif['u_spinMode'],(spinEnabled&&spinComps.length&&!showPhase)?1.0:0.0);
+  gl2.uniform1f(lobeUnif['u_sign'],psiRealUpToPhase()?1.0:0.0);
   gl2.uniform3f(lobeUnif['u_spinUpCol'],spinUpColor.r/255,spinUpColor.g/255,spinUpColor.b/255);
   gl2.uniform3f(lobeUnif['u_spinDnCol'],spinDnColor.r/255,spinDnColor.g/255,spinDnColor.b/255);
 
@@ -1893,17 +1739,19 @@ function renderLobes(cam, preview=false){
       const spec=Math.pow(Math.max(0,rx2*cam.fx+ry2*cam.fy+rz2*cam.fz),40);
       const light=0.10+0.72*dotK+0.15*dotF+0.65*spec;
 
-      // Color: phase domain coloring when showPhase, else sign-based amber/blue
+      // Use the same color quantities as the WebGL2 renderer.
       let cr,cg,cb;
-      if(showPhase){
-        const[rp,ip]=psiXYZ(comps,hx,hy,hz,t); // t not 0 — full time-dependent phase
+      if(spinEnabled&&voxelRhoUp){
+        [cr,cg,cb]=sampledSpinColor(hx,hy,hz,thresh);
+      }else if(showPhase){
+        const[rp,ip]=psiForPhase(hx,hy,hz);
         const ph=Math.atan2(ip,rp);
         const hue=((ph/(2*Math.PI))%1+1)%1;
         [cr,cg,cb]=phaseColorCpu(hue,1.0);
         cr=Math.round(cr);cg=Math.round(cg);cb=Math.round(cb);
       }else{
         const[pRe]=psiXYZ(comps,hx,hy,hz,0);
-        [cr,cg,cb]=pRe>=0?[225,110,20]:[70,90,220];
+        [cr,cg,cb]=(!psiRealUpToPhase()||pRe>=0)?[225,110,20]:[70,90,220];
       }
       img.data[pidx  ]=Math.min(255,cr*light+spec*255)|0;
       img.data[pidx+1]=Math.min(255,cg*light+spec*220)|0;
@@ -1920,134 +1768,73 @@ function renderLobes(cam, preview=false){
 // ════════════════════════════════════════════════════════════════
 //  MAIN LOOP
 // ════════════════════════════════════════════════════════════════
-function integrate(){
-  const dt=dtStep*simSpeed*BASE_SPEED;t+=dt;
+// Advance one particle along the guidance field from time `start` by `dt`.
+function stepParticle(p,start,dt,maxStep=Math.min(dtStep,0.05)){
+  const spin=spinEnabled&&spinComps.length>0;
+  const isSingleOrbital=comps.length===1;
+  if(spin&&spinTerm&&isSingleOrbital&&spinMode==='product'&&comps[0].n===1&&comps[0].l===0){
+    // 1s ⊗ |n̂⟩: exact rotation about n̂ with angular speed 1/r (v = n̂ × r̂).
+    const {upRe,upIm,dnRe,dnIm}=spinComps[0];
+    const axis=[2*(upRe*dnRe+upIm*dnIm),2*(upRe*dnIm-upIm*dnRe),upRe**2+upIm**2-dnRe**2-dnIm**2];
+    const x=p.x,y=p.y,z=p.z, r=Math.hypot(x,y,z);
+    if(r>0){
+      const [nx,ny,nz]=axis;
+      const ca=Math.cos(dt/r), sa=Math.sin(dt/r), dot=(nx*x+ny*y+nz*z)*(1-ca);
+      p.x=x*ca+(ny*z-nz*y)*sa+nx*dot;
+      p.y=y*ca+(nz*x-nx*z)*sa+ny*dot;
+      p.z=z*ca+(nx*y-ny*x)*sa+nz*dot;
+    }
+    return;
+  }
+  if(!spin&&isSingleOrbital){
+    // Scalar eigenstate: exact rotation about z with v_φ = m/ρ.
+    const radiusSquared=p.x*p.x+p.y*p.y;
+    if(radiusSquared>1e-14&&comps[0].m!==0) rotateAroundZ(p,comps[0].m*dt/radiusSquared);
+    return;
+  }
+  const stepCount=Math.max(1,Math.ceil(dt/maxStep));
+  const step=dt/stepCount;
+  for(let i=0;i<stepCount;i++){
+    const ti=start+i*step;
+    const a=bohmV(comps,p.x,p.y,p.z,ti);
+    const b=bohmV(comps,p.x+step*a[0]/2,p.y+step*a[1]/2,p.z+step*a[2]/2,ti+step/2);
+    const c=bohmV(comps,p.x+step*b[0]/2,p.y+step*b[1]/2,p.z+step*b[2]/2,ti+step/2);
+    const d=bohmV(comps,p.x+step*c[0],p.y+step*c[1],p.z+step*c[2],ti+step);
+    p.x+=step*(a[0]+2*b[0]+2*c[0]+d[0])/6;
+    p.y+=step*(a[1]+2*b[1]+2*c[1]+d[1])/6;
+    p.z+=step*(a[2]+2*b[2]+2*c[2]+d[2])/6;
+  }
+}
+
+function integrate(dt){
+  const start=t;
+  t+=dt;
+  if(densityEvolves()) invalidateDensity();
   if(showCloud){
-    // Cloud mode: fast Euler grid step for all particles (no trails)
-    stepCloudParticles();
-  }else{
-    // Trail mode — exact integrators where possible, sub-stepped RK4 otherwise.
-    const rmSq=(rMax()*1.4)**2;
-
-    if(spinEnabled&&spinComps.length){
-      // ── 1s + spin: exact Rodrigues rotation (radius conserved by construction) ──
-      const is1s=comps.length===1&&comps[0].n===1&&comps[0].l===0;
-      if(is1s){
-        let nax,nay,naz;
-        if(spinMode==='product'){
-          nax=Math.sin(spinTheta)*Math.cos(spinPhi);
-          nay=Math.sin(spinTheta)*Math.sin(spinPhi);
-          naz=Math.cos(spinTheta);
-        }else{
-          const sg=spinComps[0].upRe>0.5?1:-1;
-          nax=0;nay=0;naz=sg;
-        }
-        for(const p of particles){
-          if(isNaN(p.x)||p.x*p.x+p.y*p.y+p.z*p.z>rmSq){respawn(p);continue;}
-          const pr=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
-          if(pr<0.15) continue;
-          const ang=dt/pr,cosA=Math.cos(ang),sinA=Math.sin(ang),ocA=1-cosA;
-          const dotN=nax*p.x+nay*p.y+naz*p.z;
-          const cpx=nay*p.z-naz*p.y,cpy=naz*p.x-nax*p.z,cpz=nax*p.y-nay*p.x;
-          const nx=p.x*cosA+cpx*sinA+nax*dotN*ocA;
-          const ny=p.y*cosA+cpy*sinA+nay*dotN*ocA;
-          const nz=p.z*cosA+cpz*sinA+naz*dotN*ocA;
-          p.trail.push([p.x,p.y,p.z]);
-          if(p.trail.length>trailLen)p.trail.shift();
-          p.x=nx;p.y=ny;p.z=nz;p.age++;
-        }
-      }else{
-        // General spin eigenstate / superposition: sub-stepped exact azimuthal
-        // rotation for pure m≠0 j-eigenstates (single spinor component, azimuthal
-        // velocity only), or sub-stepped RK2 midpoint for everything else.
-        // The azimuthal-exact path mirrors the no-spin eigenstate path and is
-        // drift-free at any speed.
-        const isSingleComp = spinComps.length===1;
-        const sc0 = spinComps[0];
-        // A pure j-state with a single spinor component has only one orbital (m value).
-        // Its Bohmian velocity is v = Im(∇ψ/ψ) = m/(r sinθ) in φ̂, i.e. purely azimuthal.
-        // We can integrate exactly the same way as the no-spin m≠0 eigenstate.
-        const isPureAzimuthal = isSingleComp &&
-          (sc0.upRe*sc0.upRe+sc0.upIm*sc0.upIm > 0.99 ||
-           sc0.dnRe*sc0.dnRe+sc0.dnIm*sc0.dnIm > 0.99);
-        const mSpin = isSingleComp ? sc0.m : 0;
-
-        if(isPureAzimuthal && mSpin !== 0){
-          for(const p of particles){
-            if(isNaN(p.x)||p.x*p.x+p.y*p.y+p.z*p.z>rmSq){respawn(p);continue;}
-            const rho2=p.x*p.x+p.y*p.y;
-            if(rho2<1e-14) continue;
-            const dphi=mSpin*dt/rho2;
-            const cv=Math.cos(dphi),sv=Math.sin(dphi);
-            const nx=p.x*cv-p.y*sv,ny=p.x*sv+p.y*cv,nz=p.z;
-            p.trail.push([p.x,p.y,p.z]);
-            if(p.trail.length>trailLen)p.trail.shift();
-            p.x=nx;p.y=ny;p.z=nz;p.age++;
-          }
-        }else{
-          // General spin (mixed j-states, superpositions): sub-stepped RK2 midpoint.
-          // dtSub=0.05 keeps ω·dtSub < 0.5 even at r=0.15 (ω≈6.7).
-          // No cap on nSub — correctness at any speed takes priority.
-          const DT_SUB=0.05;
-          const nSub=Math.max(1,Math.ceil(Math.abs(dt)/DT_SUB));
-          const dtSub=dt/nSub;
-          for(const p of particles){
-            if(isNaN(p.x)||p.x*p.x+p.y*p.y+p.z*p.z>rmSq){respawn(p);continue;}
-            let px=p.x,py=p.y,pz=p.z,escaped=false;
-            for(let sub=0;sub<nSub;sub++){
-              const[k1x,k1y,k1z]=bohmVPauli(spinComps,px,py,pz,t);
-              const mx=px+0.5*dtSub*k1x,my=py+0.5*dtSub*k1y,mz=pz+0.5*dtSub*k1z;
-              const[k2x,k2y,k2z]=bohmVPauli(spinComps,mx,my,mz,t);
-              px+=dtSub*k2x;py+=dtSub*k2y;pz+=dtSub*k2z;
-              if(px*px+py*py+pz*pz>rmSq){escaped=true;break;}
-            }
-            if(escaped||isNaN(px)){respawn(p);continue;}
-            p.trail.push([p.x,p.y,p.z]);
-            if(p.trail.length>trailLen)p.trail.shift();
-            p.x=px;p.y=py;p.z=pz;p.age++;
-          }
-        }
-      }
-    }else{
-      // Spinless trail integration
-      const isEigenstate=comps.length===1;
-      for(const p of particles){
-        const{x,y,z}=p;
-        let nx,ny,nz;
-
-        if(isEigenstate&&comps[0].m!==0){
-          // Pure m≠0 eigenstate: exact azimuthal rotation (ρ_cyl conserved exactly).
-          const rho2=x*x+y*y;
-          if(rho2<1e-14){respawn(p);continue;}
-          const dphi=comps[0].m*dt/rho2;
-          const cv=Math.cos(dphi),sv=Math.sin(dphi);
-          nx=x*cv-y*sv;ny=x*sv+y*cv;nz=z;
-        }else{
-          // General superposition or m=0: standard RK4
-          const[k1x,k1y,k1z]=bohmV(comps,x,y,z,t);
-          const[k2x,k2y,k2z]=bohmV(comps,x+.5*dt*k1x,y+.5*dt*k1y,z+.5*dt*k1z,t+.5*dt);
-          const[k3x,k3y,k3z]=bohmV(comps,x+.5*dt*k2x,y+.5*dt*k2y,z+.5*dt*k2z,t+.5*dt);
-          const[k4x,k4y,k4z]=bohmV(comps,x+dt*k3x,y+dt*k3y,z+dt*k3z,t+dt);
-          nx=x+dt*(k1x+2*k2x+2*k3x+k4x)/6;
-          ny=y+dt*(k1y+2*k2y+2*k3y+k4y)/6;
-          nz=z+dt*(k1z+2*k2z+2*k3z+k4z)/6;
-        }
-
-        if(isNaN(nx)||nx*nx+ny*ny+nz*nz>rmSq){respawn(p);continue;}
-        p.trail.push([p.x,p.y,p.z]);
-        if(p.trail.length>trailLen)p.trail.shift();
-        p.x=nx;p.y=ny;p.z=nz;p.age++;
-      }
+    stepCloudParticles(dt,start);
+    return;
+  }
+  const radiusLimit=(rMax()*1.4)**2;
+  // Keep the total number of drawn trail segments roughly constant as atoms are added.
+  const trailCap=Math.max(40,Math.round(trailLen*10/Math.max(10,particles.length)));
+  for(const p of particles){
+    const previous=[p.x,p.y,p.z];
+    stepParticle(p,start,dt);
+    if(!Number.isFinite(p.x+p.y+p.z)||p.x*p.x+p.y*p.y+p.z*p.z>radiusLimit){
+      const replacement=sampleParticles(1,t)[0];
+      Object.assign(p,replacement??{x:previous[0],y:previous[1],z:previous[2],trail:[]});
+      continue;
+    }
+    if(p.x!==previous[0]||p.y!==previous[1]||p.z!==previous[2]){
+      p.trail.push(previous);
+      if(p.trail.length>trailCap) p.trail.splice(0,p.trail.length-trailCap);
+      p.age++;
     }
   }
 }
 
-function respawn(p){
-  const ns=sampleParticles(1);
-  if(ns.length){p.x=ns[0].x;p.y=ns[0].y;p.z=ns[0].z;}p.trail=[];
-}
-
 let volNeedsRedraw=true;
+let lastCpuPhaseDraw=-Infinity;
 let lastCamTheta=null,lastCamPhi=null,lastCamDist=null;
 
 function renderFrame(){
@@ -2055,12 +1842,14 @@ function renderFrame(){
   ctx.fillStyle=lightTheme?'#f0f4ff':'#04070f';ctx.fillRect(0,0,W,H);
   const cam=getCam();
   const rm=rMax();
+  const animateCpuPhase=!gl2Ready&&showPhase&&running;
+  const now=animateCpuPhase?performance.now():0;
+  const cpuPhaseDue=animateCpuPhase&&now-lastCpuPhaseDraw>=1000/15;
 
   // Lobes rendering — GPU path every frame, no caching needed
   if(showLobes&&!showCloud){
     if(volumeDirty||!voxelVals){
       buildVoxelGrid();
-      updateVerification();
       volumeDirty=false;
       lobeTexDirty=true;
       cachedVolCanvas=null;
@@ -2073,16 +1862,19 @@ function renderFrame(){
       const camMoved=(camTheta!==lastCamTheta||camPhi!==lastCamPhi||camDist!==lastCamDist);
       if(camMoved){lastCamTheta=camTheta;lastCamPhi=camPhi;lastCamDist=camDist;}
       if(dragging&&camMoved){ renderLobes(cam,true); }
-      else if(!cachedVolCanvas||volNeedsRedraw||(!dragging&&camMoved)){ renderLobes(cam,false); volNeedsRedraw=false; }
+      else if(!cachedVolCanvas||volNeedsRedraw||camMoved||cpuPhaseDue){
+        renderLobes(cam,animateCpuPhase);
+        if(animateCpuPhase) lastCpuPhaseDraw=now;
+        volNeedsRedraw=false;
+      }
     }
     blitVolume();
   }
 
-  // Volume — always GPU (real-time rotation every frame, no caching needed)
+  // Volume rendering uses WebGL2 when available.
   if(showVol&&!showCloud){
     if(volumeDirty||!voxelVals){
       buildVoxelGrid();
-      updateVerification();
       volumeDirty=false;
       cachedVolCanvas=null;
       lobeTexDirty=true;
@@ -2096,8 +1888,12 @@ function renderFrame(){
       // CPU fallback for no-WebGL2 browsers — only rerenders after drag ends
       const camMoved=(camTheta!==lastCamTheta||camPhi!==lastCamPhi||camDist!==lastCamDist);
       if(camMoved){lastCamTheta=camTheta;lastCamPhi=camPhi;lastCamDist=camDist;}
-      const needsRender=!cachedVolCanvas||volNeedsRedraw||(camMoved&&!dragging);
-      if(needsRender&&!dragging){renderVolume(cam);volNeedsRedraw=false;}
+      const needsRender=!cachedVolCanvas||volNeedsRedraw||camMoved||cpuPhaseDue;
+      if(needsRender&&!dragging){
+        renderVolume(cam,animateCpuPhase);
+        if(animateCpuPhase) lastCpuPhaseDraw=now;
+        volNeedsRedraw=false;
+      }
       blitVolume();
     }
   }
@@ -2106,7 +1902,7 @@ function renderFrame(){
   // When showPhase is also on, phase-colored slices are shown; otherwise density slices.
   // If only showPhase is on (no showSlice), phase coloring is handled by the 3D volume/lobe renderers above.
   if(showSlice){
-    if(sliceDirty||!sliceData.xz) buildSlices(); // density vals needed for isocontours either way
+    if(sliceDirty) buildSlices(); // density vals needed for isocontours either way
     if(showPhase) buildPhaseSlices(t);
     const normals={xz:[0,1,0],xy:[0,0,1],yz:[1,0,0]};
     let active=slicePlane==='all'?['xz','xy','yz']:[slicePlane];
@@ -2127,29 +1923,39 @@ function renderFrame(){
     renderCloudCanvas(cam);
   }else{
     const rm2=rMax();
-    const sorted=particles.map(p=>{const[sx,sy,d]=proj(p.x,p.y,p.z,cam);return{p,sx,sy,d};}).sort((a,b)=>a.d-b.d);
-    for(const{p,sx,sy,d}of sorted){
+    // On the light background the bright presets wash out: darken dots and trails.
+    const pc=lightTheme?{r:ptColor.r*0.55|0,g:ptColor.g*0.55|0,b:ptColor.b*0.55|0}:ptColor;
+    const trailLight=lightTheme?30:65;
+    const sorted=(interp==='pw'?particles:[]).map(p=>{const[sx,sy,d]=proj(p.x,p.y,p.z,cam);return{p,sx,sy,d};}).sort((a,b)=>a.d-b.d);
+    // 1. All trails first, so no trail is drawn over an electron.
+    for(const{p}of sorted){
       const tl=p.trail.length;
       if(tl>=2)for(let i=1;i<tl;i++){
         const[ax,ay]=proj(p.trail[i-1][0],p.trail[i-1][1],p.trail[i-1][2],cam);
         const[bx,by]=proj(p.trail[i][0],p.trail[i][1],p.trail[i][2],cam);
         const f=i/tl;
         ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);
-        ctx.strokeStyle=`hsla(${ptColor.hue},90%,65%,${(Math.pow(f,1.3)*0.72).toFixed(3)})`;
-        ctx.lineWidth=0.6+f*0.9;ctx.stroke();
+        ctx.strokeStyle=`hsla(${ptColor.hue},90%,${trailLight}%,${(Math.pow(f,1.3)*(lightTheme?0.9:0.72)).toFixed(3)})`;
+        ctx.lineWidth=(lightTheme?1:0.6)+f*(lightTheme?1.2:0.9);ctx.stroke();
       }
-      const df=Math.max(0.3,Math.min(1,(d+rm2)/(2*rm2)));
-      const g2=ctx.createRadialGradient(sx,sy,0,sx,sy,ptSize*2.8);
-      g2.addColorStop(0,`rgba(${ptColor.r},${ptColor.g},${ptColor.b},${df.toFixed(3)})`);
-      g2.addColorStop(0.5,`rgba(${ptColor.r>>1},${ptColor.g>>1},${ptColor.b>>1},${(df*0.4).toFixed(3)})`);
-      g2.addColorStop(1,`rgba(${ptColor.r>>2},${ptColor.g>>2},${ptColor.b>>2},0)`);
-      ctx.beginPath();ctx.arc(sx,sy,ptSize*(0.4+df*0.6),0,Math.PI*2);ctx.fillStyle=g2;ctx.fill();
     }
-    // Nucleus on top
+    // 2. Nucleus.
     const[nx2,ny2]=proj(0,0,0,cam);
     const ng=ctx.createRadialGradient(nx2,ny2,0,nx2,ny2,12);
     ng.addColorStop(0,'rgba(255,140,60,1)');ng.addColorStop(0.4,'rgba(255,60,20,.6)');ng.addColorStop(1,'rgba(255,30,0,0)');
     ctx.beginPath();ctx.arc(nx2,ny2,12,0,Math.PI*2);ctx.fillStyle=ng;ctx.fill();
+    // 3. Electrons on top: small shaded spheres in a colour that differs from the trails.
+    const ec=electronColor();
+    for(const{sx,sy,d}of sorted){
+      const df=Math.max(0.55,Math.min(1,(d+rm2)/(2*rm2)));   // nearer electrons slightly larger
+      const R=ptSize*(1.1+0.5*df);
+      const g2=ctx.createRadialGradient(sx-R*0.35,sy-R*0.35,0,sx,sy,R);
+      g2.addColorStop(0,'rgba(255,255,255,0.95)');
+      g2.addColorStop(0.35,`rgb(${ec.r},${ec.g},${ec.b})`);
+      g2.addColorStop(1,`rgb(${ec.r*0.45|0},${ec.g*0.45|0},${ec.b*0.45|0})`);
+      ctx.beginPath();ctx.arc(sx,sy,R,0,Math.PI*2);ctx.fillStyle=g2;ctx.fill();
+      ctx.lineWidth=0.8;ctx.strokeStyle=lightTheme?'rgba(30,30,40,0.7)':'rgba(0,0,0,0.6)';ctx.stroke();
+    }
   }
 
   // Axes
@@ -2159,17 +1965,31 @@ function renderFrame(){
   if(showInset) drawRadialInset();
   if(showProjections) drawProjectionPanels();
 
-  // Stats
+  // Diagnostics are optional and use the same clock as the displayed state.
+  if(expertMode){
+    if(volumeDirty) buildVoxelGrid();
+    updateVerification();
+  }
   const o=ORBITALS[orbIdx];
   if(superKey!=='none'&&comps.length){
     // ⟨E⟩ = Σ |c_i|² E_i  (eigenstates are orthogonal → no cross terms)
     const Eavg=comps.reduce((s,c)=>(c.cRe*c.cRe+c.cIm*c.cIm)*(-13.6/(c.n*c.n))+s,0);
     document.getElementById('stE').textContent=Eavg.toFixed(2)+' eV';
+    document.getElementById('stELabel').textContent=comps.some(c=>c.n!==comps[0].n)?'⟨E⟩ (mean energy)':'Energy';
   } else {
+    document.getElementById('stELabel').textContent='Energy';
     document.getElementById('stE').textContent=(-13.6/(o.n*o.n)).toFixed(2)+' eV';
   }
-  document.getElementById('stN').textContent=particles.length;
-  document.getElementById('stT').textContent=t.toFixed(1)+' a.u.';
+  document.getElementById('stNLM').textContent=comps.map(c=>`${c.n}, ${c.l}, ${fmtM(c.m)}`).join(' + ');
+  // Mean radius ⟨r⟩ (exact): (3n² − l(l+1))/2 per component; 1s + 2s adds a cross term that oscillates.
+  const rMean=superKey==='none'&&!spinEnabled
+    ? exactR(o.n,o.l)
+    : comps.reduce((s,c)=>s+(c.cRe**2+c.cIm**2)*exactR(c.n,c.l),0)/comps.reduce((s,c)=>s+c.cRe**2+c.cIm**2,0)
+      +(superKey==='ss'?-64/(81*Math.SQRT2)*Math.cos(3*t/8):0);
+  document.getElementById('stRmean').textContent=rMean.toFixed(2)+' a\u2080';
+  if(spinEnabled&&spinComps.length) document.getElementById('stNLM').textContent=spinKetText(spinComps);
+  document.getElementById('stNLMLabel').textContent=spinEnabled&&spinComps.length?'State':'n, l, m';
+  document.getElementById('stT').textContent=(t*24.1888).toFixed(0);
 }
 
 // Numerical normalization check: ∫₀^∞ r² |R_nl(r)|² dr should = 1
@@ -2196,17 +2016,11 @@ function updateVerification(){
     const el=document.getElementById(id);if(el)el.style.display=spinDiagVisible?'contents':'none';
   });
   if(spinDiagVisible){
-    // 1. ρ↑ fraction from voxel grid vs cos²(θ/2)
     if(voxelRhoUp&&voxelRhoDn){
-      let sumUp=0,sumTot=0;
-      for(let i=0;i<voxelRhoUp.length;i++){sumUp+=voxelRhoUp[i];sumTot+=voxelRhoUp[i]+voxelRhoDn[i];}
-      const frac=sumTot>0?sumUp/sumTot:0.5;
-      const expected=spinMode==='product'?Math.cos(spinTheta/2)**2:null;
+      const {measured,expected}=spinUpFractions();
       const fracEl=document.getElementById('stSpinFrac');
-      if(fracEl){
-        fracEl.textContent=frac.toFixed(4)+(expected!==null?' / '+expected.toFixed(4):'');
-        fracEl.className='stat-val '+(expected===null||Math.abs(frac-expected)<0.015?'ok':'warn');
-      }
+      fracEl.textContent=`${measured.toFixed(4)} / ${expected.toFixed(4)}`;
+      fracEl.className='stat-val '+(Math.abs(measured-expected)<0.015?'ok':'warn');
     }
     // 2. Spinor norm: Σ(upRe²+upIm²+dnRe²+dnIm²) should = 1
     const snorm=spinComps.reduce((s,c)=>s+c.upRe*c.upRe+c.upIm*c.upIm+c.dnRe*c.dnRe+c.dnIm*c.dnIm,0);
@@ -2214,30 +2028,33 @@ function updateVerification(){
     if(snEl){snEl.textContent=snorm.toFixed(6);snEl.className='stat-val '+(Math.abs(snorm-1)<0.0001?'ok':'warn');}
     // 3. |v| at orbital peak: sample one point near Bohr-radius-weighted peak
     //    For hydrogen: peak radial density at r ≈ n²·a₀ for dominant component
+    // Off-axis direction (θ ≈ 37°, off the nodes of p₀, d₀, p_x…) at the dominant radius;
+    // uses the guidance law in force (spinTerm).
     const n0=spinComps[0].n;
-    const testR=n0*n0*1.05; // just outside the peak
-    const[vx,vy,vz]=bohmVPauli(spinComps,testR,0,0,t);
+    const testR=n0*n0*1.05;
+    const[vx,vy,vz]=bohmVPauli(spinComps,0.36*testR,0.48*testR,0.8*testR,t,spinTerm);
     const vmag=Math.sqrt(vx*vx+vy*vy+vz*vz);
     const curlEl=document.getElementById('stSpinCurl');
     if(curlEl){
-      curlEl.textContent=vmag.toFixed(4)+(vmag>0.001?' ← non-zero ✓':' ≈ 0 (expected for 1s/pure-spin)');
-      curlEl.className='stat-val '+(vmag>0.001?'ok':'');
+      curlEl.textContent=vmag.toFixed(4)+(spinTerm?'':' (spin term off)');
+      curlEl.className='stat-val';
     }
   }
 
   if(isSuper){
-    // ⟨r⟩ exact = Σ |c_i|² ⟨r⟩_i  (cross terms vanish: different n or l → orthogonal)
-    const rExact=comps.reduce((s,c)=>(c.cRe*c.cRe+c.cIm*c.cIm)*exactR(c.n,c.l)+s,0);
+    // Only the coherent 1s + 2s preset has a nonzero radial cross term.
+    const diagonal=comps.reduce((sum,c)=>sum+(c.cRe**2+c.cIm**2)*exactR(c.n,c.l),0);
+    const rExact=diagonal+(superKey==='ss'?-64/(81*Math.SQRT2)*Math.cos(3*t/8):0);
     const rComp=meanRcomputed;
     document.getElementById('stRe').textContent=rExact.toFixed(2)+' a\u2080';
     document.getElementById('stRc').textContent=rComp.toFixed(2)+' a\u2080';
     const err=Math.abs(rComp-rExact)/Math.max(rExact,0.01);
     const el=document.getElementById('stMatch');
     el.textContent=(err*100).toFixed(1)+'% err';
-    el.className='stat-val '+(err<0.05?'ok':'warn');
+    el.className='stat-val '+(err<0.02?'ok':'warn');
     // Show component summary: "2,1,+1 + 3,2,+1"
-    const klabel=comps.map(c=>`${c.n},${c.l},${c.m>=0?'+':''}${c.m}`).join(' + ');
-    document.getElementById('stNLM').textContent=klabel;
+    const klabel=comps.map(c=>`${c.n},${c.l},${fmtM(c.m)}`).join(' + ');
+    if(!(spinEnabled&&spinComps.length)) document.getElementById('stNLM').textContent=klabel;
     // Normalization: Σ|c_i|² should equal 1
     const norm=comps.reduce((s,c)=>s+c.cRe*c.cRe+c.cIm*c.cIm,0);
     const normEl=document.getElementById('stNorm');
@@ -2251,8 +2068,8 @@ function updateVerification(){
     const err=Math.abs(rComp-rExact)/rExact;
     const el=document.getElementById('stMatch');
     el.textContent=(err*100).toFixed(1)+'% err';
-    el.className='stat-val '+(err<0.05?'ok':'warn');
-    document.getElementById('stNLM').textContent=`${o.n}, ${o.l}, ${o.m>=0?'+':''}${o.m}`;
+    el.className='stat-val '+(err<0.02?'ok':'warn');
+    if(!(spinEnabled&&spinComps.length)) document.getElementById('stNLM').textContent=`${o.n}, ${o.l}, ${fmtM(o.m)}`;
     const norm=computeRadialNorm(o.n,o.l);
     const normEl=document.getElementById('stNorm');
     normEl.textContent=norm.toFixed(4);
@@ -2262,7 +2079,17 @@ function updateVerification(){
 
 // (radial probability chart moved to canvas inset — see drawRadialInset)
 
-function loop(){if(running)integrate();renderFrame();requestAnimationFrame(loop);}
+let previousFrame;
+function loop(now){
+  if(running&&previousFrame!==undefined){
+    const elapsed=Math.min(0.05,Math.max(0,(now-previousFrame)/1000));
+    if(elapsed>0) integrate(elapsed*BASE_SPEED*simSpeed);
+  }
+  previousFrame=running?now:undefined;
+  if(!canvas.closest('[hidden]')) renderFrame();
+  requestAnimationFrame(loop);
+}
+document.addEventListener('visibilitychange',()=>{previousFrame=undefined;});
 
 // ════════════════════════════════════════════════════════════════
 //  CANVAS INSETS — P(r) radial probability + projection panels
@@ -2276,49 +2103,55 @@ function _insetBg(x,y,w,h){
 
 function drawRadialInset(){
   if(!comps.length)return;
-  const iW=220,iH=130,ix=W-iW-14,iy=H-iH-42;
+  const iW=230,iH=140,ix=W-iW-14,iy=H-iH-42;
   _insetBg(ix,iy,iW,iH);
-  const pl=28,pr=8,pt=18,pb=18;
+  const pl=28,pr=10,pt=24,pb=28;
   const pw=iW-pl-pr,ph=iH-pt-pb;
   const tc=lightTheme?'#6070a0':'#6a80a8';
   ctx.fillStyle=tc;ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='left';
-  ctx.fillText('P(r) = r²|Rₙₗ|²',ix+pl,iy+11);
+  ctx.fillText('Radial probability P(r)',ix+pl,iy+11);
   const rPlot=rMax(),NPTS=200;
-  const COLS=['#00e5ff','#e040fb','#ffb74d','#69f0ae'];
-  const traces=comps.map((c,i)=>{
-    const amp=c.cRe*c.cRe+c.cIm*c.cIm;
-    const pts=new Float32Array(NPTS);
-    for(let j=0;j<NPTS;j++){const r=j/(NPTS-1)*rPlot;const R=Rnl(c.n,c.l,r);pts[j]=amp*r*r*R*R;}
-    return{pts,col:COLS[i%4]};
-  });
+  const total=new Float32Array(NPTS);
   let maxP=1e-30;
-  traces.forEach(t=>{for(let j=0;j<NPTS;j++)if(t.pts[j]>maxP)maxP=t.pts[j];});
+  for(let j=0;j<NPTS;j++){
+    const r=j/(NPTS-1)*rPlot;
+    let radialDensity=comps.reduce((sum,c)=>sum+(c.cRe**2+c.cIm**2)*Rnl(c.n,c.l,r)**2,0);
+    if(superKey==='ss') radialDensity+=Rnl(1,0,r)*Rnl(2,0,r)*Math.cos(3*t/8);
+    total[j]=r*r*Math.max(0,radialDensity);
+    maxP=Math.max(maxP,total[j]);
+  }
   // axes
   ctx.strokeStyle=lightTheme?'#c8d0e8':'#1e2f50';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(ix+pl,iy+pt);ctx.lineTo(ix+pl,iy+pt+ph);ctx.lineTo(ix+pl+pw,iy+pt+ph);ctx.stroke();
   // ⟨r⟩ line
-  const o=ORBITALS[orbIdx];const rE=exactR(o.n,o.l);
+  const o=ORBITALS[orbIdx];const rE=superKey==='none'?exactR(o.n,o.l):0;
   if(rE>0&&rE<=rPlot){
     const xR=ix+pl+(rE/rPlot)*pw;
     ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(105,240,174,0.65)';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(xR,iy+pt);ctx.lineTo(xR,iy+pt+ph);ctx.stroke();
     ctx.restore();
-    ctx.fillStyle='rgba(105,240,174,0.8)';ctx.font='8px JetBrains Mono,monospace';
-    ctx.fillText('⟨r⟩',xR+3,iy+pt+9);
+    ctx.fillStyle='rgba(105,240,174,0.9)';ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='center';
+    ctx.fillText(`⟨r⟩ = ${rE.toFixed(1)}`,Math.min(Math.max(xR,ix+pl+24),ix+pl+pw-24),iy+pt-4);ctx.textAlign='left';
   }
-  // traces
-  traces.forEach((tr)=>{
-    ctx.strokeStyle=lightTheme?'#0077cc':tr.col;ctx.lineWidth=1.8;
-    ctx.beginPath();
-    for(let j=0;j<NPTS;j++){
-      const x2=ix+pl+(j/(NPTS-1))*pw,y2=iy+pt+ph*(1-tr.pts[j]/maxP);
-      j===0?ctx.moveTo(x2,y2):ctx.lineTo(x2,y2);
-    }
-    ctx.stroke();
-  });
-  // r axis label
+  ctx.strokeStyle=lightTheme?'#0077cc':'#00e5ff';
+  ctx.lineWidth=1.8;
+  ctx.beginPath();
+  ctx.moveTo(ix+pl,iy+pt+ph);
+  for(let j=1;j<NPTS;j++){
+    const x=ix+pl+j/(NPTS-1)*pw, y=iy+pt+ph*(1-total[j]/maxP);
+    ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  // r axis ticks and label
   ctx.fillStyle=tc;ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='center';
-  ctx.fillText('r / a₀',ix+pl+pw/2,iy+iH-3);
+  const tickStep=[1,2,5,10,20,50,100].find(s=>rPlot/s<=6)||100;
+  ctx.strokeStyle=lightTheme?'#c8d0e8':'#1e2f50';
+  for(let r=0;r<=rPlot+1e-9;r+=tickStep){
+    const x=ix+pl+(r/rPlot)*pw;
+    ctx.beginPath();ctx.moveTo(x,iy+pt+ph);ctx.lineTo(x,iy+pt+ph+3);ctx.stroke();
+    ctx.fillText(String(r),x,iy+pt+ph+12);
+  }
+  ctx.fillText('r / a₀  (P in arbitrary units)',ix+pl+pw/2,iy+iH-3);
   ctx.textAlign='left';
 }
 
@@ -2326,6 +2159,21 @@ function drawRadialInset(){
 // Works in any viz mode (Cloud, Slice-only, etc.) and always reflects current comps.
 // N=48: 3×48³ ≈ 330k evals ≈ 10–20 ms — acceptable on orbital change.
 function buildProjectionsDirect(){
+  if(densityEvolves()){
+    if(volumeDirty) buildVoxelGrid();
+    const n=VRES, xz=new Float32Array(n*n), xy=new Float32Array(n*n), yz=new Float32Array(n*n);
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++)for(let k=0;k<n;k++){
+      const density=voxelVals[i*n*n+j*n+k];
+      xz[i*n+k]+=density;
+      xy[i*n+j]+=density;
+      yz[j*n+k]+=density;
+    }
+    for(const [plane,vals] of Object.entries({xz,xy,yz})){
+      projData[plane]={vals,maxV:Math.max(1e-30,...vals),N:n};
+    }
+    projDirty=false;
+    return;
+  }
   const PN=48, rm=rMax(), step=2*rm/(PN-1);
   ['xz','xy','yz'].forEach(pln=>{
     const p2D=new Float32Array(PN*PN); let maxV=1e-30;
@@ -2340,7 +2188,7 @@ function buildProjectionsDirect(){
           if(pln==='xz'){x=u;y=w;z=v;}
           else if(pln==='xy'){x=u;y=v;z=w;}
           else{x=w;y=u;z=v;}
-          sum+=rhoAt(comps,x,y,z,0);
+          sum+=densityAt(x,y,z,t);
         }
         p2D[a*PN+b]=sum; if(sum>maxV)maxV=sum;
       }
@@ -2378,7 +2226,7 @@ function buildVolProjections(){
           else if(pln==='xy'){wx=u;wy=vv;wz=w;}
           else{wx=w;wy=u;wz=vv;}
           const raw=sampleVoxel(wx,wy,wz)/voxelMaxV;
-          const pv=Math.pow(raw,0.42);
+          const pv=Math.pow(raw,DENS_GAMMA);
           if(pv<fogClip) continue;
           const sa=pv*baseDens*(1-accA);
           const col=palColor(pv,densityPalette);
@@ -2400,10 +2248,10 @@ function buildVolProjections(){
 
 function drawProjectionPanels(){
   // Build volumetric cache if stale (same ray-march as GPU volume shader)
-  if(!projVolCache && voxelVals) buildVolProjections();
+  if(!projVolCache&&voxelVals&&!volumeDirty&&!densityEvolves()) buildVolProjections();
   // Keep sum-based projData as fallback for modes where voxelVals isn't built
-  if(projDirty) buildProjectionsDirect();
-  const pW=100,pH=100,gap=6;
+  if(projDirty&&!projVolCache) buildProjectionsDirect();
+  const pW=Math.min(100,Math.floor((W-42)/3)),pH=pW,gap=6;
   const labels=['XZ','XY','YZ'];
   projPanelHitBoxes=[];
   ['xz','xy','yz'].forEach((pln,pi)=>{
@@ -2423,7 +2271,7 @@ function drawProjectionPanels(){
       const N=pd.N;
       const imgD=ctx.createImageData(N,N);
       for(let a=0;a<N;a++)for(let b=0;b<N;b++){
-        const v=Math.pow(pd.vals[a*N+b]/pd.maxV,0.42);
+        const v=Math.pow(pd.vals[a*N+b]/pd.maxV,DENS_GAMMA);
         const c=palColor(v,densityPalette);
         const i2=(b*N+a)*4;
         imgD.data[i2]=c[0];imgD.data[i2+1]=c[1];imgD.data[i2+2]=c[2];imgD.data[i2+3]=v>0.02?255:0;
@@ -2493,6 +2341,8 @@ function drawAxes(cam,rm){
   const[ox,oy]=proj(0,0,0,cam);
   const len=rm*0.9;
   const AS=10; // arrowhead size px
+  const raw=len/4, mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const step=[1,2,5,10].map(f=>f*mag).find(v=>v>=raw)||10*mag;
   for(const{dir:[dx,dy,dz],col,label} of axes){
     const[tx,ty]=proj(dx*len,dy*len,dz*len,cam);
     // Axis line
@@ -2509,6 +2359,19 @@ function drawAxes(cam,rm){
     ctx.font='bold 13px JetBrains Mono,monospace';
     ctx.fillStyle=col;
     ctx.fillText(label,tx+6,ty-4);
+    // Tick marks in Bohr radii (numbers on the x axis only)
+    const L=Math.hypot(tx-ox,ty-oy); if(L<20) continue;
+    const nx=-(ty-oy)/L, ny=(tx-ox)/L;
+    ctx.font='10px JetBrains Mono,monospace';
+    for(let k=1;k*step<len*0.95;k++){
+      const[px,py]=proj(dx*k*step,dy*k*step,dz*k*step,cam);
+      ctx.beginPath();ctx.moveTo(px-4*nx,py-4*ny);ctx.lineTo(px+4*nx,py+4*ny);
+      ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.stroke();
+      if(label==='x'){
+        const last=(k+1)*step>=len*0.95;
+        ctx.fillText(String(k*step)+(last?' a₀':''),px+6*nx-6,py+6*ny+12);
+      }
+    }
   }
 }
 
@@ -2516,26 +2379,45 @@ let expertMode=false;
 function toggleExpert(){
   expertMode=!expertMode;
   document.getElementById('stGrid').classList.toggle('show-expert',expertMode);
-  document.getElementById('expertBtn').classList.toggle('active',expertMode);
+  const button=document.getElementById('expertBtn');
+  button.classList.toggle('active',expertMode);
+  button.setAttribute('aria-pressed',String(expertMode));
+  if(expertMode){
+    if(volumeDirty) buildVoxelGrid();
+    updateVerification();
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
 //  THEORY PANEL
 // ════════════════════════════════════════════════════════════════
-function toggleTheory(){
-  const p=document.getElementById('theoryPanel');
-  const b=document.getElementById('theoryBtn');
-  const open=p.style.display==='none'||p.style.display==='';
-  p.style.display=open?'flex':'none';
-  if(b)b.classList.toggle('active',open);
-}
-
 // ════════════════════════════════════════════════════════════════
 //  ANALYTICAL VERIFICATION CHECKS
 // ════════════════════════════════════════════════════════════════
+function spinUpFractions(){
+  let sumUp=0,sumDown=0;
+  for(let i=0;i<voxelRhoUp.length;i++){
+    sumUp+=voxelRhoUp[i];
+    sumDown+=voxelRhoDn[i];
+  }
+  // The orbital basis used by spinComps is orthonormal.
+  const expected=spinComps.reduce((sum,c)=>sum+c.upRe**2+c.upIm**2,0);
+  return {measured:sumUp/(sumUp+sumDown),expected};
+}
+
+function showDiagnosticResults(title,message){
+  const dialog=document.getElementById('diagnostic-results');
+  const output=document.getElementById('diagnostic-results-text');
+  document.getElementById('diagnostic-results-title').textContent=title;
+  output.textContent=message;
+  output.scrollTop=0;
+  if(!dialog.open) dialog.showModal();
+  return output;
+}
+
 function runAnalyticalChecks(){
-  // Open expert panel so results are visible
   if(!expertMode) toggleExpert();
+  if(spinEnabled&&volumeDirty) buildVoxelGrid();
 
   const lines=[];
   const PASS='\u2713'; const FAIL='\u2717'; const WARN='\u26a0';
@@ -2558,11 +2440,11 @@ function runAnalyticalChecks(){
     const ok=maxErr<0.02;
     lines.push(`${ok?PASS:FAIL} m≠0 azimuthal v: max err ${(maxErr*100).toFixed(2)}% (expect <2%) ${ok?'':'— FD grid too coarse near axis?'}`);
   } else if(!spinEnabled && comps.length===1 && comps[0].m===0){
-    lines.push(`${WARN} m=0 eigenstate — v should be 0 everywhere (no circulation). Enable spin to see spin-curl.`);
+    lines.push(`${WARN} m = 0 eigenstate: without the spin term v should be 0 everywhere. Turn on the spin term (Advanced) to test the spin velocity.`);
   }
 
   // ── Test 2: 1s product spin — |v| = sin∠(r̂, n̂) ─────────────
-  if(spinEnabled && spinMode==='product' && comps.length===1 && comps[0].n===1 && comps[0].l===0){
+  if(spinEnabled && spinTerm && spinMode==='product' && comps.length===1 && comps[0].n===1 && comps[0].l===0){
     const nx=Math.sin(spinTheta)*Math.cos(spinPhi);
     const ny=Math.sin(spinTheta)*Math.sin(spinPhi);
     const nz=Math.cos(spinTheta);
@@ -2583,14 +2465,18 @@ function runAnalyticalChecks(){
     }
     const ok=maxErr<0.05;
     lines.push(`${ok?PASS:FAIL} 1s+spin v=−(r̂×n̂): max err ${(maxErr*100).toFixed(2)}% (expect <5% — FD accuracy)`);
-    // Also check r-independence: |v| should be same at r=1 and r=3
-    const[v1x,v1y,v1z]=bohmVPauli(spinComps,1,0,0,t);
-    const[v3x,v3y,v3z]=bohmVPauli(spinComps,3,0,0,t);
+    // r-independence: |v| = 1 at r = 1 and r = 3 along a direction perpendicular to n̂
+    // (on the spin axis v = 0, which would make the comparison empty).
+    let ux=-ny, uy=nx, uz=0;
+    if(Math.hypot(ux,uy)<1e-6){ux=1;uy=0;uz=0;}
+    const un=Math.hypot(ux,uy,uz); ux/=un; uy/=un; uz/=un;
+    const[v1x,v1y,v1z]=bohmVPauli(spinComps,ux,uy,uz,t);
+    const[v3x,v3y,v3z]=bohmVPauli(spinComps,3*ux,3*uy,3*uz,t);
     const mag1=Math.sqrt(v1x**2+v1y**2+v1z**2);
     const mag3=Math.sqrt(v3x**2+v3y**2+v3z**2);
     const rErr=Math.abs(mag1-mag3)/Math.max(mag1,1e-6);
-    const rok=rErr<0.05;
-    lines.push(`${rok?PASS:FAIL} 1s+spin r-independence: |v|(r=1)=${mag1.toFixed(3)}, |v|(r=3)=${mag3.toFixed(3)}, diff ${(rErr*100).toFixed(1)}% (expect <5%)`);
+    const rok=rErr<0.05&&Math.abs(mag1-1)<0.05;
+    lines.push(`${rok?PASS:FAIL} 1s+spin r-independence (perpendicular to n̂): |v|(r=1)=${mag1.toFixed(3)}, |v|(r=3)=${mag3.toFixed(3)}, expect both 1.000`);
   }
 
   // ── Test 3: spinor norm ──────────────────────────────────────
@@ -2600,34 +2486,16 @@ function runAnalyticalChecks(){
     lines.push(`${ok?PASS:FAIL} Spinor norm = ${norm.toFixed(6)} (expect 1.000000)`);
   }
 
-  // ── Test 4: ρ↑ fraction vs cos²(θ/2) ─────────────────────────
-  if(spinEnabled && spinMode==='product' && voxelRhoUp && voxelRhoDn){
-    let sumUp=0,sumTot=0;
-    for(let i=0;i<voxelRhoUp.length;i++){sumUp+=voxelRhoUp[i];sumTot+=voxelRhoUp[i]+voxelRhoDn[i];}
-    const frac=sumTot>0?sumUp/sumTot:0.5;
-    const expected=Math.cos(spinTheta/2)**2;
-    const err=Math.abs(frac-expected);
+  if(spinEnabled&&spinComps.length&&voxelRhoUp&&voxelRhoDn){
+    const {measured,expected}=spinUpFractions();
+    const err=Math.abs(measured-expected);
     const ok=err<0.015;
-    lines.push(`${ok?PASS:FAIL} ρ↑ fraction: measured ${frac.toFixed(4)}, analytical cos²(θ/2)=${expected.toFixed(4)}, err=${(err*100).toFixed(2)}% (expect <1.5%)`);
+    lines.push(`${ok?PASS:FAIL} ρ↑ fraction: measured ${measured.toFixed(4)}, analytical ${expected.toFixed(4)}, difference ${(err*100).toFixed(2)} percentage points (expect <1.5)`);
   }
 
   if(!lines.length) lines.push(`${WARN} No applicable tests for current state. Try: m≠0 eigenstate without spin, or 1s+product spin.`);
 
-  // Display in a browser alert (simple, always visible) + console
-  console.table(lines);
-  const msg='Analytical Verification Results\n─────────────────────────────────\n'+lines.join('\n');
-  // Show in a temporary overlay on the canvas
-  let box=document.getElementById('verifyResultBox');
-  if(!box){
-    box=document.createElement('div');box.id='verifyResultBox';
-    box.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(6,11,22,.97);border:1px solid #16213a;padding:18px 22px;z-index:500;max-width:520px;width:90%;border-radius:4px;font-size:11px;line-height:1.8;white-space:pre-wrap;cursor:pointer;';
-    box.title='Click to close';
-    box.onclick=()=>box.remove();
-    document.querySelector('.canvas-wrap').appendChild(box);
-  }
-  box.textContent=msg+'\n\n(Click to close)';
-  // Auto-close after 12 seconds
-  clearTimeout(box._t);box._t=setTimeout(()=>box.remove(),12000);
+  showDiagnosticResults('Analytical verification',lines.join('\n'));
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -2690,29 +2558,16 @@ function verifyContinuity(compsArg, useSpinArg, spinCompsArg, time_t, nTests, rB
 // report pass/fail for (a) the exact velocity formula and (b) the
 // continuity equation for each case.
 function runSweep() {
-  // Show a "Computing…" placeholder immediately so the user sees a response
-  let box = document.getElementById('verifyResultBox');
-  if(!box) {
-    box = document.createElement('div'); box.id = 'verifyResultBox';
-    box.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'
-      + 'background:rgba(6,11,22,.97);border:1px solid #16213a;padding:18px 22px;z-index:500;'
-      + 'max-width:560px;width:90%;border-radius:4px;font-size:10.5px;line-height:1.75;'
-      + 'white-space:pre;cursor:pointer;max-height:80vh;overflow-y:auto;font-family:monospace;';
-    box.title = 'Click to close';
-    box.onclick = () => box.remove();
-    document.querySelector('.canvas-wrap').appendChild(box);
-  }
-  box.textContent = 'Running sweep \u2014 please wait\u2026';
+  const output=showDiagnosticResults('Scalar verification sweep','Running sweep…');
 
-  // Defer actual work one frame so the browser paints the placeholder first
   requestAnimationFrame(() => {
+  const saveSpin = spinEnabled, saveSC = spinComps, saveComps = comps;
   try {
   const PASS = '\u2713', FAIL = '\u2717';
   const lines = [];
   let pass = 0, fail = 0;
 
-  // Save & override globals so bohmV uses scalar path for every sub-test
-  const saveSpin = spinEnabled, saveSC = spinComps, saveComps = comps;
+  // Ensure bohmV uses the scalar path for every sub-test.
   spinEnabled = false; spinComps = [];
 
   lines.push('SCALAR BOHM \u2014 ALL PURE EIGENSTATES (n=1\u20136)');
@@ -2800,42 +2655,41 @@ function runSweep() {
   lines.push('');
   lines.push(`\u2550 GRAND TOTAL: ${pass}/${pass+fail} passed \u2550`);
 
-  // Restore globals
-  spinEnabled = saveSpin; spinComps = saveSC; comps = saveComps;
-
-  // Display (box was already created and shown at the top of runSweep)
-  box.textContent = 'Comprehensive Verification Sweep\n' + '\u2550'.repeat(40) + '\n' + lines.join('\n') + '\n\n(Click to close)';
-  clearTimeout(box._t); box._t = setTimeout(() => box.remove(), 60000);
-  console.log(lines.join('\n'));
+  output.textContent=lines.join('\n');
   } catch(e) {
-    box.textContent = 'Sweep error:\n' + e.message + '\n\n' + e.stack + '\n\n(Click to close)';
-    console.error('runSweep error:', e);
+    output.textContent='Sweep error: '+e.message;
+    console.error('runSweep error:',e);
+  } finally {
+    spinEnabled=saveSpin;
+    spinComps=saveSC;
+    comps=saveComps;
   }
-  }); // end requestAnimationFrame
+  });
+}
+
+function syncDisplayToggle(id,active){
+  const button=document.getElementById(id);
+  if(!button) return;
+  button.classList.toggle('active',active);
+  button.setAttribute('aria-pressed',String(active));
 }
 
 function toggleAxes(){
   showAxes=!showAxes;
-  document.getElementById('axesBtn').classList.toggle('active',showAxes);
+  syncDisplayToggle('axesBtn',showAxes);
 }
 
 function toggleInset(){
   showInset=!showInset;
-  document.getElementById('insetBtn').classList.toggle('active',showInset);
+  syncDisplayToggle('insetBtn',showInset);
 }
 
 function toggleProjections(){
   showProjections=!showProjections;
   if(showProjections&&projDirty&&voxelVals) buildProjections();
-  document.getElementById('projBtn').classList.toggle('active',showProjections);
-}
-
-function toggleTheme(){
-  lightTheme=!lightTheme;
-  document.body.classList.toggle('light',lightTheme);
-  const btn=document.getElementById('themeBtn');
-  btn.textContent=lightTheme?'☽ Dark':'☀ Light';
-  btn.classList.toggle('active',lightTheme);
+  syncDisplayToggle('projBtn',showProjections);
+  document.getElementById('camera-plane').hidden=!showProjections;
+  canvas.parentElement.classList.toggle('has-projections',showProjections);
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -2852,34 +2706,28 @@ function toggleViz(which){
     if(showPhase&&showCloud){
       showCloud=false;
       showVol=true;
-      particles=sampleParticles(nPart);
+      particles=sampleParticles(nPart,t);
     }
     _syncVizUI();
     return;
   }
 
   // Determine if this mode is currently active
-  const curr={volume:showVol,slice:showSlice,lobes:showLobes,cloud:showCloud};
-  const wasActive=curr[which];
   const wasCloud=showCloud;
 
   // Turn all exclusive modes off
   showVol=false; showSlice=false; showLobes=false; showCloud=false;
 
-  if(!wasActive){
-    // Activate the requested mode
-    if(which==='volume') showVol=true;
-    else if(which==='slice') showSlice=true;
-    else if(which==='lobes') showLobes=true;
-    else if(which==='cloud'){
-      showCloud=true;
-      if(!wasCloud){ cachedVolCanvas=null; initCloudParts(); }
-    }
+  if(which==='volume') showVol=true;
+  else if(which==='slice'){showSlice=true;setTimeout(syncSlicePlaneToState);}
+  else if(which==='lobes') showLobes=true;
+  else if(which==='cloud'){
+    showCloud=true;
+    if(!wasCloud){cachedVolCanvas=null;initCloudParts();}
   }
-  // If wasActive: clicking the active button turns it off (all off state)
 
   // Restore trail particles when leaving cloud mode
-  if(wasCloud&&!showCloud) particles=sampleParticles(nPart);
+  if(wasCloud&&!showCloud) particles=sampleParticles(nPart,t);
 
   // Phase overlay is incompatible with Cloud
   if(showCloud) showPhase=false;
@@ -2888,29 +2736,59 @@ function toggleViz(which){
 }
 
 function _syncVizUI(){
-  document.getElementById('vtVol').classList.toggle('active',showVol);
-  document.getElementById('vtSlice').classList.toggle('active',showSlice);
-  document.getElementById('vtLobes').classList.toggle('active',showLobes);
-  document.getElementById('vtPhase').classList.toggle('active',showPhase);
-  document.getElementById('vtCloud')?.classList.toggle('active',showCloud);
+  for(const [id,active] of Object.entries({vtVol:showVol,vtSlice:showSlice,vtLobes:showLobes,vtCloud:showCloud,vtPhase:showPhase})){
+    const button=document.getElementById(id);
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  }
   document.getElementById('sliceRow').style.display=showSlice?'flex':'none';
   document.getElementById('lobeRow').style.display=showLobes?'flex':'none';
   document.getElementById('cloudRow').style.display=showCloud?'flex':'none';
   const autoRow=document.getElementById('cloudAutoRow');
   if(autoRow)autoRow.style.display=showCloud?'flex':'none';
   if(showVol||showLobes){volNeedsRedraw=true;cachedVolCanvas=null;}
+  const banner=document.getElementById('gpuStatusBanner');
+  if(banner&&preferSliceFallback) banner.hidden=!(showVol||showLobes);
   if(showLobes){lobeTexDirty=true;}
   // Grey out Phase tab when spin is active
   const phBtn=document.getElementById('vtPhase');
-  if(phBtn){phBtn.disabled=spinEnabled;phBtn.title=spinEnabled?'Phase overlay unavailable in spin mode (gauge-ambiguous for spinors)':phBtn.getAttribute('data-title')||phBtn.title;}
+  phBtn.dataset.title??=phBtn.title;
+  phBtn.disabled=spinEnabled;
+  phBtn.title=spinEnabled?'Phase overlay unavailable in spin mode (gauge-ambiguous for spinors)':phBtn.dataset.title;
   updateLegend();
+  updateCaption();
 }
 
 // ════════════════════════════════════════════════════════════════
 //  SPIN UI (toggle, mode, colour pickers)
 // ════════════════════════════════════════════════════════════════
+// The state is a spinor that the button must not destroy: a spin preset or a j-state.
+function spinorStateSelected(){
+  return spinEnabled&&(Boolean(SPIN_SUPERS[superKey])||(spinMode==='jstate'&&superKey==='none'));
+}
+
+// Return to the spinless state and the standard guidance law (used by the Quiz).
+function clearSpin(){
+  if(!spinEnabled) return;
+  if(SPIN_SUPERS[superKey]){superKey='none';document.getElementById('superSel').value='none';}
+  spinMode='product';
+  spinTerm=true;
+  toggleSpin();
+}
+
 function toggleSpin(){
+  if(spinorStateSelected()){
+    // Same state, same positions: only the guidance law changes; trails restart.
+    spinTerm=!spinTerm;
+    particles.forEach(p=>{p.trail=[];});
+    if(showCloud) initCloudParts();
+    updateInfo();
+    _syncSpinUI();
+    return;
+  }
+  spinTerm=true;
   spinEnabled=!spinEnabled;
+  spinFromPreset=false;
   if(spinEnabled){
     // Turning on: build spinComps from current state
     if(spinMode==='jstate') _refreshJStateDropdown();
@@ -2919,55 +2797,96 @@ function toggleSpin(){
     if(showPhase){showPhase=false;}
   }else{
     spinComps=[];
+    if(superKey==='none') buildComps();
     voxelRhoUp=null;voxelRhoDn=null;
     // If we were in a spin-super preset, revert to its scalar comps
     if(SPIN_SUPERS[superKey]){
       superKey='none';
       document.getElementById('superSel').value='none';
       buildComps();
+      updateInfo();
     }
   }
-  cloudVelGrid=null;cloudFieldAge=Infinity;
-  volumeDirty=true;lobeTexDirty=true;volNeedsRedraw=true;cachedVolCanvas=null;
+  invalidateDensity();
   t=0;
   if(showCloud){initCloudParts();}else{particles=sampleParticles(nPart);}
+  if(superKey==='none') updateInfo();
   _syncSpinUI();
   _syncVizUI();
+  updateQuickPresets();
+}
+
+// Spinor written out: e.g. "1/√2 |1,0,0⟩↑ + 1/√2 |2,0,0⟩↓".
+function spinKetText(sc){
+  const coef=(re,im)=>{
+    const mag=Math.hypot(re,im), known=[[1,''],[Math.SQRT1_2,'1/√2'],[Math.sqrt(2/3),'√(2/3)'],[Math.sqrt(1/3),'√(1/3)'],[0.5,'1/2'],[Math.sqrt(3)/2,'√3/2']];
+    const k=known.find(([v])=>Math.abs(v-mag)<5e-4);
+    const body=k?k[1]:mag.toFixed(2);
+    const imag=Math.abs(im)>Math.abs(re);
+    const neg=imag?im<0:re<0;
+    return {neg, txt:(imag?(body?body+'i':'i'):body)};
+  };
+  const terms=[];
+  for(const c of sc){
+    for(const [re,im,arrow] of [[c.upRe,c.upIm,'↑'],[c.dnRe,c.dnIm,'↓']]){
+      if(Math.hypot(re,im)<1e-6) continue;
+      const {neg,txt}=coef(re,im);
+      terms.push({neg,str:`${txt?txt+' ':''}|${c.n},${c.l},${fmtM(c.m)}⟩${arrow}`});
+    }
+  }
+  return terms.map((t,i)=>i===0?(t.neg?'−':'')+t.str:(t.neg?' − ':' + ')+t.str).join('');
 }
 
 function _syncSpinUI(){
   const btn=document.getElementById('spinToggleBtn');
-  if(btn)btn.classList.toggle('active',spinEnabled);
+  const termOn=spinEnabled&&spinTerm;
+  btn.classList.toggle('active',termOn);
+  btn.setAttribute('aria-pressed',String(termOn));
+  btn.title=spinorStateSelected()
+    ? 'Switch the Pauli spin term in the guidance law on or off. The spinor state stays the same, so you can compare the two laws.'
+    : 'Add the Pauli spin term to the guidance law. It changes the trajectories, not |ψ|². See Physics § 4.';
+  document.getElementById('stSpin').textContent=!spinEnabled?'Off':spinTerm?'On':'Off (spinor kept)';
   const sec=document.getElementById('spinSubSection');
   if(sec)sec.style.display=spinEnabled?'block':'none';
   const pr=document.getElementById('spinProductRow');
   const pr2=document.getElementById('spinProductRow2');
   const jr=document.getElementById('spinJRow');
-  if(pr) pr.style.display=(spinEnabled&&spinMode==='product')?'flex':'none';
-  if(pr2)pr2.style.display=(spinEnabled&&spinMode==='product')?'flex':'none';
+  // Spin presets are fixed (often entangled) spinors: show the state, not the Mode/θ/φ controls.
+  const preset=Boolean(SPIN_SUPERS[superKey]);
+  const modeRow=document.getElementById('spinModeRow');
+  if(modeRow) modeRow.style.display=preset?'none':'flex';
+  const ketRow=document.getElementById('spinKetRow');
+  if(ketRow){ketRow.hidden=!(spinEnabled&&preset);if(preset)document.getElementById('spinKetText').textContent='Ψ = '+spinKetText(spinComps)+(SPIN_SUPERS[superKey].comps.length>1?' (spin and orbit entangled)':'');}
+  if(pr) pr.style.display=(spinEnabled&&spinMode==='product'&&!preset)?'flex':'none';
+  if(pr2)pr2.style.display=(spinEnabled&&spinMode==='product'&&!preset)?'flex':'none';
   if(jr) jr.style.display=(spinEnabled&&spinMode==='jstate') ?'flex':'none';
   // Update mode radio buttons
   const mProd=document.getElementById('spinModeProd');
   const mJst =document.getElementById('spinModeJst');
   if(mProd)mProd.checked=(spinMode==='product');
-  if(mJst) mJst.checked=(spinMode==='jstate');
+  if(mJst){
+    mJst.checked=spinMode==='jstate';
+    mJst.disabled=superKey!=='none';
+  }
+  const fixedSpin=Boolean(SPIN_SUPERS[superKey]);
+  for(const id of ['sSpinTheta','sSpinPhi']) document.getElementById(id).disabled=fixedSpin;
   // Update spin colour swatches in legend
   const upSw=document.getElementById('spinUpSwatch');
   const dnSw=document.getElementById('spinDnSwatch');
   if(upSw)upSw.style.background=spinUpColor.hex;
   if(dnSw)dnSw.style.background=spinDnColor.hex;
   updateLegend();
+  updateCaption();
 }
 
 function setSpinMode(mode){
+  if(mode==='jstate'&&superKey!=='none') return;
   spinMode=mode;
-  if(spinEnabled){
-    if(mode==='jstate') _refreshJStateDropdown();
-    else buildSpinComps();
-  }
-  cloudVelGrid=null;cloudFieldAge=Infinity;
-  volumeDirty=true;lobeTexDirty=true;t=0;
+  spinTerm=true;
+  t=0;previousFrame=undefined;
+  buildComps();
   if(showCloud){initCloudParts();}else{particles=sampleParticles(nPart);}
+  if(superKey==='none') updateInfo();
   _syncSpinUI();
 }
 
@@ -2976,9 +2895,9 @@ function setJState(idx){
   if(!_currentJEntries.length) _refreshJStateDropdown();
   const entry=_currentJEntries[idx]; if(!entry) return;
   _applyJState(entry);
-  cloudVelGrid=null;cloudFieldAge=Infinity;
-  volumeDirty=true;lobeTexDirty=true;t=0;
+  invalidateDensity();t=0;previousFrame=undefined;
   if(showCloud){initCloudParts();}else{particles=sampleParticles(nPart);}
+  updateInfo();
 }
 
 function setSpinUpColor(hex){
@@ -3001,59 +2920,70 @@ function hexToRgb(hex){
 // Legacy helper — still used in a few places (ss auto-switch, init).
 // Deactivates all exclusive modes, then activates the requested one.
 function setView(mode){
+  const wasSliceOnly=showSlice&&!showVol&&!showLobes;
   showVol=false;showLobes=false;showSlice=false;
   if(mode==='volume') showVol=true;
   else if(mode==='lobes') showLobes=true;
   else if(mode==='slice') showSlice=true;
   else if(mode==='both'){showVol=true;showSlice=true;}
+  // Slices looks face-on; a 3D view needs the tilted camera, or 2p₀ looks like a ball.
+  if(wasSliceOnly&&(showVol||showLobes)) resetCamera();
   _syncVizUI();
 }
 
+function phaseLegendText(){
+  const names={twilight:'0 blue, +π/2 purple, ±π cream, −π/2 orange',
+    hsv:'0 red, +π/2 green, ±π cyan, −π/2 violet',
+    phase4:'0 red, +π/2 yellow, ±π cyan, −π/2 blue'};
+  return '<span class="lrow-txt">arg ψ (global phase removed)<span class="lrow-sub">'+(names[phasePalette]||'0 → ±π → 0 around the colour wheel')+'</span></span>';
+}
 function updateLegend(){
   const div=document.getElementById('legend');
   const curPal=PAL_META.find(p=>p.key===densityPalette)||PAL_META[0];
   const curPhasePal=PHASE_PAL_META.find(p=>p.key===phasePalette)||PHASE_PAL_META[0];
-  const palRow=(lbl)=>`<button class="lrow-btn" onclick="openLegPalPop(event)" title="Change palette"><span class="lsw" style="background:${curPal.grad}"></span>${lbl}</button>`;
-  const phaseRow=(lbl)=>`<button class="lrow-btn" onclick="openLegPhasePalPop(event)" title="Change phase palette"><span class="lsw" style="background:${curPhasePal.grad}"></span>${lbl}</button>`;
+  const palRow=(lbl)=>`<button id="density-palette-button" class="lrow-btn" onclick="openLegPalPop(event)" title="Change palette"><span class="lsw" style="background:${curPal.grad}"></span>${lbl}</button>`;
+  const phaseRow=(lbl)=>`<button id="phase-palette-button" class="lrow-btn" onclick="openLegPhasePalPop(event)" title="Change phase palette"><span class="lsw" style="background:${curPhasePal.grad}"></span>${lbl}</button>`;
   const volRows   = showPhase
-    ? phaseRow('arg(ψ) volume — red=0, cyan=±π')
-    : palRow('|ψ|² volume');
+    ? phaseRow(phaseLegendText())
+    : spinEnabled ? '<div class="lrow">Spin density volume</div>' : palRow('|ψ|² volume');
   const lobeRows  = showPhase
-    ? phaseRow('arg(ψ) lobes — red=0, cyan=±π')
-    : palRow('|ψ|² lobes')+`<div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#1010c0,#4060e0,#8090ff)"></span>Negative-ψ lobe</div>`;
-  const sliceRows=palRow('|ψ|² slice')
-    +`<div class="lrow"><span class="lsw" style="background:transparent;border:1.5px solid rgba(0,220,255,.8);border-radius:2px"></span>Isosurface</div>`;
-  const tg=`linear-gradient(90deg,${ptColor.hex}22,${ptColor.hex})`;
-  const pg=`radial-gradient(circle at 40%,${ptColor.hex},${ptColor.hex}44)`;
-  const colDots=PT_PRESETS.map(p=>`<button class="leg-col-opt${p===ptColor?' sel':''}" style="background:${p.hex}" title="${p.label}" onclick="setParticleColor('${p.label}')"></button>`).join('');
-  const palOpts=PAL_META.map(p=>`<div class="pal-opt${p.key===densityPalette?' selected':''}" onclick="setPaletteByKey('${p.key}')"><span class="pal-swatch" style="background:${p.grad}"></span>${p.label}</div>`).join('');
-  const phaseOpts=PHASE_PAL_META.map(p=>`<div class="pal-opt${p.key===phasePalette?' selected':''}" onclick="setPhasePaletteByKey('${p.key}')"><span class="pal-swatch" style="background:${p.grad}"></span>${p.label}</div>`).join('');
+    ? phaseRow(phaseLegendText())
+    : spinEnabled ? '<div class="lrow">Spin density isosurface</div>' : (psiRealUpToPhase()
+        ? `<div class="lrow"><span class="lsw" style="background:#e16e14"></span>ψ &gt; 0 lobe</div><div class="lrow"><span class="lsw" style="background:linear-gradient(90deg,#1010c0,#4060e0,#8090ff)"></span>ψ &lt; 0 lobe</div>`
+        : `<div class="lrow"><span class="lsw" style="background:#e16e14"></span>|ψ|² surface (ψ is complex: use Phase for arg ψ)</div>`);
+  const contourRow=isoOp>0?`<div class="lrow"><span class="lsw" style="background:transparent;border:1.5px solid rgba(0,220,255,.8);border-radius:2px"></span>Density contour</div>`:'';
+  const sliceRows=palRow('|ψ|² slice')+contourRow;
+  const tg=`linear-gradient(180deg,transparent 0 40%,${ptColor.hex} 40% 60%,transparent 60% 100%)`;
+  const pg=`radial-gradient(circle,${ptColor.hex} 0 35%,transparent 40%)`;
+  const colDots=PT_PRESETS.map(p=>`<button aria-label="${p.label}" aria-pressed="${p===ptColor}" class="leg-col-opt${p===ptColor?' sel':''}" style="background:${p.hex}" title="${p.label}" onclick="setParticleColor('${p.label}')"></button>`).join('');
+  const palOpts=PAL_META.map(p=>`<button type="button" aria-pressed="${p.key===densityPalette}" class="pal-opt${p.key===densityPalette?' selected':''}" onclick="setPaletteByKey('${p.key}');document.getElementById('density-palette-button').focus()"><span class="pal-swatch" style="background:${p.grad}"></span>${p.label}</button>`).join('');
+  const phaseOpts=PHASE_PAL_META.map(p=>`<button type="button" aria-pressed="${p.key===phasePalette}" class="pal-opt${p.key===phasePalette?' selected':''}" onclick="setPhasePaletteByKey('${p.key}');document.getElementById('phase-palette-button').focus()"><span class="pal-swatch" style="background:${p.grad}"></span>${p.label}</button>`).join('');
   // Spin channel rows
-  const spinRows=spinEnabled&&spinComps.length?`
+  const spinRows=spinEnabled&&spinComps.length&&!showSlice?`
     <div class="lrow spin-lrow">
       <button class="lrow-btn" onclick="document.getElementById('spinUpPicker').click()" title="Change spin-↑ colour"><span class="lsw" id="spinUpSwatch" style="background:${spinUpColor.hex}"></span>Spin ↑ (ρ<sub>↑</sub>)</button>
-      <input type="color" id="spinUpPicker" style="opacity:0;position:absolute;width:0;height:0" value="${spinUpColor.hex}" oninput="setSpinUpColor(this.value)">
+      <input type="color" id="spinUpPicker" tabindex="-1" aria-label="Spin up color" style="opacity:0;position:absolute;width:0;height:0" value="${spinUpColor.hex}" oninput="setSpinUpColor(this.value)">
     </div>
     <div class="lrow spin-lrow">
       <button class="lrow-btn" onclick="document.getElementById('spinDnPicker').click()" title="Change spin-↓ colour"><span class="lsw" id="spinDnSwatch" style="background:${spinDnColor.hex}"></span>Spin ↓ (ρ<sub>↓</sub>)</button>
-      <input type="color" id="spinDnPicker" style="opacity:0;position:absolute;width:0;height:0" value="${spinDnColor.hex}" oninput="setSpinDnColor(this.value)">
+      <input type="color" id="spinDnPicker" tabindex="-1" aria-label="Spin down color" style="opacity:0;position:absolute;width:0;height:0" value="${spinDnColor.hex}" oninput="setSpinDnColor(this.value)">
     </div>`:'';
   const common=`
     ${spinRows}
-    <button class="lrow-btn" onclick="openLegColPop(event)" title="Change particle color"><span class="lsw" style="background:${tg}"></span>Particle trail</button>
-    <button class="lrow-btn" onclick="openLegColPop(event)" title="Change particle color"><span class="lsw" style="background:${pg}"></span>Particle</button>
+    ${showCloud||interp!=='pw'?'':`<button class="lrow-btn" onclick="openLegColPop(event)" title="Change particle color"><span class="lsw" style="background:${tg}"></span>Trail</button>
+    <div class="lrow"><span class="lsw" style="background:radial-gradient(circle,${electronColor().hex} 0 38%,transparent 44%)"></span>Electron</div>`}
     <div class="lrow"><span class="lsw" style="background:radial-gradient(circle at 30%,#ff7040,transparent)"></span>Proton</div>
     <div class="leg-colpop" id="legColPop">${colDots}</div>
     <div class="leg-pal-pop" id="legPalPop">${palOpts}</div>
     <div class="leg-pal-pop" id="legPhasePalPop">${phaseOpts}</div>`;
-  const phaseRows=phaseRow('arg(ψ) slice — red=0, cyan=±π')
-    +`<div class="lrow"><span class="lsw" style="background:transparent;border:1.5px solid rgba(0,220,255,.8);border-radius:2px"></span>Isosurface</div>`;
+  const phaseRows=phaseRow(phaseLegendText())+contourRow;
   let legendRows='';
   if(showLobes) legendRows+=lobeRows;
   if(showVol)   legendRows+=volRows;
   if(showSlice&&!showPhase) legendRows+=sliceRows;
   if(showSlice&&showPhase)  legendRows+=phaseRows;
-  if(!legendRows) legendRows=volRows; // fallback when all off
+  if(showCloud) legendRows=`<div class="lrow">${interp==='pw'?'Probability samples':'Position-measurement outcomes'}</div>`;
+  if(!legendRows) legendRows=volRows;
   div.innerHTML=legendRows+common;
 }
 function openLegColPop(e){
@@ -3061,6 +2991,13 @@ function openLegColPop(e){
   document.getElementById('legColPop')?.classList.toggle('open');
   document.getElementById('legPalPop')?.classList.remove('open');
 }
+// Electron spheres use a warm yellow so they stand out from the (cyan by default) trails;
+// if the trails themselves are amber, the electrons turn white.
+function electronColor(){
+  if(ptColor.label==='Amber') return {r:245,g:245,b:250,hex:'#f5f5fa'};
+  return lightTheme?{r:230,g:160,b:0,hex:'#e6a000'}:{r:255,g:214,b:64,hex:'#ffd640'};
+}
+
 function setParticleColor(label){
   ptColor=PT_PRESETS.find(p=>p.label===label)||PT_PRESETS[0];
   cloudSprite=null; // rebuild sphere sprite with new colour
@@ -3076,18 +3013,13 @@ function refreshOrbGrid(){
   ORBITALS.forEach((o,i)=>{
     if(o.n!==selectedN)return;
     const btn=document.createElement('button');
-    btn.className='obtn'+(i===orbIdx?' active':'');
+    const on=i===orbIdx&&superKey==='none';
+    btn.className='obtn'+(on?' active':'');
+    btn.setAttribute('aria-pressed',String(on));
     btn.textContent=o.label.replace(/^\d/,''); // strip leading n digit
     const desc=INFO[o.label]||'';
-    btn.title=`|${o.n}, ${o.l}, ${o.m>=0?'+':''}${o.m}⟩${desc?'\n'+desc:''}`;
-    btn.onclick=()=>{
-      document.querySelectorAll('.obtn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      orbIdx=i;superKey='none';document.getElementById('superSel').value='none';
-      buildComps();sliceDirty=true;volumeDirty=true;volNeedsRedraw=true;t=0;
-      if(showCloud){initCloudParts();}else{particles=sampleParticles(nPart);}
-      updateInfo();
-    };
+    btn.title=`|${o.n}, ${o.l}, ${fmtM(o.m)}⟩${desc?'\n'+desc:''}`;
+    btn.onclick=()=>selectPureOrbital(i);
     ogrid.appendChild(btn);
   });
 }
@@ -3097,11 +3029,12 @@ function buildOrbPicker(){
   [1,2,3,4,5,6].forEach(n=>{
     const btn=document.createElement('button');
     btn.className='nbtn'+(n===selectedN?' active':'');
+    btn.setAttribute('aria-pressed',String(n===selectedN));
     btn.textContent='n='+n;
     btn.onclick=()=>{
       selectedN=n;
-      document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
+      document.querySelectorAll('.nbtn').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false');});
+      btn.classList.add('active');btn.setAttribute('aria-pressed','true');
       refreshOrbGrid();
     };
     nrow.appendChild(btn);
@@ -3110,44 +3043,199 @@ function buildOrbPicker(){
 }
 buildOrbPicker();
 
+// Slice plane that shows the current state best: the xy ring for m ≠ 0, the xz plane otherwise.
+function syncSlicePlaneToState(){
+  if(!showSlice||slicePlane==='all') return;
+  slicePlane=comps.some(c=>c.m!==0)?'xy':'xz';
+  document.getElementById('sliceSel').value=slicePlane;
+  sliceDirty=true;
+  // Look at the slice face-on, so a sphere looks round and rings look like rings:
+  // xy from +z with x right and y up; xz from −y with z up.
+  const face={xy:{theta:Math.PI-0.01,phi:Math.PI/2},xz:{theta:Math.PI/2,phi:Math.PI/2}}[slicePlane];
+  camTheta=face.theta; camPhi=face.phi; volNeedsRedraw=true;
+}
+
+function selectPureOrbital(index){
+  orbIdx=index;
+  selectedN=ORBITALS[index].n;
+  document.querySelectorAll('.nbtn').forEach(button=>{const on=button.textContent===`n=${selectedN}`;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on));});
+  superKey='none';
+  document.getElementById('superSel').value='none';
+  t=0;
+  previousFrame=undefined;
+  buildComps();
+  if(showCloud) initCloudParts();
+  else particles=sampleParticles(nPart);
+  syncSlicePlaneToState();
+  fitZoom();
+  refreshOrbGrid();
+  updateInfo();
+  updateQuickPresets();
+  _syncVizUI();
+}
+
+function updateQuickPresets(){
+  document.querySelectorAll('[data-orbital-index], #beatPreset').forEach(button=>{
+    const active=button.id==='beatPreset' ? superKey==='sp' : superKey==='none'&&Number(button.dataset.orbitalIndex)===orbIdx;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  });
+}
+
+document.querySelectorAll('[data-orbital-index]').forEach(button=>{
+  button.addEventListener('click',()=>selectPureOrbital(Number(button.dataset.orbitalIndex)));
+});
+document.getElementById('beatPreset').addEventListener('click',()=>{
+  const dropdown=document.getElementById('superSel');
+  dropdown.value='sp';
+  dropdown.dispatchEvent(new Event('change'));
+});
+updateQuickPresets();
+
+const SUPER_DESC={
+    px:'2p_x = (2p₋₁ − 2p₊₁)/√2: two lobes along x. This combination is real, so the pilot-wave velocity is zero; in 2p₊₁ the electrons circulate.',
+    py:'2p_y = i(2p₋₁ + 2p₊₁)/√2: two lobes along y. Real, so the pilot-wave velocity is zero.',
+    pz:'2p_z is the m = 0 state 2p₀: two lobes along z. Real, so the pilot-wave velocity is zero.',
+    dz2:'3d_z² is the m = 0 state 3d₀: two lobes along z and a ring in the xy plane of opposite sign. Real, so the pilot-wave velocity is zero.',
+    dxz:'3d_xz: four lobes in the xz plane, a real combination of m = ±1. The pilot-wave velocity is zero; in 3d₊₁ the electrons circulate.',
+    dyz:'3d_yz: four lobes in the yz plane, a real combination of m = ±1. The pilot-wave velocity is zero.',
+    dx2y2:'3d_x²−y²: four lobes along the x and y axes, a real combination of m = ±2. The pilot-wave velocity is zero; in 3d₊₂ the electrons circulate.',
+    dxy:'3d_xy: four lobes between the x and y axes, a real combination of m = ±2. The pilot-wave velocity is zero.',
+    ss:'1s + 2s: the density breathes radially. ΔE = 3/8 a.u., period 16.8 atomic units ≈ 405 attoseconds. In pilot-wave theory the electrons move in and out along radii. Volume view shows the breathing best.',
+    sp:'1s + 2p₀: the density sloshes up and down the z axis; ⟨r⟩ stays the same. ΔE = 3/8 a.u., period 16.8 atomic units ≈ 405 attoseconds.',
+    pd:'2p₀ + 3d₀: slower beating along z. ΔE = 5/72 a.u., period 90.5 atomic units ≈ 2.2 femtoseconds.',
+    circ:'2p₊₁ + 3d₊₁: a ring of density that sloshes above and below the xy plane with period 90.5 atomic units ≈ 2.2 femtoseconds; its radius stays the same. Both states have m = +1, so in pilot-wave theory the electrons also circle z.',
+    spin_ss:'1s↑ + 2s↓: the spin channels add without interference, so |ψ|² is stationary. With the Pauli spin term in the guidance law the electrons still move, because the spin density S has a nonzero curl.',
+    spin_sp:'1s↑ + 2p₀↓: stationary |ψ|², symmetric about the xy plane. With the Pauli spin term the electrons still move.',
+    spin_circ:'2p₊₁↑ + 3d₊₁↓: stationary |ψ|², ring-shaped. With the Pauli spin term the electrons circulate with a time-dependent speed.',
+    none:''};
+
 document.getElementById('superSel').onchange=function(){
   superKey=this.value;
-  const isSpin=!!SPIN_SUPERS[superKey];
-  buildComps();sliceDirty=true;volumeDirty=true;volNeedsRedraw=true;t=0;
+  t=0;previousFrame=undefined;
+  buildComps();
   if(showCloud){initCloudParts();}else{particles=sampleParticles(nPart);}
-  const desc={
-    px:'Real p_x orbital: (2p₊₁−2p₋₁)/√2 → two lobes along x. Degenerate → stationary particles.',
-    ss:'1s+2s (Tumulka 2004): both spherically symmetric → pure radial density oscillation. ΔE=3/8 a.u., period≈16.8 a.u. Particles move in/out along radii. Lobes mode shows a sphere; Volume mode shows the breathing gradient best.',
-    sp:'1s+2pz: density oscillates between compact sphere and elongated upper lobe. ΔE=3/8 a.u., period≈16.8 a.u.',
-    pd:'2pz+3dz²: slower z-axis beating. ΔE=5/72 a.u., period≈91 a.u. Density pulses between p_z and d_z² shapes.',
-    circ:'2p₊₁+3d₊₁: m=+1 on both → CCW azimuthal circulation. Radial density also beats at ΔE=5/72 a.u. Most dynamic: particles orbit while the ring expands/contracts.',
-    spin_ss:'1s↑ + 2s↓ (spin super): same radial breathing as 1s+2s but the density oscillates between two spin channels. Pauli–Bohm spin-curl term makes particles non-stationary even between the radial nodes.',
-    spin_sp:'1s↑ + 2p₀↓: z-axis density oscillation with spin-channel switching. The spin-curl term drives complex 3D trajectories.',
-    spin_circ:'2p₊₁↑ + 3d₊₁↓: CCW circulation + radial beating + spin-channel switching. Most complex preset: three coupled dynamics.',
-    none:''};
+  syncSlicePlaneToState();
+  fitZoom();
+  refreshOrbGrid();
+
   // Per-preset lobe threshold
-  const presetLb={ss:1,sp:3,pd:8,circ:6,px:10,none:12,spin_ss:1,spin_sp:3,spin_circ:6};
+  const presetLb={ss:1,sp:3,pd:8,circ:6,px:10,py:10,pz:10,dz2:10,dxz:10,dyz:10,dx2y2:10,dxy:10,none:12,spin_ss:1,spin_sp:3,spin_circ:6};
   const lb=presetLb[superKey];
   if(lb!==undefined){
     lobeThresh=lb/100;
     const sl=document.getElementById('sLB');sl.value=lb;document.getElementById('vLB').textContent=lb;
     cachedVolCanvas=null;
   }
-  if(superKey==='ss'&&typeof viewMode!=='undefined'&&viewMode==='lobes') setView('volume');
-  document.getElementById('infoKet').textContent=this.options[this.selectedIndex].text;
-  document.getElementById('infoDesc').textContent=desc[superKey]||'';
+  if(superKey==='none') updateInfo();
+  else{
+    document.getElementById('infoKet').textContent=this.options[this.selectedIndex].text;
+    document.getElementById('infoDesc').textContent=predictPending?'Make your prediction first.':forReading(SUPER_DESC[superKey]||'');
+  }
   // Sync spin UI heading when a spin preset is selected
-  if(isSpin) _syncSpinUI();
+  _syncSpinUI();
+  _syncVizUI();
+  updateQuickPresets();
 };
+
+// In the orthodox reading, drop sentences about electron motion from state descriptions.
+function forReading(text){
+  if(interp==='pw'||!text) return text;
+  return text.split(/(?<=\.)\s+/).filter(x=>!/pilot-wave|pilot wave|guidance|spin term|electrons? (still )?(move|circle|stay|ride)/i.test(x)).join(' ');
+}
+
+function setInterpretation(value){
+  interp=value==='cpn'?'cpn':'pw';
+  const spinBtn=document.getElementById('spinToggleBtn');
+  spinBtn.disabled=interp!=='pw';
+  spinBtn.title=interp==='pw'
+    ? 'Add the Pauli spin term to the guidance law. It changes the trajectories, not |ψ|². See Physics § 4.'
+    : 'The spin term is part of the pilot-wave guidance law; switch to Pilot Wave to use it.';
+  document.querySelector('.hydrogen-predict')?.toggleAttribute('hidden',interp!=='pw');
+  document.getElementById('atomsRow')?.toggleAttribute('hidden',interp!=='pw');
+  if(showCloud) initCloudParts();
+  if(superKey==='none') updateInfo();
+  else document.getElementById('infoDesc').textContent=forReading(SUPER_DESC[superKey]||'');
+  updateLegend();
+  updateCaption();
+}
+
+// One line under the canvas saying what the marks mean.
+// Names the spin direction in product mode (spin along +x by default).
+function spinAxisText(){
+  if(!(spinEnabled&&spinMode==='product'&&superKey==='none')) return '';
+  const th=spinTheta, ph=spinPhi, near=(a,b)=>Math.abs(a-b)<0.03;
+  let axis;
+  if(near(th,0)) axis='+z';
+  else if(near(th,Math.PI)) axis='−z';
+  else if(near(th,Math.PI/2)&&(near(ph,0)||near(ph,2*Math.PI))) axis='+x';
+  else if(near(th,Math.PI/2)&&near(ph,Math.PI/2)) axis='+y';
+  else if(near(th,Math.PI/2)&&near(ph,Math.PI)) axis='−x';
+  else if(near(th,Math.PI/2)&&near(ph,3*Math.PI/2)) axis='−y';
+  else axis=`θ = ${th.toFixed(2)}, φ = ${ph.toFixed(2)}`;
+  return ` Spin along ${axis}; for 1s the electrons circle that axis (Advanced: θ, φ).`;
+}
+function updateCaption(){
+  const el=document.getElementById('viewCaption'); if(!el) return;
+  const spin=spinEnabled&&spinComps.length>0, evolving=densityEvolves();
+  let text;
+  if(interp!=='pw'){
+    text=showCloud
+      ? 'Orthodox: each sphere is one possible outcome of a position measurement on one of many atoms prepared in this state. No position is assigned between measurements.'
+      : 'Orthodox: the display is |ψ|², the probability of finding the electron in a region if its position is measured. No position or path is assigned between measurements.';
+    if(!spin&&comps.some(c=>c.m!==0)&&!psiRealUpToPhase()) text+=' The probability current j = (ħ/mₑ) Im(ψ*∇ψ) circulates about z; it is standard too. Reading j/|ψ|² as the velocity of an electron that always has a position is the pilot-wave step.';
+    if(evolving) text+=' The density itself changes in time.';
+    el.textContent=text;
+    return;
+  }
+  if(predictPending){
+    el.textContent='Pilot wave: each dot is the electron of a separate atom, started at a position drawn from |ψ|². Make your prediction, then watch.';
+    return;
+  }
+  if(showCloud){
+    text='Pilot wave, Cloud: each sphere is one sample of |ψ|², a place where a position measurement on one of many atoms could find the electron.';
+    if(evolving) text+=' The density changes in time, so the samples are redrawn each frame.';
+    else if(spin) text+=' With the spin term on, each sample also moves along its pilot-wave trajectory.';
+    else if(comps.some(c=>c.m!==0)) text+=' Each sample also moves along its pilot-wave path about z.';
+  }else{
+    text='Pilot wave: each dot is the electron of a separate atom, started at a position drawn from |ψ|²; trails are their paths.';
+    if(spin&&spinTerm) text+=' The spin term is on, so the electrons move even where |ψ|² does not change.'+spinAxisText();
+    else if(spin) text+=' Spin term off: the same spinor, guided by the convective current Im(Ψ†∇Ψ)/ρ only.';
+    else if(psiRealUpToPhase()) text+=' ψ is real here, so with the standard guidance law the velocity is zero and the electrons stay put (Physics § 3; § 4 for the spin term).';
+  }
+  el.textContent=text;
+}
+
+// While a prediction is pending, state descriptions that would give away the answer are hidden.
+let predictPending=false;
+function setPredictPending(value){predictPending=value;updateInfo();updateCaption();}
 
 function updateInfo(){
   const o=ORBITALS[orbIdx];
-  document.getElementById('infoKet').textContent=`|${o.n}, ${o.l}, ${o.m>=0?'+':''}${o.m}⟩`;
-  document.getElementById('infoDesc').textContent=INFO[o.label]||'';
+  if(superKey!=='none'){
+    const sel=document.getElementById('superSel');
+    document.getElementById('infoKet').textContent=sel.options[sel.selectedIndex].text;
+    let d=SUPER_DESC[superKey]||'';
+    if(SPIN_SUPERS[superKey]&&!spinTerm) d+=' Spin term off: the electrons follow the guidance law without it.';
+    document.getElementById('infoDesc').textContent=predictPending?'Make your prediction first.':forReading(d);
+    updateCaption();
+    return;
+  }
+  const coupled=spinEnabled&&spinMode==='jstate'&&superKey==='none';
+  document.getElementById('infoKet').textContent=coupled
+    ? document.getElementById('jStateSel').selectedOptions[0]?.textContent
+    : `|${o.n}, ${o.l}, ${fmtM(o.m)}⟩`;
+  if(predictPending){document.getElementById('infoDesc').textContent='Make your prediction first.';updateCaption();return;}
+  document.getElementById('infoDesc').textContent=(spinEnabled&&interp!=='pw')
+    ? 'Spinor state: the density shown is |ψ↑|² + |ψ↓|².'
+    : forReading(spinEnabled
+    ? (spinTerm?'Pilot-wave guidance includes the Pauli spin term.':'Spinor state; pilot-wave guidance without the spin term.')
+    : INFO[o.label]||'');
+  updateCaption();
 }
 updateInfo();
 
-document.getElementById('sNP').oninput=function(){nPart=+this.value;document.getElementById('vNP').textContent=nPart;particles=sampleParticles(nPart);};
+document.getElementById('sNP').oninput=function(){nPart=+this.value;document.getElementById('vNP').textContent=nPart;if(!showCloud)particles=sampleParticles(nPart,t);};
 const _sSphPx=document.getElementById('sSphPx');
 if(_sSphPx)_sSphPx.oninput=function(){
   cloudSpherePx=+this.value;
@@ -3156,11 +3244,10 @@ if(_sSphPx)_sSphPx.oninput=function(){
   if(showCloud)initCloudParts();
 };
 document.getElementById('resetCloudBtn').onclick=function(){if(showCloud)initCloudParts();};
-document.getElementById('sSP').oninput=function(){simSpeed=+this.value;document.getElementById('vSP').textContent=simSpeed.toFixed(1)+'×';};
 document.getElementById('sTR').oninput=function(){trailLen=+this.value;document.getElementById('vTR').textContent=trailLen;};
 document.getElementById('sDT').oninput=function(){dtStep=+this.value;document.getElementById('vDT').textContent=dtStep.toFixed(3);};
 document.getElementById('sDO').oninput=function(){densOp=+this.value/100;document.getElementById('vDO').textContent=this.value+'%';volNeedsRedraw=true;cachedVolCanvas=null;projVolCache=null;};
-document.getElementById('sIO').oninput=function(){isoOp=+this.value/100;document.getElementById('vIO').textContent=this.value;volNeedsRedraw=true;cachedVolCanvas=null;projVolCache=null;};
+document.getElementById('sIO').oninput=function(){isoOp=+this.value/100;document.getElementById('vIO').textContent=this.value;volNeedsRedraw=true;cachedVolCanvas=null;projVolCache=null;updateLegend();};
 document.getElementById('sLB').oninput=function(){lobeThresh=+this.value/100;document.getElementById('vLB').textContent=this.value;volNeedsRedraw=true;cachedVolCanvas=null;};
 document.getElementById('sPS').oninput=function(){ptSize=+this.value;document.getElementById('vPS').textContent=ptSize;};
 document.getElementById('sliceSel').onchange=function(){slicePlane=this.value;sliceDirty=true;};
@@ -3207,41 +3294,79 @@ document.addEventListener('click',e=>{
     lp.classList.remove('open');
 });
 
-// ── Sidebar resize ─────────────────────────────────────────────
-(function(){
-  const sb=document.getElementById('sidebar');
-  const handle=document.getElementById('sidebarResize');
-  let sbDrag=false,startX=0,startW=0;
-  handle.addEventListener('mousedown',e=>{
-    sbDrag=true;startX=e.clientX;startW=sb.offsetWidth;
-    handle.classList.add('dragging');
-    document.body.style.userSelect='none';
-    e.preventDefault();
-  });
-  window.addEventListener('mousemove',e=>{
-    if(!sbDrag)return;
-    const w=Math.max(180,Math.min(560,startW+(e.clientX-startX)));
-    sb.style.width=w+'px';
-    volNeedsRedraw=true;
-  });
-  window.addEventListener('mouseup',()=>{
-    if(!sbDrag)return;
-    sbDrag=false;
-    handle.classList.remove('dragging');
-    document.body.style.userSelect='';
-  });
-})();
+// The shared shell owns playback and theme controls; the renderer owns the state.
+const hydrogenSimulation={
+  isRunning:()=>running,
+  setRunning(value){
+    if(running===value) return;
+    running=value;
+    previousFrame=undefined;
+    if(showPhase) volNeedsRedraw=true;
+  },
+  reset(){
+    invalidateDensity();
+    t=0;
+    previousFrame=undefined;
+    if(showCloud) initCloudParts();
+    else particles=sampleParticles(nPart);
+  },
+  setSpeed(value){simSpeed=value;},
+  setTheme(theme){
+    lightTheme=theme==='light';
+    document.body.classList.toggle('light',lightTheme);
+  },
+  getCanvasScale:()=>Math.min(W,H)*0.47/rMax()*camDist,
+};
 
-function toggleRun(){
-  running=!running;
-  const btn=document.getElementById('runBtn');
-  btn.textContent=running?'⏸ Pause':'▶ Run';
-  btn.classList.toggle('active',running);
-}
-
-document.getElementById('resetBtn').onclick=()=>{sliceDirty=true;volumeDirty=true;volNeedsRedraw=true;if(showCloud){initCloudParts();}else{particles=sampleParticles(nPart);}t=0;if(!running){running=true;const b=document.getElementById('runBtn');b.textContent='⏸ Pause';b.classList.add('active');}};
 document.getElementById('clearBtn').onclick=()=>particles.forEach(p=>p.trail=[]);
 
+// Zoom so that most of |ψ|² (about 1.8 ⟨r⟩ of the largest component) fills the view.
+function fitZoom(){
+  const rDisp=1.8*Math.max(...comps.map(c=>exactR(c.n,c.l)),1);
+  camDist=Math.max(0.6,Math.min(5,rMax()/(rDisp*1.15)));
+  volNeedsRedraw=true;
+}
+function zoomCamera(factor){
+  camDist=Math.max(0.3,Math.min(5,camDist*factor));
+  volNeedsRedraw=true;
+}
+
+function resetCamera(){
+  if(_camTween) cancelAnimationFrame(_camTween);
+  _camTween=null;
+  // Tilted view: rings about z (m ≠ 0) and lobes along z both stay visible.
+  const initial=preferSliceFallback?{theta:1.05,phi:0.5}:{theta:0.55,phi:0.5};
+  camTheta=initial.theta;
+  camPhi=initial.phi;
+  fitZoom();
+}
+document.getElementById('zoom-in').onclick=()=>zoomCamera(1.2);
+document.getElementById('zoom-out').onclick=()=>zoomCamera(1/1.2);
+document.getElementById('reset-camera').onclick=resetCamera;
+document.getElementById('camera-plane').onchange=function(){
+  if(this.value) snapCamTo(this.value);
+  this.value='';
+};
+// Collapse the legend on phones and short (projector) screens so it does not cover the orbital.
+const compactLegend=matchMedia('(max-width:600px), (max-height:700px)');
+const syncLegendLayout=()=>{document.getElementById('hydrogen-legend').open=!compactLegend.matches;};
+compactLegend.addEventListener('change',syncLegendLayout);
+syncLegendLayout();
+
+canvas.addEventListener('keydown',event=>{
+  if(event.key==='+'||event.key==='='||event.key==='-'||event.key==='Home'){
+    event.preventDefault();
+    if(event.key==='Home') resetCamera();
+    else zoomCamera(event.key==='-'?1/1.2:1.2);
+    return;
+  }
+  const movement={ArrowLeft:[-0.12,0],ArrowRight:[0.12,0],ArrowUp:[0,-0.12],ArrowDown:[0,0.12]}[event.key];
+  if(!movement) return;
+  event.preventDefault();
+  camPhi+=movement[0];
+  camTheta=Math.max(0.05,Math.min(Math.PI-0.05,camTheta+movement[1]));
+  volNeedsRedraw=true;
+});
 canvas.addEventListener('mousedown',e=>{dragging=true;lastMX=e.clientX;lastMY=e.clientY;});
 window.addEventListener('mouseup',()=>{dragging=false;volNeedsRedraw=true;});
 canvas.addEventListener('mousemove',e=>{
@@ -3271,7 +3396,7 @@ canvas.addEventListener('click',e=>{
   const hit=projPanelHitBoxes.find(b=>mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h);
   if(hit)snapCamTo(hit.plane);
 });
-canvas.addEventListener('wheel',e=>{camDist*=1-e.deltaY*0.001;camDist=Math.max(0.3,Math.min(3,camDist));volNeedsRedraw=true;e.preventDefault();},{passive:false});
+canvas.addEventListener('wheel',e=>{zoomCamera(1-e.deltaY*0.001);e.preventDefault();},{passive:false});
 canvas.addEventListener('touchstart',e=>{dragging=true;lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;},{passive:true});
 window.addEventListener('touchend',()=>{dragging=false;volNeedsRedraw=true;});
 canvas.addEventListener('touchmove',e=>{
@@ -3281,13 +3406,80 @@ canvas.addEventListener('touchmove',e=>{
   lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;volNeedsRedraw=true;
 },{passive:true});
 
+// ─── Share links ─────────────────────────────────────────────
+// A link carries the state, guidance law, display and camera.
+function currentView(){return showCloud?'cloud':showLobes?'lobes':showSlice?'slice':'volume';}
+function hydrogenShareUrl(){
+  const q=new URLSearchParams();
+  if(superKey!=='none') q.set('sup',superKey); else q.set('orb',ORBITALS[orbIdx].label);
+  if(spinEnabled&&!SPIN_SUPERS[superKey]){
+    q.set('spin',spinMode==='jstate'?'j':'1');
+    if(spinMode==='jstate') q.set('j',document.getElementById('jStateSel').value||'0');
+    else{q.set('th',spinTheta.toFixed(2));q.set('ph',spinPhi.toFixed(2));}
+  }
+  if(interp!=='pw') q.set('interp',interp);
+  if(spinorStateSelected()&&!spinTerm) q.set('term','0');
+  q.set('view',currentView());
+  if(showSlice) q.set('plane',slicePlane);
+  if(showPhase) q.set('phase','1');
+  q.set('electrons',String(nPart));
+  q.set('cam',[camTheta,camPhi,camDist].map(v=>v.toFixed(2)).join(','));
+  const u=new URL(location.href); u.search=q.toString(); u.hash='';
+  return u.href;
+}
+function applyShareParams(){
+  const q=new URLSearchParams(location.search);
+  if(![...q.keys()].length) return;
+  const atoms=parseInt(q.get('electrons')??q.get('atoms'),10);   // 'atoms' kept for older links
+  if(Number.isFinite(atoms)){
+    nPart=Math.max(1,Math.min(50,atoms));
+    document.getElementById('sNP').value=nPart; document.getElementById('vNP').textContent=nPart;
+  }
+  const view=q.get('view');
+  if(['volume','slice','lobes','cloud'].includes(view)) toggleViz(view);
+  const plane=q.get('plane');
+  if(['xz','xy','yz','all'].includes(plane)){slicePlane=plane;document.getElementById('sliceSel').value=plane;sliceDirty=true;}
+  const sub={'1':'₁','2':'₂','3':'₃','4':'₄','5':'₅'};
+  const orbParam=(q.get('orb')||'').replace(/^(\d[spdfgh])(\+|−|-)(\d?)$/,(x,h,sg,k)=>h+(sg==='+'?'₊':'₋')+sub[k||'1']);   // old links used 2p+, 3d−1
+  const orb=ORBITALS.findIndex(o=>o.label===orbParam);
+  const sup=q.get('sup');
+  if(sup&&(SUPERS[sup]||SPIN_SUPERS[sup])){
+    const sel=document.getElementById('superSel'); sel.value=sup; sel.dispatchEvent(new Event('change'));
+  }else selectPureOrbital(orb>=0?orb:orbIdx);
+  const spin=q.get('spin');
+  if(spin&&!SPIN_SUPERS[superKey]){
+    if(spin==='j'&&superKey==='none'){ spinMode='jstate'; }
+    else{
+      const th=parseFloat(q.get('th')), ph=parseFloat(q.get('ph'));
+      if(Number.isFinite(th)){spinTheta=Math.max(0,Math.min(Math.PI,th));document.getElementById('sSpinTheta').value=Math.round(spinTheta*100);document.getElementById('vSpinTheta').textContent=spinTheta.toFixed(2)+'rad';}
+      if(Number.isFinite(ph)){spinPhi=((ph%(2*Math.PI))+2*Math.PI)%(2*Math.PI);document.getElementById('sSpinPhi').value=Math.round(spinPhi*100);document.getElementById('vSpinPhi').textContent=spinPhi.toFixed(2)+'rad';}
+    }
+    if(!spinEnabled) toggleSpin();
+    if(spin==='j'&&superKey==='none'){
+      const idx=parseInt(q.get('j'),10)||0;
+      document.getElementById('jStateSel').value=String(idx); setJState(idx);
+    }
+  }
+  if(q.get('phase')==='1'&&!showPhase&&!spinEnabled) toggleViz('phase');
+  if(q.get('term')==='0'&&spinorStateSelected()&&spinTerm) toggleSpin();
+  const cam=(q.get('cam')||'').split(',').map(Number);
+  if(cam.length===3&&cam.every(Number.isFinite)){
+    camTheta=Math.max(0.05,Math.min(Math.PI-0.05,cam[0])); camPhi=cam[1]; camDist=Math.max(0.3,Math.min(5,cam[2]));
+    volNeedsRedraw=true;
+  }
+}
+
 // ─── Start ───────────────────────────────────────────────────
 buildComps();
 particles=sampleParticles(nPart);
 updateLegend();
 initLobeGL();
 if(!gl2Ready) showGpuFallbackNotice();
+resetCamera();
 setView(preferSliceFallback?'slice':'volume');
-document.getElementById('insetBtn')?.classList.toggle('active',showInset);
-document.getElementById('projBtn')?.classList.toggle('active',showProjections);
+syncSlicePlaneToState();
+syncDisplayToggle('axesBtn',showAxes);
+syncDisplayToggle('insetBtn',showInset);
+syncDisplayToggle('projBtn',showProjections);
+applyShareParams();
 requestAnimationFrame(loop);

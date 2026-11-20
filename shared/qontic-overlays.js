@@ -50,7 +50,8 @@ export function mountDistanceScale({host,getUnitsPerPixel,format=v=>String(v),st
 
 // Shared linear-coordinate overlay. Models provide only their current bounds
 // and formatting; the template owns grid drawing and pointer interactions.
-export function mountCoordinateTools({host,getBounds,formatValue=value=>Number(value.toPrecision(4)).toString(),storageKey}) {
+// Optional yUp (default false): y increases upward on screen, yMax at the top edge.
+export function mountCoordinateTools({host,getBounds,formatValue=value=>Number(value.toPrecision(4)).toString(),storageKey,yUp=false}) {
   styles();
   const canvas=document.createElement('canvas');canvas.className='qontic-coordinate-overlay';canvas.hidden=true;host.append(canvas);
   const readout=document.createElement('output');readout.className='qontic-coordinate-readout';readout.hidden=true;readout.setAttribute('aria-live','polite');host.append(readout);
@@ -61,7 +62,7 @@ export function mountCoordinateTools({host,getBounds,formatValue=value=>Number(v
   const worldPoint=(clientX,clientY)=>{
     const rect=host.getBoundingClientRect(),bounds=validBounds();if(!bounds||!(rect.width>0&&rect.height>0))return null;
     const px=Math.max(0,Math.min(rect.width,clientX-rect.left)),py=Math.max(0,Math.min(rect.height,clientY-rect.top));
-    return {px,py,x:bounds.xMin+px/rect.width*(bounds.xMax-bounds.xMin),y:bounds.yMin+py/rect.height*(bounds.yMax-bounds.yMin)};
+    return {px,py,x:bounds.xMin+px/rect.width*(bounds.xMax-bounds.xMin),y:yUp?bounds.yMax-py/rect.height*(bounds.yMax-bounds.yMin):bounds.yMin+py/rect.height*(bounds.yMax-bounds.yMin)};
   };
   const label=(ctx,text,x,y)=>{
     ctx.font='11px Inter,Arial,sans-serif';const padding=5,width=ctx.measureText(text).width+2*padding,height=20;
@@ -74,12 +75,12 @@ export function mountCoordinateTools({host,getBounds,formatValue=value=>Number(v
     canvas.hidden=!gridVisible&&!measureActive;if(canvas.hidden||!bounds||width<1||height<1)return;
     if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);}
     const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
-    const toPixel=point=>({x:(point.x-bounds.xMin)/(bounds.xMax-bounds.xMin)*width,y:(point.y-bounds.yMin)/(bounds.yMax-bounds.yMin)*height});
+    const toPixel=point=>({x:(point.x-bounds.xMin)/(bounds.xMax-bounds.xMin)*width,y:(yUp?bounds.yMax-point.y:point.y-bounds.yMin)/(bounds.yMax-bounds.yMin)*height});
     if(gridVisible){
       const xStep=niceStep(bounds.xMax-bounds.xMin,width),yStep=niceStep(bounds.yMax-bounds.yMin,height);
       ctx.lineWidth=1;
       for(let x=Math.ceil(bounds.xMin/xStep)*xStep;x<=bounds.xMax+xStep*1e-9;x+=xStep){const px=(x-bounds.xMin)/(bounds.xMax-bounds.xMin)*width;ctx.strokeStyle=Math.abs(x)<xStep*1e-8?'rgba(208,247,255,.52)':'rgba(190,234,244,.22)';ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,height);ctx.stroke();}
-      for(let y=Math.ceil(bounds.yMin/yStep)*yStep;y<=bounds.yMax+yStep*1e-9;y+=yStep){const py=(y-bounds.yMin)/(bounds.yMax-bounds.yMin)*height;ctx.strokeStyle=Math.abs(y)<yStep*1e-8?'rgba(208,247,255,.52)':'rgba(190,234,244,.22)';ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(width,py);ctx.stroke();}
+      for(let y=Math.ceil(bounds.yMin/yStep)*yStep;y<=bounds.yMax+yStep*1e-9;y+=yStep){const py=(yUp?bounds.yMax-y:y-bounds.yMin)/(bounds.yMax-bounds.yMin)*height;ctx.strokeStyle=Math.abs(y)<yStep*1e-8?'rgba(208,247,255,.52)':'rgba(190,234,244,.22)';ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(width,py);ctx.stroke();}
     }
     if(measureActive&&cursor){ctx.strokeStyle='rgba(126,233,251,.72)';ctx.lineWidth=1;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(cursor.px,0);ctx.lineTo(cursor.px,height);ctx.moveTo(0,cursor.py);ctx.lineTo(width,cursor.py);ctx.stroke();ctx.setLineDash([]);}
     const pixels=points.map(toPixel);

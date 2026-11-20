@@ -22,18 +22,19 @@ const boolAttr = (element, name, fallback = false) => {
 };
 
 class QonticControls extends HTMLElement {
-  static observedAttributes = ["interpretation", "interpretations", "running", "auto-run", "speed", "active-tab", "accent", "theme", "show-interpretation", "show-autorun", "show-reset", "show-speed", "speed-min", "speed-max", "speed-step", "disabled", "show-tabs", "show-appearance", "show-advanced", "show-expert"];
+  static observedAttributes = ["interpretation", "interpretations", "running", "auto-run", "speed", "active-tab", "accent", "theme", "show-interpretation", "show-autorun", "show-reset", "show-rerun", "show-speed", "speed-min", "speed-max", "speed-step", "disabled", "show-tabs", "show-appearance", "show-advanced", "show-expert"];
 
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this.shadowRoot.innerHTML = `
-      <link rel="stylesheet" href="${new URL("./qontic-controls.css?v=3.2", import.meta.url).href}">
+      <link rel="stylesheet" href="${new URL("./qontic-controls.css?v=5", import.meta.url).href}">
       <section class="qontic-common-controls" aria-label="Simulation controls">
         <button class="qontic-interpretation" type="button"></button>
         <div class="qontic-run-row" role="group" aria-label="Run controls">
           <button class="qontic-main-run" type="button"></button>
           <button class="qontic-reset" type="button">Reset</button>
+          <button class="qontic-rerun" type="button" aria-label="Rerun simulation" title="Restart and run with the current settings" hidden>↻</button>
           <button class="qontic-auto-rerun" type="button">↻</button>
           <label class="qontic-speed"><span>Speed</span><input type="range" min=".1" max="4" step=".05"><output></output></label>
         </div>
@@ -68,6 +69,9 @@ class QonticControls extends HTMLElement {
     });
     root.querySelector(".qontic-reset").addEventListener("click", () => {
       this.dispatch("reset", {});
+    });
+    root.querySelector(".qontic-rerun").addEventListener("click", () => {
+      this.dispatch("rerun", {});
     });
     root.querySelector(".qontic-auto-rerun").addEventListener("click", () => {
       const autoRun = !boolAttr(this, "auto-run", true);
@@ -112,6 +116,9 @@ class QonticControls extends HTMLElement {
     interpretationButton.textContent = label;
     interpretationButton.style.setProperty("--qontic-control-accent", this.getAttribute("accent") || "#55d8e6");
     interpretationButton.title = "Click to change interpretation";
+    // Screen readers: say what the button is, what it shows now and what it switches to.
+    const next = list[(list.findIndex(([id]) => id === interpretation) + 1) % list.length][1];
+    interpretationButton.setAttribute("aria-label", list.length > 1 ? `Interpretation: ${label}. Activate to switch to ${next}.` : `Interpretation: ${label}`);
 
     const running = boolAttr(this, "running");
     const runButton = root.querySelector(".qontic-main-run");
@@ -122,6 +129,8 @@ class QonticControls extends HTMLElement {
     resetButton.hidden = this.getAttribute("show-reset") !== "true";
     resetButton.setAttribute("aria-label", "Reset simulation");
     resetButton.title = "Return the simulation to its initial state";
+
+    root.querySelector(".qontic-rerun").hidden = this.getAttribute("show-rerun") !== "true";
 
     const autoRun = boolAttr(this, "auto-run", true);
     const autoButton = root.querySelector(".qontic-auto-rerun");

@@ -2,7 +2,7 @@ const DEFAULTS = Object.freeze({
   title: 'Quantum demonstration',
   eyebrow: 'Q-Ontic interactive laboratory',
   purpose: '',
-  compactHeader: false,
+  headerVisibilityControl: true,
   navigation: 'legacy',
   showSiteNavigation: true,
   breadcrumbs: null,
@@ -21,8 +21,8 @@ function decorateShell(shell, settings) {
 
   shell.dataset.qonticShell = 'true';
   shell.classList.add('qontic-template');
-  header.classList.add('qontic-app-header');
-  if (settings.compactHeader) header.classList.add('qontic-compact-header');
+  header.classList.add('qontic-app-header', 'qontic-compact-header');
+  if (!header.id) header.id = 'qontic-app-header';
 
   const currentTitle = header.querySelector('h1');
   const titleGroup = currentTitle?.parentElement;
@@ -37,9 +37,47 @@ function decorateShell(shell, settings) {
     titleRow.className = 'qontic-title-row';
     currentTitle.before(titleRow);
     titleRow.append(currentTitle);
+    const headerTools = document.createElement('div');
+    headerTools.className = 'qontic-header-tools';
+    titleRow.append(headerTools);
     if (tabs) {
       tabs.classList.add('qontic-view-tabs');
-      titleRow.append(tabs);
+      headerTools.append(tabs);
+    }
+
+    if (settings.headerVisibilityControl) {
+      const visibilityStorageKey = 'qontic-header-visibility';
+      const hideButton = document.createElement('button');
+      hideButton.type = 'button';
+      hideButton.className = 'qontic-header-icon-button qontic-header-visibility-toggle qontic-header-end-control';
+      hideButton.setAttribute('aria-label', 'Hide header');
+      hideButton.setAttribute('aria-controls', header.id);
+      hideButton.dataset.tooltip = 'Hide header';
+      hideButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M8 14l4-4 4 4M12 10v9"/></svg>';
+
+      const restoreButton = document.createElement('button');
+      restoreButton.type = 'button';
+      restoreButton.className = 'qontic-header-icon-button qontic-header-restore';
+      restoreButton.setAttribute('aria-label', 'Show header');
+      restoreButton.setAttribute('aria-controls', header.id);
+      restoreButton.dataset.tooltip = 'Show header';
+      restoreButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18h14M8 10l4 4 4-4M12 5v9"/></svg>';
+      document.body.append(restoreButton);
+
+      const setHeaderHidden = (hidden, persist = true) => {
+        document.body.classList.toggle('qontic-header-hidden', hidden);
+        restoreButton.hidden = !hidden;
+        if (persist) {
+          try { localStorage.setItem(visibilityStorageKey, hidden ? 'hidden' : 'shown'); } catch (_) {}
+        }
+        window.dispatchEvent(new Event('resize'));
+      };
+      hideButton.addEventListener('click', () => { setHeaderHidden(true); restoreButton.focus(); });
+      restoreButton.addEventListener('click', () => { setHeaderHidden(false); hideButton.focus(); });
+      headerTools.append(hideButton);
+      let initiallyHidden = false;
+      try { initiallyHidden = localStorage.getItem(visibilityStorageKey) === 'hidden'; } catch (_) {}
+      setHeaderHidden(initiallyHidden, false);
     }
 
     if (settings.purpose) {
@@ -105,9 +143,15 @@ function decorateShell(shell, settings) {
   }
 
   const keepTabsConcise = () => {
-    const mathTab = [...(tabs?.querySelectorAll('button') ?? [])]
-      .find((button) => button.textContent.trim() === 'Details & Math');
+    const buttons = [...(tabs?.querySelectorAll('button') ?? [])];
+    const mathTab = buttons.find((button) => button.textContent.trim() === 'Details & Math');
     if (mathTab) mathTab.textContent = 'Math';
+    const compactLabels = { Simulation: 'Sim', Physics: 'Phys', Views: 'Views', Math: 'Math', Rationale: 'Why' };
+    for (const button of buttons) {
+      const label = button.textContent.trim();
+      button.dataset.compactLabel = compactLabels[label] || label.slice(0, 4);
+      if (!button.title) button.title = label;
+    }
   };
   keepTabsConcise();
   if (tabs) new MutationObserver(keepTabsConcise).observe(tabs, { childList: true, subtree: true });
@@ -128,7 +172,7 @@ function decorateShell(shell, settings) {
 
   const footer = document.createElement('footer');
   footer.className = 'qontic-footer';
-  footer.innerHTML = `<span>${settings.version || 'Q-Ontic interactive demonstration'}</span><nav aria-label="Q-Ontic links"><a href="${settings.homeHref}">All demonstrations</a><a href="${settings.labHref}">Q-Ontic Lab</a></nav>`;
+  footer.innerHTML = `<span>${settings.version || 'Q-Ontic interactive demonstration'}</span><span class="qontic-footer-contact">Comments or problems? <a href="mailto:qonticlab@rice.edu">qonticlab@rice.edu</a></span><nav aria-label="Q-Ontic links"><a href="${settings.homeHref}">All demonstrations</a><a href="${settings.labHref}">Q-Ontic Lab</a></nav>`;
   // Keep shared navigation outside the framework-managed app root. React may
   // replace Demo/Details children, but it will not reorder this sibling.
   if (directory || !settings.showSiteNavigation) footer.querySelector('nav')?.remove();
