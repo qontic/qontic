@@ -26,6 +26,7 @@
     "double-slit-analytical-simulation": "1. Start with interference and compare three accounts.",
     "double-slit-notebook": "2. Work through the analytical model and its activities.",
     "double-slit-webgl-simulation": "3. Explore numerical wave dynamics, reflection and trajectories colored by their starting position.",
-    "double-slit-pilot-wave-notebook": "4. Study pilot-wave trajectories and equivariance."
+    "double-slit-pilot-wave-notebook": "4. Study pilot-wave trajectories and equivariance.",
+    "n-slits-analytical": "5. Go beyond two: 1 to 16 slits, detectors at any slit, and slits closed during a run."
   }
 }
