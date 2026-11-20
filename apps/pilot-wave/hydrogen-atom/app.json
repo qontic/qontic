@@ -1,6 +1,8 @@
 {
+  "id": "hydrogen-atom-simulation",
   "title": "Hydrogen Atom",
   "type": "app",
+  "module": "potential-well",
   "category": "pilot-wave",
   "description": "Hydrogen eigenstates and superpositions: |ψ|², phase, and the electron trajectories of pilot-wave theory, with an optional Pauli spin term.",
   "tags": [

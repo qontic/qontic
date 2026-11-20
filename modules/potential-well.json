@@ -3,5 +3,9 @@
   "title": "Potential Wells and Bound States",
   "summary": "Bound-state wave functions, energy eigenstates, and particle motion in confining potentials.",
   "topics": ["potential-wells", "bound-states", "eigenstates"],
-  "order": 35
+  "order": 35,
+  "recommendedResources": ["particle-box-3d-notebook", "hydrogen-atom-simulation"],
+  "resourceNotes": {
+    "hydrogen-atom-simulation": "After the box: a real atom, bound by the Coulomb potential."
+  }
 }
